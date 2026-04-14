@@ -39,7 +39,7 @@ function startPipeline() {
 
           if (prevStatus !== newStatus) {
             jobStates.set(job.id, newStatus);
-            handleStatusChange(job, prevStatus: prevStatus || 'unknown', newStatus).catch((err) => {
+            handleStatusChange(job, prevStatus, newStatus).catch((err) => {
               logger.error('pipeline', `Handler error for Job ${job.id}: ${err.message}`, {
                 jobId: job.id,
                 prevStatus: prevStatus || 'unknown',
@@ -66,7 +66,7 @@ function startPipeline() {
 /**
  * Route a job to the appropriate handler based on its new status.
  */
-async function handleStatusChange(job, prevStatus: prevStatus || 'unknown', newStatus) {
+async function handleStatusChange(job, prevStatus, newStatus) {
   await logger.log('pipeline', 'SUCCESS', `Job ${job.id}: ${prevStatus || 'NEW'} → ${newStatus}`, {
     type: 'status_transition',
     jobId: job.id,
