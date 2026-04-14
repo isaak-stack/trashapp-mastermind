@@ -1,0 +1,5 @@
+.env
+node_modules/
+*.log
+TrashApp_Mastermind_PC_Setup.pdf
+.DS_Store

@@ -1,0 +1,63 @@
+{
+  "minimumJob": 175,
+  "basePricePerYard": 85,
+  "loadSizes": [
+    { "yards": 1, "price": 175 },
+    { "yards": 2, "price": 275 },
+    { "yards": 3, "price": 375 },
+    { "yards": 6, "price": 575 },
+    { "yards": 9, "price": 775 },
+    { "yards": 12, "price": 950 }
+  ],
+  "materialMultipliers": {
+    "general_household": 1.00,
+    "furniture": 1.15,
+    "appliances": 1.35,
+    "yard_waste": 0.95,
+    "construction_debris": 1.55,
+    "heavy_materials": 1.75,
+    "concrete": 1.75,
+    "mattresses": 1.30,
+    "ewaste": 1.20,
+    "recyclable_metal": 0.85,
+    "mixed": 1.10
+  },
+  "laborSurcharges": {
+    "stairs_per_flight": 45,
+    "long_carry": 35,
+    "disassembly": 55,
+    "hoarding": 150,
+    "elevator": 25
+  },
+  "dumpSurcharges": {
+    "tires": 15,
+    "appliances": 25,
+    "mattresses": 30,
+    "hazmat": 75,
+    "environmental_fee": 16,
+    "fuel_surcharge": 10
+  },
+  "urgencyFees": {
+    "standard": 0,
+    "same_day": 75,
+    "after_hours": 100,
+    "emergency": 150
+  },
+  "travel": {
+    "includedMiles": 10,
+    "feePerMile": 3.50
+  },
+  "confidence": {
+    "highThreshold": 0.80,
+    "mediumThreshold": 0.60,
+    "manualReviewThreshold": 0.45,
+    "highExpansion": 0.08,
+    "mediumExpansion": 0.18,
+    "lowExpansion": 0.30
+  },
+  "multiLocation": {
+    "efficiencyDiscount": 0.10
+  },
+  "floorMargin": 0.40,
+  "targetMargin": 0.65
+}

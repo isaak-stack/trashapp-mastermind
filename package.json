@@ -1,0 +1,38 @@
+{
+  "name": "trashapp-mastermind",
+  "version": "1.0.0",
+  "description": "TrashApp Mastermind — AI Dispatch Brain. Connects all TrashApp services into one automated dispatch pipeline with real-time dashboard.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "install-service": "node install-service.js",
+    "generate-pdf": "node generate-pdf.js",
+    "health": "curl http://localhost:3000/health"
+  },
+  "keywords": ["trashapp", "dispatch", "junk-removal", "ai"],
+  "author": "Isaak Thammavong <isaak@igniscreatives.com>",
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "express": "^4.21.0",
+    "firebase-admin": "^12.7.0",
+    "twilio": "^5.4.0",
+    "stripe": "^17.5.0",
+    "node-cron": "^3.0.3",
+    "socket.io": "^4.8.1",
+    "pdfkit": "^0.16.0",
+    "dotenv": "^16.4.7",
+    "open": "^10.1.0",
+    "axios": "^1.7.9",
+    "cheerio": "^1.0.0-rc.12",
+    "@anthropic-ai/sdk": "^0.39.0"
+  },
+  "optionalDependencies": {
+    "node-windows": "^1.0.0-beta.8",
+    "node-mac": "^1.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.7"
+  }
+}

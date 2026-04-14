@@ -1,0 +1,3588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TrashApp — Admin Console v1.7.3</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%231a1a1a'/%3E%3Crect x='28' y='36' width='44' height='46' rx='6' fill='%23F5A623'/%3E%3Crect x='20' y='27' width='60' height='11' rx='5' fill='%23F5A623'/%3E%3Crect x='40' y='16' width='20' height='13' rx='4' fill='%23F5A623'/%3E%3Crect x='40' y='49' width='6' height='22' rx='3' fill='%231a1a1a'/%3E%3Crect x='54' y='49' width='6' height='22' rx='3' fill='%231a1a1a'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDtkh_G25Kr6YaAeNJOd9D9YJuyZnKvu08&libraries=places,geocoding" async defer></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--black:#0a0a0a;--dark:#141414;--card:#1a1a1a;--card2:#202020;--gold:#F5A623;--gold2:#ffb84d;--white:#f0f0ea;--gray:#666;--border:#252525;--green:#22c55e;--red:#ef4444;--blue:#3b82f6;--purple:#a855f7;--orange:#f97316;--brand:#F5A623;--brand-dim:rgba(245,166,35,0.12);--brand-hover:#E8941A;--bg-base:#0A0A0B;--bg-surface:#111113;--bg-elevated:#1A1A1F;--bg-overlay:#222228;--border-subtle:rgba(255,255,255,0.06);--border-strong:rgba(255,255,255,0.12);--text-primary:#F0F0EA;--text-secondary:#888896;--text-tertiary:#555560;--text-inverse:#0A0A0B;--green-dim:rgba(34,197,94,0.12);--red-dim:rgba(239,68,68,0.12);--yellow:#EAB308;--yellow-dim:rgba(234,179,8,0.12);--blue-dim:rgba(59,130,246,0.12);--shadow-sm:0 1px 3px rgba(0,0,0,0.4);--shadow-md:0 4px 16px rgba(0,0,0,0.5);--shadow-lg:0 12px 40px rgba(0,0,0,0.6);--radius-sm:6px;--radius-md:10px;--radius-lg:14px;--radius-xl:20px;--transition:150ms cubic-bezier(0.4,0,0.2,1)}
+html,body{height:100%;font-family:'Inter','DM Sans',sans-serif;background:var(--black);color:var(--white);overflow:hidden}
+
+/* LAYOUT */
+.shell{display:flex;height:100vh}
+.sidebar{width:240px;flex-shrink:0;background:var(--dark);border-right:1px solid var(--border);display:flex;flex-direction:column}
+.sidebar-top{padding:1.25rem 1rem;border-bottom:1px solid var(--border)}
+.sidebar-logo{display:flex;align-items:center;gap:10px;margin-bottom:.5rem}
+.logo-icon{width:36px;height:36px;background:var(--gold);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:19px}
+.logo-text{font-family:'Bebas Neue',sans-serif;font-size:19px;letter-spacing:.5px}
+.logo-text span{color:var(--gold)}
+.admin-badge{display:inline-block;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:var(--red);font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;letter-spacing:1px}
+.sidebar-nav{flex:1;padding:.5rem 0;overflow-y:auto}
+.nav-section-label{padding:.35rem 1rem;margin-top:.5rem;font-size:9px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:1.5px;border-top:1px solid var(--border)}
+.nav-section-label:first-of-type{margin-top:0;border-top:none}
+.nav-btn{display:flex;align-items:center;gap:10px;width:100%;padding:.7rem 1rem;border:none;background:transparent;color:var(--gray);font-size:13px;font-weight:500;cursor:pointer;text-align:left;font-family:'Inter','DM Sans',sans-serif;transition:.15s;border-left:3px solid transparent}
+.nav-btn:hover{background:rgba(255,255,255,0.03);color:var(--white)}
+.nav-btn.active{color:var(--gold);border-left-color:var(--gold);background:rgba(245,166,35,0.05)}
+.nav-icon{font-size:15px;width:20px;text-align:center}
+.sidebar-bottom{padding:.75rem;border-top:1px solid var(--border)}
+.btn-signout{width:100%;padding:.55rem;background:transparent;color:var(--gray);border:1px solid var(--border);border-radius:7px;font-size:12px;cursor:pointer;font-family:'Inter','DM Sans',sans-serif}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{background:var(--dark);border-bottom:1px solid var(--border);padding:.75rem 1.5rem;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.topbar-title{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.5px}
+.topbar-right{display:flex;align-items:center;gap:.75rem;font-size:13px;color:var(--gray)}
+.live-dot{width:7px;height:7px;background:var(--green);border-radius:50%;animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+.skeleton{background:linear-gradient(90deg,var(--bg-elevated,#1A1A1F) 25%,var(--bg-overlay,#222228) 50%,var(--bg-elevated,#1A1A1F) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:6px}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.page-enter{animation:fadeUp 400ms cubic-bezier(0.4,0,0.2,1) both}
+.content{flex:1;overflow-y:auto;padding:1.5rem}
+.hamburger-btn{display:none;background:transparent;border:none;color:var(--white);font-size:20px;cursor:pointer;padding:.5rem}
+
+/* MOBILE RESPONSIVE */
+@media(max-width:767px){
+  .shell{flex-direction:column}
+  .sidebar{display:none;width:100%;height:auto;position:fixed;bottom:0;left:0;right:0;z-index:1000;border-right:none;border-top:1px solid var(--border)}
+  .sidebar.open{display:flex;height:80vh;flex-direction:column}
+  .hamburger-btn{display:block;position:absolute;left:1rem;top:.75rem}
+  .topbar-title{margin-left:3rem}
+  .topbar-right{display:none}
+  .content{padding:1rem}
+  .stats-row{grid-template-columns:repeat(2,1fr)}
+  .data-table{font-size:11px}
+  .data-table th,.data-table td{padding:6px 8px}
+  .nav-section-label{display:none}
+}
+@media(min-width:768px) and (max-width:1023px){
+  .sidebar{width:180px}
+  .sidebar-logo{margin-bottom:.25rem}
+  .logo-icon{width:28px;height:28px;font-size:14px}
+  .logo-text{font-size:15px}
+  .admin-badge{font-size:9px;padding:1px 6px}
+  .nav-btn{padding:.55rem .75rem;font-size:12px;gap:8px}
+  .nav-icon{width:16px;font-size:13px}
+  .nav-section-label{padding:.3rem .75rem;font-size:8px}
+  .topbar{padding:.6rem 1rem}
+  .content{padding:1rem}
+}
+
+/* VIEW */
+.view{display:none}
+.view.active{display:block}
+
+/* AI OS TAB */
+.aios-tab{padding:8px 16px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--gray);font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter','DM Sans',sans-serif;transition:.15s}
+.aios-tab:hover{background:var(--card2);color:var(--white)}
+.aios-tab.active{background:rgba(245,166,35,0.1);border-color:var(--gold);color:var(--gold)}
+.aios-badge{background:var(--red);color:#fff;font-size:10px;padding:1px 6px;border-radius:99px;margin-left:4px}
+.aios-live-badge{background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;margin-left:8px;animation:pulse 1.5s infinite}
+.aios-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem}
+@media(max-width:767px){.aios-grid{grid-template-columns:repeat(2,1fr)}}
+.aios-agent-card{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:1rem;position:relative}
+.aios-agent-header{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.aios-agent-emoji{font-size:20px}
+.aios-agent-name{font-size:14px;font-weight:700}
+.aios-agent-dot{width:8px;height:8px;border-radius:50%;margin-left:auto}
+.aios-agent-dot.running{background:var(--gold);animation:pulse 1.5s infinite}
+.aios-agent-dot.idle{background:var(--green)}
+.aios-agent-dot.error{background:var(--red)}
+.aios-agent-dot.meeting{background:var(--purple);animation:pulse 1.5s infinite}
+.aios-agent-meta{font-size:11px;color:var(--gray);line-height:1.6}
+.aios-approval-card{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:.75rem}
+.aios-approval-header{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.aios-approval-title{font-size:14px;font-weight:600}
+.aios-approval-desc{font-size:12px;color:var(--gray);margin-bottom:8px;line-height:1.5}
+.aios-approval-impact{font-size:11px;color:var(--gold);margin-bottom:10px}
+.aios-approval-btns{display:flex;gap:8px}
+.aios-btn-approve{padding:6px 16px;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);color:var(--green);border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter','DM Sans',sans-serif}
+.aios-btn-decline{padding:6px 16px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:var(--red);border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter','DM Sans',sans-serif}
+.aios-chat{max-height:500px;overflow-y:auto;padding:4px}
+.aios-chat-msg{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+.aios-chat-msg:last-child{border-bottom:none}
+.aios-chat-avatar{font-size:20px;flex-shrink:0;width:28px;text-align:center}
+.aios-chat-body{flex:1}
+.aios-chat-sender{font-size:12px;font-weight:700;color:var(--gold);margin-bottom:2px}
+.aios-chat-sender span{font-weight:400;color:var(--gray);font-size:11px;margin-left:6px}
+.aios-chat-text{font-size:13px;color:var(--white);line-height:1.5;white-space:pre-wrap}
+.aios-content-card{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:.75rem}
+.aios-content-header{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px;color:var(--gray)}
+.aios-content-body{font-size:13px;color:var(--white);line-height:1.5;margin-bottom:10px;white-space:pre-wrap;max-height:120px;overflow-y:auto}
+.aios-content-btns{display:flex;gap:8px}
+
+/* CARDS */
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:.75rem}
+.card-title{font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:1px;margin-bottom:1rem}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem}
+.card-header-title{font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:1px}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(6,1fr);gap:.75rem;margin-bottom:1.25rem}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:1rem;text-align:center}
+.stat-val{font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--gold);line-height:1}
+.stat-label{font-size:10px;color:var(--gray);margin-top:3px;text-transform:uppercase;letter-spacing:.5px}
+
+/* REP TABLE */
+.rep-table{width:100%;border-collapse:collapse}
+.rep-table th{text-align:left;font-size:11px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;padding:.5rem .75rem;border-bottom:1px solid var(--border)}
+.rep-table td{padding:.65rem .75rem;border-bottom:1px solid rgba(255,255,255,0.04);font-size:13px;vertical-align:middle}
+.rep-table tr:last-child td{border-bottom:none}
+.rep-table tr:hover td{background:rgba(255,255,255,0.02)}
+.role-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;text-transform:uppercase;letter-spacing:.5px}
+.role-owner{background:rgba(245,166,35,0.15);color:var(--gold)}
+.role-admin{background:rgba(239,68,68,0.15);color:var(--red)}
+.role-rep{background:rgba(100,100,100,0.15);color:#aaa}
+.status-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px}
+.status-approved{background:rgba(34,197,94,0.15);color:var(--green)}
+.status-pending{background:rgba(245,166,35,0.15);color:var(--gold)}
+.status-denied{background:rgba(239,68,68,0.15);color:var(--red)}
+.status-terminated{background:rgba(239,68,68,0.15);color:var(--red)}
+.rep-actions{display:flex;gap:.35rem;flex-wrap:wrap}
+.action-btn{padding:.3rem .65rem;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:none;font-family:'Inter','DM Sans',sans-serif;white-space:nowrap;min-height:44px;display:flex;align-items:center}
+.action-btn:active{transform:scale(0.97)}
+.btn-approve{background:rgba(34,197,94,0.15);color:var(--green);border:1px solid rgba(34,197,94,0.25)}
+.btn-deny{background:rgba(239,68,68,0.1);color:var(--red);border:1px solid rgba(239,68,68,0.2)}
+.btn-save{background:var(--gold);color:var(--black)}
+.btn-delete{background:rgba(239,68,68,0.1);color:var(--red);border:1px solid rgba(239,68,68,0.2)}
+.inline-input{padding:.3rem .6rem;background:#2a2a2a;border:1px solid var(--border);border-radius:6px;color:var(--white);font-size:12px;outline:none;font-family:'Inter','DM Sans',sans-serif}
+.inline-input:focus{border-color:var(--gold)}
+select.inline-input{cursor:pointer}
+
+/* SCRIPTS */
+.script-card{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:.5rem}
+.script-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem}
+.script-name{font-weight:700;font-size:14px}
+.script-body-text{font-size:13px;color:var(--gray);line-height:1.6;white-space:pre-line}
+.script-actions{display:flex;gap:.35rem;margin-top:.6rem}
+.add-form{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:.75rem}
+.add-form-title{font-size:12px;font-weight:700;color:var(--gold);margin-bottom:.6rem}
+.form-input{width:100%;padding:.55rem .75rem;background:#2a2a2a;border:1px solid var(--border);border-radius:7px;color:var(--white);font-size:13px;outline:none;font-family:'Inter','DM Sans',sans-serif;margin-bottom:.4rem}
+.form-input:focus{border-color:var(--gold)}
+.btn-primary{padding:.55rem 1.1rem;background:var(--gold);color:var(--black);border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Inter','DM Sans',sans-serif;min-height:44px}
+.btn-primary:active{transform:scale(0.97)}
+.btn-danger{padding:.55rem 1.1rem;background:rgba(239,68,68,0.15);color:var(--red);border:1px solid rgba(239,68,68,0.25);border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Inter','DM Sans',sans-serif}
+
+/* MAP — Google Maps (Live Activity) */
+#admin-map{height:500px;border-radius:10px;overflow:hidden;border:1px solid var(--border)}
+/* MAP — Google Maps (Fulfillment) */
+#fulfillment-map{height:420px;border-radius:10px;overflow:hidden;border:1px solid var(--border);margin-bottom:1rem}
+
+/* LIVE REPS TABLE */
+.live-rep-row{display:flex;align-items:center;gap:.75rem;padding:.6rem .75rem;border-radius:8px;background:var(--card2);margin-bottom:.35rem}
+.live-rep-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;animation:pulse 1.5s infinite}
+.live-rep-name{flex:1;font-weight:600;font-size:13px}
+.live-rep-stats{font-size:12px;color:var(--gray)}
+
+/* AUTH */
+.auth-screen{display:none;align-items:center;justify-content:center;height:100vh;flex-direction:column;padding:1.5rem}
+.auth-screen.visible{display:flex}
+.auth-box{width:100%;max-width:380px;background:var(--dark);border:1px solid var(--border);border-radius:16px;padding:2rem}
+.auth-logo{display:flex;align-items:center;gap:10px;margin-bottom:1.5rem;justify-content:center}
+.auth-logo-icon{width:40px;height:40px;background:var(--gold);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:21px}
+.auth-logo-text{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px}
+.auth-logo-text span{color:var(--gold)}
+.auth-label{font-size:11px;color:var(--gray);margin-bottom:3px;display:block}
+.auth-input{width:100%;padding:.6rem .8rem;background:#222;border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:15px;outline:none;font-family:'Inter','DM Sans',sans-serif;margin-bottom:.6rem}
+.auth-input:focus{border-color:var(--gold)}
+.auth-btn{width:100%;padding:.65rem;background:var(--gold);color:var(--black);border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;font-family:'Inter','DM Sans',sans-serif}
+.auth-err{font-size:12px;color:var(--red);margin-top:.4rem;min-height:16px}
+.otp-hint{font-size:12px;color:var(--gray);margin-bottom:.6rem}
+
+.empty{text-align:center;color:#555;font-size:13px;padding:2rem}
+@keyframes skeleton-pulse{0%{opacity:.15}50%{opacity:.35}100%{opacity:.15}}
+@keyframes admin-knock-pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.5);opacity:.5}}
+.knock-marker-icon{animation:admin-knock-pulse 1.2s ease-in-out infinite;}
+.skeleton{border-radius:6px;background:#333;animation:skeleton-pulse 1.5s ease-in-out infinite}
+.skeleton-line{height:14px;margin-bottom:8px;width:80%}
+.skeleton-line.short{width:50%}
+.skeleton-card{height:72px;border-radius:10px;margin-bottom:10px;background:#1a1a1a;padding:12px;display:flex;flex-direction:column;gap:8px}
+.skeleton-card .skeleton-line{background:#333;animation:skeleton-pulse 1.5s ease-in-out infinite}
+.skeleton-row{height:42px;margin-bottom:4px}
+.analytics-preset{padding:.35rem .85rem;border:1px solid var(--border);border-radius:7px;background:var(--card2);color:var(--gray);font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter','DM Sans',sans-serif;transition:.15s;min-height:44px;display:flex;align-items:center}
+.analytics-preset:hover{border-color:var(--gold);color:var(--white)}
+.analytics-preset:active{transform:scale(0.97)}
+.analytics-preset.active{background:var(--gold);color:var(--black);border-color:var(--gold)}
+.chart-bar{background:var(--gold);border-radius:3px 3px 0 0;min-width:20px;transition:height .3s;cursor:pointer;position:relative;flex:1}
+.chart-bar:hover{background:var(--gold2)}
+.chart-bar-deals{background:var(--green);border-radius:3px 3px 0 0;min-width:20px;transition:height .3s;flex:1}
+.chart-container{display:flex;gap:1.5rem;flex-wrap:wrap;margin-top:1rem}
+.chart-item{display:flex;flex-direction:column;align-items:center;flex:1;min-width:100px}
+.chart-bars{display:flex;gap:.5rem;align-items:flex-end;height:200px;margin-bottom:.5rem}
+.chart-label{font-size:12px;font-weight:600;text-align:center;margin-bottom:.25rem}
+.chart-bar-label{font-size:10px;color:var(--gray);margin-top:.25rem}
+/* Territory rows */
+.territory-row{display:flex;align-items:center;gap:.75rem;padding:.65rem .5rem;border-bottom:1px solid var(--border)}
+.territory-row:last-child{border-bottom:none}
+.territory-name{flex:1;font-weight:600;font-size:13px}
+.territory-zip{font-size:12px;color:var(--gray);width:80px}
+.territory-input{padding:.4rem .65rem;background:#1e1e1e;border:1px solid var(--border);border-radius:7px;color:var(--white);font-size:13px;outline:none;font-family:'Inter','DM Sans',sans-serif;width:100px}
+.territory-input:focus{border-color:var(--gold)}
+.btn-save-zone{padding:.4rem .8rem;background:var(--gold);color:var(--black);border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Inter','DM Sans',sans-serif;min-height:44px}
+.btn-save-zone:hover{background:var(--gold2)}
+.btn-save-zone:active{transform:scale(0.97)}
+/* Data tables */
+.data-table{border-collapse:collapse;font-size:12px;width:100%}
+.data-table th{text-align:left;padding:8px 10px;color:var(--gray);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);white-space:nowrap}
+.data-table td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--white);vertical-align:middle}
+.data-table tr:hover td{background:rgba(255,255,255,.02)}
+.status-pill{display:inline-block;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700;letter-spacing:.3px}
+.status-pill.pending_dispatch{background:rgba(245,166,35,.15);color:var(--gold)}
+.status-pill.quote_sent{background:rgba(59,130,246,.15);color:var(--blue)}
+.status-pill.customer_accepted{background:rgba(249,115,22,.15);color:var(--orange)}
+.status-pill.scheduled{background:rgba(168,85,247,.15);color:var(--purple)}
+.status-pill.deal_closed{background:rgba(34,197,94,.15);color:var(--green)}
+.status-pill.quoted{background:rgba(59,130,246,.15);color:var(--blue)}
+.status-pill.dispatched{background:rgba(249,115,22,.15);color:var(--orange)}
+.status-pill.in_progress{background:rgba(168,85,247,.15);color:var(--purple)}
+.status-pill.completed{background:rgba(34,197,94,.15);color:var(--green)}
+.status-pill.pending{background:rgba(245,166,35,.15);color:var(--gold)}
+.status-pill.approved{background:rgba(59,130,246,.15);color:var(--blue)}
+.status-pill.paid{background:rgba(34,197,94,.15);color:var(--green)}
+.status-pill.pending_review{background:rgba(249,115,22,.15);color:var(--orange)}
+.status-pill.success{background:rgba(34,197,94,.15);color:var(--green)}
+.status-pill.error{background:rgba(239,68,68,.15);color:var(--red)}
+.status-pill.partial{background:rgba(249,115,22,.15);color:var(--orange)}
+.btn-sm{padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:var(--card2);color:var(--white);font-size:11px;font-weight:600;cursor:pointer;font-family:'Inter','DM Sans',sans-serif;transition:.15s;min-height:44px;display:flex;align-items:center}
+.btn-sm:hover{border-color:var(--gold);color:var(--gold)}
+.btn-sm:active{transform:scale(0.97)}
+.btn-sm.green{border-color:var(--green);color:var(--green)}
+.btn-sm.green:hover{background:var(--green);color:var(--black)}
+.btn-sm.red{border-color:var(--red);color:var(--red)}
+/* Filter buttons */
+.filter-btn{padding:6px 14px;border:1px solid var(--border);border-radius:20px;background:var(--card2);color:var(--gray);font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter','DM Sans',sans-serif;transition:.15s;min-height:44px;display:flex;align-items:center}
+.filter-btn:hover{border-color:var(--gold);color:var(--white)}
+.filter-btn:active{transform:scale(0.97)}
+.filter-btn.active{background:var(--gold);color:var(--black);border-color:var(--gold)}
+/* Pipeline board */
+.pipeline-col{background:var(--card);border:1px solid var(--border);border-radius:10px;min-height:200px;display:flex;flex-direction:column}
+.pipeline-header{padding:8px 12px;font-size:11px;font-weight:700;letter-spacing:.5px;color:white;border-radius:10px 10px 0 0;text-align:center}
+.pipeline-list{padding:8px;flex:1;display:flex;flex-direction:column;gap:6px}
+.pipeline-card{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px;cursor:pointer;transition:.15s}
+.pipeline-card:hover{border-color:var(--gold)}
+.pipeline-card .pc-name{font-weight:600;margin-bottom:3px}
+.pipeline-card .pc-addr{color:var(--gray);font-size:11px}
+.pipeline-card .pc-rev{color:var(--gold);font-weight:600;font-size:11px;margin-top:4px}
+.pipeline-card.flagged{border-color:var(--red);box-shadow:0 0 0 1px rgba(239,68,68,.2)}
+/* Admin inputs */
+.admin-input{padding:.5rem .75rem;background:#1e1e1e;border:1px solid var(--border);border-radius:7px;color:var(--white);font-size:13px;outline:none;font-family:'Inter','DM Sans',sans-serif;min-height:44px}
+.admin-input:focus{border-color:var(--gold)}
+/* Health log entries */
+.health-entry{padding:8px 12px;border-radius:8px;font-size:12px;display:flex;gap:10px;align-items:flex-start}
+.health-entry.success{background:rgba(34,197,94,.05);border:1px solid rgba(34,197,94,.15)}
+.health-entry.error{background:rgba(239,68,68,.05);border:1px solid rgba(239,68,68,.15)}
+.health-entry.partial{background:rgba(249,115,22,.05);border:1px solid rgba(249,115,22,.15)}
+/* Review card */
+.review-card{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:.75rem}
+.review-card .rc-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;flex-wrap:wrap;gap:.5rem}
+.review-card .rc-price{font-size:18px;font-weight:700;color:var(--gold)}
+.review-card .rc-meta{font-size:12px;color:var(--gray);line-height:1.5}
+.review-checkbox{width:20px;height:20px;cursor:pointer;accent-color:var(--gold)}
+/* Broadcast history */
+.bc-item{padding:.65rem .5rem;border-bottom:1px solid var(--border)}
+.bc-item:last-child{border-bottom:none}
+.bc-msg{font-size:13px;color:var(--white);margin-bottom:.25rem;line-height:1.5}
+.bc-meta{font-size:11px;color:var(--gray)}
+
+/* QUICK ACTIONS ROW */
+.quick-actions{display:flex;gap:.5rem;margin-bottom:1.25rem;flex-wrap:wrap}
+.quick-actions .btn-primary{flex:1;min-width:140px}
+
+/* JOBS DETAIL PANEL */
+.job-detail-panel{position:fixed;top:0;right:0;width:360px;height:100%;background:var(--dark);border-left:1px solid var(--border);overflow-y:auto;z-index:500;transform:translateX(100%);transition:transform .3s ease;box-shadow:-2px 0 8px rgba(0,0,0,0.4)}
+.job-detail-panel.open{transform:translateX(0)}
+.job-detail-header{padding:1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.job-detail-close{background:transparent;border:none;color:var(--white);font-size:20px;cursor:pointer;padding:.25rem}
+.job-detail-close:active{transform:scale(0.9)}
+.job-detail-content{padding:1.25rem}
+.job-detail-section{margin-bottom:1.5rem}
+.job-detail-label{font-size:10px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:1px;margin-bottom:.5rem}
+.job-detail-value{font-size:13px;color:var(--white);margin-bottom:.35rem;word-break:break-word}
+.job-detail-timeline{background:var(--card);border-radius:8px;padding:.75rem;margin-bottom:1rem}
+.timeline-item{padding:.5rem 0;border-bottom:1px solid var(--border);font-size:11px}
+.timeline-item:last-child{border-bottom:none}
+.timeline-status{color:var(--gold);font-weight:600}
+.timeline-time{color:var(--gray);font-size:10px;margin-top:.25rem}
+.job-detail-actions{display:flex;flex-direction:column;gap:.5rem}
+.job-detail-actions .btn-primary{margin:0}
+.job-panel-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:499;opacity:0;pointer-events:none;transition:opacity .3s}
+.job-panel-overlay.open{opacity:1;pointer-events:auto}
+
+/* BULK REVIEW CONTROLS */
+.bulk-review-toolbar{background:var(--card2);border:1px solid var(--gold);border-radius:8px;padding:1rem;margin-bottom:1rem;display:none}
+.bulk-review-toolbar.active{display:block}
+.bulk-review-toolbar input{width:100%;margin-bottom:.5rem;min-height:44px}
+
+/* TABLE WRAPPER FOR MOBILE */
+.table-wrapper{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+/* ERROR BANNER */
+.error-banner{background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:1rem;margin-bottom:1rem;color:var(--red);font-size:12px;display:flex;align-items:center;justify-content:space-between}
+.error-banner button{background:transparent;border:1px solid rgba(239,68,68,0.5);color:var(--red);padding:.35rem .7rem;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600}
+.error-banner button:active{transform:scale(0.97)}
+
+/* BUTTON STYLES */
+.btn-ghost{padding:.55rem 1rem;background:transparent;color:var(--gray);border:1px solid var(--border);border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter','DM Sans',sans-serif;min-height:44px}
+.btn-secondary{padding:.55rem 1rem;background:var(--card2);color:var(--white);border:1px solid var(--border);border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter','DM Sans',sans-serif;min-height:44px}
+.btn-ghost:hover,.btn-secondary:hover{border-color:var(--gold);color:var(--white)}
+
+/* SOCIAL */
+.social-shell{display:grid;grid-template-columns:minmax(420px,1.08fr) minmax(320px,.92fr);gap:1rem;align-items:start}
+.social-stack{display:flex;flex-direction:column;gap:.75rem}
+.social-connection-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:.75rem}
+.social-connection-card{background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));border:1px solid var(--border);border-radius:12px;padding:1rem;display:flex;flex-direction:column;gap:.7rem;min-height:210px}
+.social-connection-head{display:flex;align-items:flex-start;justify-content:space-between;gap:.75rem}
+.social-connection-name{font-size:14px;font-weight:700}
+.social-connection-desc{font-size:11px;color:var(--gray);line-height:1.5}
+.social-connection-meta{font-size:11px;color:var(--gray);line-height:1.55;min-height:52px}
+.social-connection-actions{display:flex;gap:.45rem;flex-wrap:wrap;margin-top:auto}
+.social-inline-stack{display:flex;gap:.65rem;align-items:center;flex-wrap:wrap}
+.social-backend-input{min-width:220px;flex:1}
+.social-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.65rem}
+.social-form-grid .full{grid-column:1/-1}
+.social-section-label{font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.7px;margin-bottom:.35rem;display:block}
+.social-helper{font-size:12px;color:var(--gray);line-height:1.55}
+.platform-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.55rem}
+.platform-opt{display:flex;gap:.55rem;align-items:flex-start;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:.75rem;cursor:pointer;min-height:82px}
+.platform-opt input{margin-top:2px;accent-color:var(--gold)}
+.platform-opt strong{display:block;font-size:13px}
+.platform-opt small{display:block;font-size:11px;color:var(--gray);margin-top:4px;line-height:1.4}
+.social-preview-list{display:flex;flex-direction:column;gap:.65rem}
+.social-preview-card{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:.9rem}
+.social-preview-head{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-bottom:.55rem}
+.social-preview-title{font-size:13px;font-weight:700}
+.social-preview-limit{font-size:11px;color:var(--gray)}
+.social-caption-input{width:100%;min-height:128px;padding:.75rem .85rem;background:#181818;border:1px solid var(--border);border-radius:9px;color:var(--white);font-size:13px;line-height:1.55;outline:none;font-family:'Inter','DM Sans',sans-serif;resize:vertical}
+.social-caption-input:focus{border-color:var(--gold)}
+.social-meta-row{display:flex;gap:.45rem;flex-wrap:wrap}
+.social-chip{display:inline-flex;align-items:center;padding:.24rem .55rem;border-radius:999px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px}
+.social-chip.draft{background:rgba(59,130,246,0.12);color:var(--blue)}
+.social-chip.scheduled{background:rgba(245,166,35,0.15);color:var(--gold)}
+.social-chip.posted{background:rgba(34,197,94,0.15);color:var(--green)}
+.social-chip.paused{background:rgba(168,85,247,0.14);color:var(--purple)}
+.social-chip.manual{background:rgba(249,115,22,0.14);color:var(--orange)}
+.social-mini-btn{padding:.38rem .7rem;background:transparent;color:var(--gray);border:1px solid var(--border);border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Inter','DM Sans',sans-serif}
+.social-mini-btn:hover,.btn-ghost:hover,.btn-secondary:hover{border-color:var(--gold);color:var(--white)}
+.social-empty{padding:1.25rem;border:1px dashed var(--border);border-radius:10px;color:var(--gray);text-align:center;font-size:13px;background:rgba(255,255,255,0.01)}
+.social-note{background:linear-gradient(135deg,rgba(59,130,246,0.08),rgba(245,166,35,0.06));border:1px solid rgba(59,130,246,0.18);border-radius:10px;padding:.9rem 1rem;font-size:12px;color:var(--white);line-height:1.6}
+.social-upcoming-item{padding:.7rem .8rem;border-radius:9px;background:var(--card2);border:1px solid var(--border);margin-bottom:.45rem}
+.social-upcoming-title{font-size:13px;font-weight:700;margin-bottom:3px}
+.social-upcoming-meta{font-size:11px;color:var(--gray);line-height:1.5}
+.social-toolbar{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.75rem}
+
+@media(max-width:1200px){
+  .social-shell{grid-template-columns:1fr}
+  .social-connection-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:860px){
+  .social-form-grid,.platform-grid,.social-connection-grid{grid-template-columns:1fr}
+}
+.retry-banner{background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:8px;padding:.65rem 1rem;display:none;align-items:center;justify-content:space-between;gap:.75rem;margin-bottom:.75rem;font-size:13px;color:#ef4444}
+.retry-banner.visible{display:flex}
+.retry-btn{background:transparent;border:1px solid #F5A623;color:#F5A623;padding:.3rem .75rem;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Inter','DM Sans',sans-serif}
+
+/* SCHEDULE VIEW */
+.schedule-settings{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1.25rem}
+.schedule-section{margin-bottom:1.5rem}
+.schedule-section-title{font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:1px;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
+.day-toggle-group{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.75rem}
+.day-toggle{padding:.4rem .65rem;border:1px solid var(--border);border-radius:6px;background:var(--card2);color:var(--gray);font-size:12px;font-weight:600;cursor:pointer;transition:.15s;min-height:36px}
+.day-toggle:hover{border-color:var(--gold);color:var(--white)}
+.day-toggle.active{background:var(--gold);color:var(--black);border-color:var(--gold)}
+.time-input-group{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin-bottom:.75rem}
+.time-input-group label{font-size:11px;color:var(--gray);min-width:80px}
+.time-select{padding:.4rem .65rem;background:#1e1e1e;border:1px solid var(--border);border-radius:6px;color:var(--white);font-size:12px;outline:none;font-family:'Inter','DM Sans',sans-serif;cursor:pointer}
+.time-select:focus{border-color:var(--gold)}
+.slot-settings-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.75rem;margin-bottom:1rem}
+.closure-list{background:var(--card2);border-radius:8px;padding:.75rem}
+.closure-item{display:flex;align-items:center;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid var(--border);font-size:12px}
+.closure-item:last-child{border-bottom:none}
+.closure-item button{padding:.2rem .5rem;background:transparent;border:1px solid rgba(239,68,68,0.3);color:var(--red);border-radius:4px;font-size:10px;cursor:pointer;font-weight:600}
+.week-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;gap:1rem}
+.week-nav button{padding:.4rem .8rem;background:var(--card2);border:1px solid var(--border);border-radius:6px;color:var(--white);font-size:12px;cursor:pointer;font-weight:600}
+.week-nav button:hover{border-color:var(--gold)}
+.week-display{text-align:center;font-size:13px;color:var(--gray);flex:1}
+.slot-grid{width:100%;border-collapse:collapse;font-size:11px}
+.slot-grid th{padding:.5rem;background:var(--card2);border:1px solid var(--border);font-weight:700;color:var(--gold);text-align:center}
+.slot-grid td{padding:.4rem;border:1px solid var(--border);text-align:center;font-size:11px;cursor:pointer;transition:.15s}
+.slot-grid td:hover{background:rgba(245,166,35,0.1)}
+.slot-booked{background:rgba(245,166,35,0.15);color:var(--gold);font-weight:600}
+.slot-open{background:rgba(100,150,100,0.1);color:#70d870}
+.slot-blocked{background:rgba(239,68,68,0.15);color:var(--red);font-weight:600}
+.slot-held{background:rgba(249,115,22,0.15);color:var(--orange)}
+
+/* KANBAN BOARD */
+.kanban-container{display:flex;gap:1rem;overflow-x:auto;padding:.5rem;margin-bottom:1.25rem}
+.kanban-col{background:var(--card);border:1px solid var(--border);border-radius:10px;min-width:280px;display:flex;flex-direction:column;flex-shrink:0}
+.kanban-header{padding:1rem;background:var(--card2);border-bottom:1px solid var(--border);font-weight:700;color:var(--gold);font-size:12px;text-transform:uppercase;letter-spacing:.5px}
+.kanban-list{padding:.5rem;flex:1;display:flex;flex-direction:column;gap:.5rem;min-height:300px}
+.job-card{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:.75rem;cursor:pointer;transition:.15s}
+.job-card:hover{border-color:var(--gold);background:rgba(245,166,35,0.05)}
+.job-card-name{font-weight:600;font-size:12px;color:var(--white);margin-bottom:.35rem}
+.job-card-addr{font-size:10px;color:var(--gray);margin-bottom:.35rem;word-break:break-word}
+.job-card-meta{font-size:10px;color:var(--muted);display:flex;justify-content:space-between;flex-wrap:wrap}
+
+/* INTEL VIEW */
+.intel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem}
+.intel-updated{font-size:12px;color:var(--gray)}
+.zip-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:1rem;margin-bottom:2rem}
+.zip-card{background:var(--card2);border:2px solid var(--border);border-radius:10px;padding:1rem;cursor:pointer;transition:.15s;text-align:center}
+.zip-card:hover{border-color:var(--gold)}
+.zip-card.hot{background:rgba(245,166,35,0.1);border-color:var(--gold);box-shadow:0 0 12px rgba(245,166,35,0.2)}
+.zip-card.good{background:rgba(34,197,94,0.1);border-color:var(--green)}
+.zip-card.avg{background:rgba(100,100,100,0.1);border-color:#666}
+.zip-code{font-size:16px;font-weight:700;color:var(--gold);margin-bottom:.5rem}
+.zip-score{font-size:12px;color:var(--white);margin-bottom:.35rem}
+.zip-signal{font-size:10px;color:var(--gray);line-height:1.4}
+.zip-expanded{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1rem}
+.zip-expanded-title{font-weight:700;color:var(--gold);margin-bottom:.75rem}
+.signal-item{padding:.5rem 0;border-bottom:1px solid var(--border);font-size:11px}
+.signal-item:last-child{border-bottom:none}
+.signal-label{color:var(--gray)}
+
+/* TERRITORY ASSIGNMENTS */
+.assignments-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1.25rem}
+.assignments-title{font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:1px;margin-bottom:1rem}
+.assignment-item{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:.75rem;display:flex;justify-content:space-between;align-items:flex-start;gap:1rem}
+.assignment-rep-name{font-weight:700;font-size:13px;margin-bottom:.5rem}
+.assignment-territory{font-size:12px;color:var(--gold);margin-bottom:.35rem}
+.assignment-reasoning{font-size:11px;color:var(--gray);line-height:1.5;margin-bottom:.75rem}
+.assignment-actions{display:flex;gap:.5rem;flex-wrap:wrap}
+</style>
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div class="auth-screen visible" id="auth-screen">
+  <div id="recaptcha-container"></div>
+  <div class="auth-box">
+    <div class="auth-logo"><div class="auth-logo-icon">⚙️</div><div class="auth-logo-text">TRASH<span>APP</span> ADMIN</div></div>
+    <p style="font-size:13px;color:var(--gray);margin-bottom:1.25rem;text-align:center">Admin access only. Your phone will be verified.</p>
+    <div id="admin-step1">
+      <label class="auth-label">Admin phone number</label>
+      <input class="auth-input" id="admin-phone" type="tel" placeholder="+1 (909) 000-0000">
+      <button class="auth-btn" id="admin-otp-btn" onclick="sendAdminOTP()">Send Code →</button>
+      <div class="auth-err" id="admin-err"></div>
+    </div>
+    <div id="admin-step2" style="display:none">
+      <p class="otp-hint">Enter the 6-digit code sent to your phone</p>
+      <input class="auth-input" id="admin-code" type="number" placeholder="000000">
+      <button class="auth-btn" id="admin-verify-btn" onclick="verifyAdminOTP()">Verify →</button>
+      <div class="auth-err" id="admin-err2"></div>
+      <button onclick="resetAdminAuth()" style="width:100%;margin-top:.5rem;padding:.5rem;background:transparent;color:var(--gray);border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;font-family:'Inter','DM Sans',sans-serif">← Try again / Resend code</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN ADMIN APP -->
+<div class="shell" id="admin-shell" style="display:none">
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-top">
+      <div class="sidebar-logo">
+        <div class="logo-icon">⚙️</div>
+        <div class="logo-text">TRASH<span>APP</span></div>
+      </div>
+      <span class="admin-badge">ADMIN CONSOLE</span>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-section-label">OPERATIONS</div>
+      <button class="nav-btn active" id="snav-overview" onclick="showView('overview')"><span class="nav-icon">📊</span> Overview</button>
+      <button class="nav-btn" id="snav-reps" onclick="showView('reps')"><span class="nav-icon">👥</span> Rep Management</button>
+      <button class="nav-btn" id="snav-live" onclick="showView('live')"><span class="nav-icon">🟢</span> Live Activity</button>
+
+      <div class="nav-section-label">CONTENT</div>
+      <button class="nav-btn" id="snav-scripts" onclick="showView('scripts')"><span class="nav-icon">📝</span> Script Manager</button>
+      <button class="nav-btn" id="snav-doors" onclick="showView('doors')"><span class="nav-icon">🚪</span> Door Logs</button>
+
+      <div class="nav-section-label">ANALYTICS</div>
+      <button class="nav-btn" id="snav-analytics" onclick="showView('analytics')"><span class="nav-icon">📈</span> Analytics</button>
+      <button class="nav-btn" id="snav-intel" onclick="showView('intel')"><span class="nav-icon">🔍</span> Intel</button>
+      <button class="nav-btn" id="snav-territories" onclick="showView('territories')"><span class="nav-icon">🗺️</span> Territories</button>
+
+      <div class="nav-section-label">COMMS</div>
+      <button class="nav-btn" id="snav-broadcast" onclick="showView('broadcast')"><span class="nav-icon">📢</span> Broadcasts</button>
+      <button class="nav-btn" id="snav-social" onclick="showView('social')"><span class="nav-icon">📱</span> Social Media</button>
+
+      <div class="nav-section-label">DISPATCH</div>
+      <button class="nav-btn" id="snav-schedule" onclick="showView('schedule')"><span class="nav-icon">📅</span> Schedule</button>
+      <button class="nav-btn" id="snav-jobs" onclick="showView('jobs')"><span class="nav-icon">📋</span> Jobs</button>
+      <button class="nav-btn" id="snav-fulfillment" onclick="showView('fulfillment')"><span class="nav-icon">🚛</span> Fulfillment</button>
+      <button class="nav-btn" id="snav-review" onclick="showView('review')"><span class="nav-icon">🔍</span> Review Queue</button>
+
+      <div class="nav-section-label">FINANCE</div>
+      <button class="nav-btn" id="snav-payouts" onclick="showView('payouts')"><span class="nav-icon">💰</span> Payouts</button>
+      <button class="nav-btn" id="snav-financials" onclick="showView('financials')"><span class="nav-icon">💵</span> Financials</button>
+
+      <div class="nav-section-label">AI</div>
+      <button class="nav-btn" id="snav-aios" onclick="showView('aios')"><span class="nav-icon">🧠</span> AI OS</button>
+
+      <div class="nav-section-label">SYSTEM</div>
+      <button class="nav-btn" id="snav-crews" onclick="showView('crews')"><span class="nav-icon">👷</span> Crews</button>
+      <button class="nav-btn" id="snav-health" onclick="showView('health')"><span class="nav-icon">🩺</span> System Health</button>
+    </div>
+    <div class="sidebar-bottom">
+      <button class="btn-signout" onclick="adminSignOut()">Sign Out</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <button class="hamburger-btn" onclick="toggleSidebar()">☰</button>
+      <div class="topbar-title" id="topbar-title">Overview</div>
+      <div class="topbar-right">
+        <a href="https://flourishing-hotteok-596592.netlify.app" target="_blank" style="color:var(--gold);text-decoration:none;font-size:12px;font-weight:600">View Rep Platform →</a>
+        <span style="color:var(--border)">|</span>
+        <a href="#" onclick="showView('crews');return false;" style="color:var(--blue);text-decoration:none;font-size:12px;font-weight:600">Crew Dashboard →</a>
+        <span style="color:var(--border)">|</span>
+        <div class="live-dot"></div>
+        <span id="active-rep-count">0 reps active</span>
+        <span style="color:var(--border)">|</span>
+        <span id="admin-user-name" style="color:var(--white);font-weight:600">Admin</span>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- OVERVIEW -->
+      <div class="view active" id="view-overview">
+        <div class="stats-row">
+          <div class="stat-card"><div class="stat-val" id="ov-reps">0</div><div class="stat-label">Total Reps</div></div>
+          <div class="stat-card"><div class="stat-val" id="ov-active">0</div><div class="stat-label">Active Today</div></div>
+          <div class="stat-card"><div class="stat-val" id="ov-doors">0</div><div class="stat-label">Doors Today</div></div>
+          <div class="stat-card"><div class="stat-val" id="ov-deals">0</div><div class="stat-label">Deals Today</div></div>
+          <div class="stat-card"><div class="stat-val" id="ov-pending">0</div><div class="stat-label">Pending Approval</div></div>
+          <div class="stat-card"><div class="stat-val" id="ov-today-est" style="color:var(--green)">$0</div><div class="stat-label">Est. Today</div></div>
+        </div>
+
+        <div class="quick-actions">
+          <button class="btn-primary" onclick="approveAllPending()">✓ Approve All Pending</button>
+          <button class="btn-primary" onclick="showView('broadcast')">📢 Send Broadcast</button>
+          <button class="btn-primary" onclick="showView('live')">🗺️ View Live Map</button>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Today's Leaderboard</div>
+          <div id="ov-leaderboard"><div class="skeleton-card"><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line short"></div></div><div class="skeleton-card"><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line short"></div></div></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Pending Approvals</div>
+          <div id="ov-pending-list"><div class="skeleton-card"><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line short"></div></div></div>
+        </div>
+        <div class="card" style="background:linear-gradient(135deg,rgba(34,197,94,0.06),rgba(34,197,94,0.02));border-color:rgba(34,197,94,0.2)">
+          <div class="card-title" style="color:var(--green)">📈 Revenue Forecast</div>
+          <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap">
+            <div><div style="font-size:28px;font-weight:900;color:var(--green)" id="ov-forecast">$0</div><div style="font-size:11px;color:var(--gray)">Projected this week</div></div>
+            <div><div style="font-size:18px;font-weight:700;color:var(--gold)" id="ov-forecast-jobs">0</div><div style="font-size:11px;color:var(--gray)">Jobs in pipeline</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- REP MANAGEMENT -->
+      <div class="view" id="view-reps">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-header-title">All Reps</div>
+            <button class="btn-primary" onclick="loadReps()">↻ Refresh</button>
+          </div>
+          <div class="retry-banner" id="retry-reps"><span class="retry-msg">Reps failed to load</span><button class="retry-btn" onclick="document.getElementById('retry-reps').classList.remove('visible');loadReps()">Retry</button></div>
+          <div class="table-wrapper">
+            <table class="rep-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Phone</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                  <th>Zip</th>
+                  <th>Commission</th>
+                  <th>Stats</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="rep-table-body"><tr><td colspan="8"><div class="skeleton skeleton-row" style="width:100%"></div><div class="skeleton skeleton-row" style="width:100%"></div><div class="skeleton skeleton-row" style="width:95%"></div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- LIVE ACTIVITY -->
+      <div class="view" id="view-live">
+        <div style="display:grid;grid-template-columns:1fr 340px;gap:1rem">
+          <div>
+            <div class="card" style="padding:0;overflow:hidden">
+              <div id="admin-map"></div>
+            </div>
+          </div>
+          <div>
+            <div class="card">
+              <div class="card-title">Active Reps</div>
+              <div id="live-reps-list"><div class="empty">No reps active</div></div>
+            </div>
+            <div class="card">
+              <div class="card-title">Recent Door Logs</div>
+              <div id="live-recent-doors"><div class="empty">No recent activity</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCRIPT MANAGER -->
+      <div class="view" id="view-scripts">
+        <div class="add-form">
+          <div class="add-form-title">Push New Script to All Reps</div>
+          <input class="form-input" id="script-title" placeholder="Script title (e.g. Cold Open, Price Objection)">
+          <textarea class="form-input" id="script-body" rows="4" placeholder="Write the script text here..."></textarea>
+          <button class="btn-primary" onclick="publishScript()">📤 Publish to All Reps</button>
+        </div>
+        <div class="card">
+          <div class="card-title">Published Admin Scripts</div>
+          <div id="admin-scripts-list"><div class="skeleton-card"><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line short"></div></div></div>
+        </div>
+      </div>
+
+      <!-- DOOR LOGS -->
+      <div class="view" id="view-doors">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-header-title">All Door Logs</div>
+            <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+              <select class="inline-input" id="door-filter-rep" onchange="loadDoorLogs()">
+                <option value="">All Reps</option>
+              </select>
+              <select class="inline-input" id="door-filter-status" onchange="loadDoorLogs()">
+                <option value="">All Statuses</option>
+                <option value="quote_given">Quote Given</option>
+                <option value="pending_dispatch">Pending Dispatch</option>
+                <option value="deal_closed">Deal Closed</option>
+                <option value="follow_up">Follow Up</option>
+                <option value="come_back">Come Back</option>
+                <option value="not_home">Not Home</option>
+                <option value="no_junk">No Junk</option>
+                <option value="no_answer">No Answer</option>
+              </select>
+              <button class="btn-primary" onclick="exportDoorLogsCSV()">📥 Export CSV</button>
+            </div>
+          </div>
+          <div class="retry-banner" id="retry-doors"><span class="retry-msg">Door logs failed to load</span><button class="retry-btn" onclick="document.getElementById('retry-doors').classList.remove('visible');loadDoorLogs()">Retry</button></div>
+          <div id="door-logs-table"><div class="skeleton skeleton-row" style="width:100%"></div><div class="skeleton skeleton-row" style="width:100%"></div><div class="skeleton skeleton-row" style="width:95%"></div></div>
+        </div>
+      </div>
+
+      <!-- ANALYTICS -->
+      <div class="view" id="view-analytics">
+        <!-- Date range controls -->
+        <div class="card" style="margin-bottom:1rem">
+          <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap">
+            <div style="font-size:13px;font-weight:700;color:var(--gold)">📈 Analytics</div>
+            <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+              <button class="analytics-preset active" id="preset-today" onclick="setPreset('today')">Today</button>
+              <button class="analytics-preset" id="preset-week" onclick="setPreset('week')">This Week</button>
+              <button class="analytics-preset" id="preset-month" onclick="setPreset('month')">This Month</button>
+              <button class="analytics-preset" id="preset-custom" onclick="setPreset('custom')">Custom</button>
+            </div>
+            <button class="analytics-preset" id="toggle-chart-view" onclick="toggleChartView()" style="margin-left:auto">📊 Chart View</button>
+          </div>
+          <div style="display:flex;gap:.5rem;margin-top:1rem;flex-wrap:wrap" id="custom-range" style="display:none">
+            <input type="date" id="custom-start" class="admin-input" style="flex:1;min-width:120px">
+            <input type="date" id="custom-end" class="admin-input" style="flex:1;min-width:120px">
+            <button class="btn-primary" onclick="setCustomRange()">Apply Range</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Rep Performance</div>
+          <div id="analytics-table-container">
+            <div class="table-wrapper">
+              <table class="data-table" id="analytics-table">
+                <thead>
+                  <tr><th>Rep Name</th><th>Doors Knocked</th><th>Deals Closed</th><th>Conversion %</th><th>Avg Deal</th></tr>
+                </thead>
+                <tbody id="analytics-body"><tr><td colspan="5"><div class="skeleton skeleton-row"></div></td></tr></tbody>
+              </table>
+            </div>
+          </div>
+          <div id="analytics-chart-container" style="display:none"></div>
+        </div>
+      </div>
+
+      <!-- SCHEDULE -->
+      <div class="view" id="view-schedule">
+        <div class="schedule-settings">
+          <div class="schedule-section">
+            <div class="schedule-section-title">Operating Days</div>
+            <div class="day-toggle-group" id="schedule-day-toggles">
+              <button class="day-toggle" data-day="MON" onclick="toggleScheduleDay('MON')">Mon</button>
+              <button class="day-toggle" data-day="TUE" onclick="toggleScheduleDay('TUE')">Tue</button>
+              <button class="day-toggle" data-day="WED" onclick="toggleScheduleDay('WED')">Wed</button>
+              <button class="day-toggle" data-day="THU" onclick="toggleScheduleDay('THU')">Thu</button>
+              <button class="day-toggle" data-day="FRI" onclick="toggleScheduleDay('FRI')">Fri</button>
+              <button class="day-toggle" data-day="SAT" onclick="toggleScheduleDay('SAT')">Sat</button>
+              <button class="day-toggle" data-day="SUN" onclick="toggleScheduleDay('SUN')">Sun</button>
+            </div>
+          </div>
+
+          <div class="schedule-section">
+            <div class="schedule-section-title">Default Hours</div>
+            <div class="time-input-group">
+              <label>Start:</label>
+              <select class="time-select" id="schedule-default-start">
+                <option value="06:00">6:00 AM</option>
+                <option value="07:00" selected>7:00 AM</option>
+                <option value="08:00">8:00 AM</option>
+                <option value="09:00">9:00 AM</option>
+              </select>
+              <label>End:</label>
+              <select class="time-select" id="schedule-default-end">
+                <option value="17:00">5:00 PM</option>
+                <option value="18:00">6:00 PM</option>
+                <option value="19:00">7:00 PM</option>
+                <option value="20:00" selected>8:00 PM</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="schedule-section">
+            <div class="schedule-section-title">Slot Settings</div>
+            <div class="slot-settings-row">
+              <div>
+                <label class="form-input" style="display:block;margin-bottom:.25rem;font-size:11px;color:var(--gray);text-transform:uppercase">Slot Duration</label>
+                <select class="time-select" id="schedule-slot-duration">
+                  <option value="60">1 hour</option>
+                  <option value="90" selected>1.5 hours</option>
+                  <option value="120">2 hours</option>
+                  <option value="180">3 hours</option>
+                  <option value="240">4 hours</option>
+                </select>
+              </div>
+              <div>
+                <label class="form-input" style="display:block;margin-bottom:.25rem;font-size:11px;color:var(--gray);text-transform:uppercase">Max Jobs/Slot</label>
+                <select class="time-select" id="schedule-max-jobs">
+                  <option value="1" selected>1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                </select>
+              </div>
+              <div>
+                <label class="form-input" style="display:block;margin-bottom:.25rem;font-size:11px;color:var(--gray);text-transform:uppercase">Min Notice</label>
+                <select class="time-select" id="schedule-min-notice">
+                  <option value="30">30 min</option>
+                  <option value="60" selected>1 hour</option>
+                  <option value="120">2 hours</option>
+                  <option value="240">4 hours</option>
+                  <option value="1440">24 hours</option>
+                </select>
+              </div>
+              <div>
+                <label class="form-input" style="display:block;margin-bottom:.25rem;font-size:11px;color:var(--gray);text-transform:uppercase">Book Up To</label>
+                <select class="time-select" id="schedule-book-days">
+                  <option value="7">7 days</option>
+                  <option value="14" selected>14 days</option>
+                  <option value="21">21 days</option>
+                  <option value="30">30 days</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="schedule-section">
+            <div class="schedule-section-title">Quick Holidays</div>
+            <div style="display:flex;gap:.5rem;margin-bottom:.75rem;flex-wrap:wrap">
+              <button class="btn-secondary" onclick="addHoliday('2026-12-25')">+ Christmas</button>
+              <button class="btn-secondary" onclick="addHoliday('2026-01-01')">+ New Year</button>
+              <button class="btn-secondary" onclick="addHoliday('2026-07-04')">+ July 4th</button>
+              <button class="btn-secondary" onclick="addHoliday('2026-11-27')">+ Thanksgiving</button>
+            </div>
+            <div class="closure-list" id="schedule-closures"><div style="color:var(--gray);font-size:11px;padding:.5rem">No closures scheduled</div></div>
+          </div>
+
+          <button class="btn-primary" onclick="saveScheduleConfig()">💾 Save Schedule Settings</button>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Week View Grid</div>
+          <div class="week-nav">
+            <button onclick="scheduleNavigateWeek(-1)">← Prev Week</button>
+            <div class="week-display" id="schedule-week-display">Week of Apr 14, 2026</div>
+            <button onclick="scheduleNavigateWeek(1)">Next Week →</button>
+          </div>
+          <div style="overflow-x:auto">
+            <table class="slot-grid" id="schedule-slot-grid">
+              <thead id="schedule-grid-head"></thead>
+              <tbody id="schedule-grid-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- INTEL -->
+      <div class="view" id="view-intel">
+        <div class="intel-header">
+          <div>
+            <div class="intel-updated" id="intel-updated-time">Last updated: —</div>
+          </div>
+          <button class="btn-primary" onclick="refreshIntel()">🔄 Refresh Intel</button>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Zip Code Opportunities</div>
+          <div class="zip-grid" id="intel-zip-grid"><div class="empty">Loading zip code data...</div></div>
+        </div>
+
+        <div class="assignments-card">
+          <div class="assignments-title">Territory Assignments - Week of Apr 14</div>
+          <div id="intel-assignments"><div class="empty">Loading territory assignments...</div></div>
+          <button class="btn-primary" style="margin-top:1rem;width:100%" onclick="approveAllAssignments()">✓ Approve All</button>
+        </div>
+      </div>
+
+      <!-- TERRITORIES -->
+      <div class="view" id="view-territories">
+        <div class="card">
+          <div class="card-title">Service Territories</div>
+          <div id="territories-list"><div class="skeleton-card"><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line short"></div></div></div>
+        </div>
+      </div>
+
+      <!-- BROADCASTS -->
+      <div class="view" id="view-broadcast">
+        <div class="add-form">
+          <div class="add-form-title">Send New Broadcast</div>
+          <input class="form-input" id="broadcast-title" placeholder="Broadcast title">
+          <textarea class="form-input" id="broadcast-msg" rows="3" placeholder="Message to all reps..."></textarea>
+          <button class="btn-primary" onclick="sendBroadcast()">📤 Send to All Reps</button>
+        </div>
+        <div class="card">
+          <div class="card-title">Broadcast History</div>
+          <div class="retry-banner" id="retry-broadcasts"><span class="retry-msg">Broadcasts failed to load</span><button class="retry-btn" onclick="document.getElementById('retry-broadcasts').classList.remove('visible');loadBroadcasts()">Retry</button></div>
+          <div id="broadcasts-list"><div class="empty">📢 No broadcasts sent yet</div></div>
+        </div>
+      </div>
+
+      <!-- JOBS -->
+      <div class="view" id="view-jobs">
+        <div style="display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap">
+          <button class="filter-btn active" onclick="filterJobs('ALL')">All</button>
+          <button class="filter-btn" onclick="filterJobs('PENDING_DISPATCH')">Pending Dispatch</button>
+          <button class="filter-btn" onclick="filterJobs('QUOTE_SENT')">Quote Sent</button>
+          <button class="filter-btn" onclick="filterJobs('CUSTOMER_ACCEPTED')">Accepted</button>
+          <button class="filter-btn" onclick="filterJobs('SCHEDULED')">Scheduled</button>
+          <button class="filter-btn" onclick="filterJobs('DEAL_CLOSED')">Deal Closed</button>
+        </div>
+        <!-- Dispatch Queue -->
+        <div class="card" id="dispatch-queue-card" style="border-color:rgba(245,166,35,0.3);background:linear-gradient(135deg,rgba(245,166,35,0.04),transparent);display:none">
+          <div class="card-title" style="color:var(--gold)">🚚 Dispatch Queue</div>
+          <div style="font-size:11px;color:var(--gray);margin-bottom:.75rem">Pending Dispatch jobs — oldest unverified first. Review and send to AI Dispatch.</div>
+          <div class="table-wrapper">
+            <table class="data-table" style="width:100%">
+              <thead><tr><th>Customer</th><th>Address</th><th>Rep</th><th>Est. Revenue</th><th>Pickup Date</th><th>Created</th><th>Action</th></tr></thead>
+              <tbody id="dispatch-queue-body"><tr><td colspan="7" class="empty">No pending dispatch jobs</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Job Board</div>
+          <div class="retry-banner" id="retry-jobs"><span class="retry-msg">Jobs failed to load</span><button class="retry-btn" onclick="document.getElementById('retry-jobs').classList.remove('visible');loadJobsKanban()">Retry</button></div>
+          <div class="table-wrapper">
+            <table class="data-table" style="width:100%">
+              <thead><tr><th>Customer</th><th>Address</th><th>Status</th><th>Rep</th><th>Est. Rev</th><th>Actual Rev</th><th>Commission</th><th>Created</th><th>Actions</th></tr></thead>
+              <tbody id="jobs-table-body"><tr><td colspan="9"><div class="skeleton skeleton-row"></div><div class="skeleton skeleton-row"></div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAYOUTS -->
+      <div class="view" id="view-payouts">
+        <div class="stats-row" style="grid-template-columns:repeat(3,1fr);margin-bottom:1.25rem">
+          <div class="stat-card"><div class="stat-val" id="pay-pending">$0</div><div class="stat-label">Pending</div></div>
+          <div class="stat-card"><div class="stat-val" id="pay-approved" style="color:var(--gold)">$0</div><div class="stat-label">Approved</div></div>
+          <div class="stat-card"><div class="stat-val" id="pay-paid" style="color:var(--green)">$0</div><div class="stat-label">Paid</div></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Commission Log</div>
+          <div class="table-wrapper">
+            <table class="data-table" style="width:100%">
+              <thead><tr><th>Rep</th><th>Job</th><th>Amount</th><th>Type</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
+              <tbody id="payouts-table-body"><tr><td colspan="7"><div class="skeleton skeleton-row"></div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- FULFILLMENT -->
+      <div class="view" id="view-fulfillment">
+        <div class="card-title" style="margin-bottom:.5rem">Job Map</div>
+        <div id="fulfillment-map"></div>
+        <div style="display:flex;gap:1rem;margin-bottom:.75rem;font-size:11px;color:var(--gray);flex-wrap:wrap">
+          <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--gold);margin-right:4px"></span>Pending Dispatch</span>
+          <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--blue);margin-right:4px"></span>Quote Sent</span>
+          <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--orange);margin-right:4px"></span>Customer Accepted</span>
+          <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--purple);margin-right:4px"></span>Scheduled</span>
+          <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);margin-right:4px"></span>Deal Closed</span>
+        </div>
+        <div class="card-title" style="margin-bottom:1rem">Job Pipeline</div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:.75rem" id="fulfillment-board">
+          <div class="pipeline-col">
+            <div class="pipeline-header" style="background:var(--gold)">PENDING DISPATCH</div>
+            <div class="pipeline-list" id="pipe-pending_dispatch"></div>
+          </div>
+          <div class="pipeline-col">
+            <div class="pipeline-header" style="background:var(--blue)">QUOTE SENT</div>
+            <div class="pipeline-list" id="pipe-quote_sent"></div>
+          </div>
+          <div class="pipeline-col">
+            <div class="pipeline-header" style="background:var(--orange)">CUSTOMER ACCEPTED</div>
+            <div class="pipeline-list" id="pipe-customer_accepted"></div>
+          </div>
+          <div class="pipeline-col">
+            <div class="pipeline-header" style="background:var(--purple)">SCHEDULED</div>
+            <div class="pipeline-list" id="pipe-scheduled"></div>
+          </div>
+          <div class="pipeline-col">
+            <div class="pipeline-header" style="background:var(--green)">DEAL CLOSED</div>
+            <div class="pipeline-list" id="pipe-deal_closed"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FINANCIALS -->
+      <div class="view" id="view-financials">
+        <div class="stats-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:1.25rem">
+          <div class="stat-card"><div class="stat-val" id="fin-revenue">$0</div><div class="stat-label">Gross Revenue</div></div>
+          <div class="stat-card"><div class="stat-val" id="fin-commissions" style="color:var(--gold)">$0</div><div class="stat-label">Commissions</div></div>
+          <div class="stat-card"><div class="stat-val" id="fin-crew" style="color:var(--orange)">$0</div><div class="stat-label">Crew Wages</div></div>
+          <div class="stat-card"><div class="stat-val" id="fin-profit" style="color:var(--green)">$0</div><div class="stat-label">Net Profit</div></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Daily Financials</div>
+          <div class="table-wrapper">
+            <table class="data-table" style="width:100%">
+              <thead><tr><th>Date</th><th>Revenue</th><th>Commissions</th><th>Crew</th><th>Expenses</th><th>Net</th><th>Jobs</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody id="financials-table-body"><tr><td colspan="9"><div class="skeleton skeleton-row"></div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- CREWS -->
+      <div class="view" id="view-crews">
+        <div class="card" style="max-width:560px;margin-bottom:1rem">
+          <div class="card-title">Add Crew</div>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+            <input class="admin-input" id="crew-name" placeholder="Crew name" style="flex:1">
+            <input class="admin-input" id="crew-phone" placeholder="Phone" style="flex:1">
+            <input class="admin-input" id="crew-rate" placeholder="Hourly rate" type="number" style="width:100px">
+            <input class="admin-input" id="crew-zones" placeholder="Zones (comma separated)" style="flex:1">
+            <button class="btn-primary" onclick="addCrew()">Add Crew</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Active Crews</div>
+          <div class="table-wrapper">
+            <table class="data-table" style="width:100%">
+              <thead><tr><th>Name</th><th>Phone</th><th>Rate</th><th>Zones</th><th>Status</th><th>Jobs Done</th><th>Hours/Week</th><th>Actions</th></tr></thead>
+              <tbody id="crews-table-body"><tr><td colspan="8"><div class="skeleton skeleton-row"></div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- REVIEW QUEUE -->
+      <div class="view" id="view-review">
+        <div class="bulk-review-toolbar" id="bulk-toolbar">
+          <input class="admin-input" id="bulk-confirm-price" placeholder="Confirmed price (applies to all selected)" type="number">
+          <button class="btn-primary" onclick="bulkSendReviewed()">✓ Bulk Send Selected</button>
+          <button class="btn-primary" style="background:rgba(239,68,68,0.1);color:var(--red)" onclick="clearReviewSelection()">✕ Clear Selection</button>
+        </div>
+        <div class="card">
+          <div class="card-title">AI Quote Review Queue</div>
+          <p style="font-size:13px;color:var(--gray);margin-bottom:1rem">Low-confidence AI quotes flagged for manual review. Select quotes and enter a confirmed price to approve.</p>
+          <div id="review-queue-list"><div class="empty">No quotes pending review</div></div>
+        </div>
+      </div>
+
+      <!-- SYSTEM HEALTH -->
+      <div class="view" id="view-health">
+        <div class="stats-row" style="grid-template-columns:repeat(3,1fr);margin-bottom:1.25rem">
+          <div class="stat-card"><div class="stat-val" id="health-success" style="color:var(--green)">0</div><div class="stat-label">Successes (24h)</div></div>
+          <div class="stat-card"><div class="stat-val" id="health-errors" style="color:var(--red)">0</div><div class="stat-label">Errors (24h)</div></div>
+          <div class="stat-card"><div class="stat-val" id="health-partial" style="color:var(--orange)">0</div><div class="stat-label">Partial (24h)</div></div>
+        </div>
+        <div class="card">
+          <div class="card-title">System Logs (Real-time)</div>
+          <div id="health-log-list" style="max-height:500px;overflow-y:auto;display:flex;flex-direction:column;gap:6px"><div class="empty" style="color:var(--gray)">Connecting to system logs...</div></div>
+        </div>
+      </div>
+
+      <div class="view" id="view-social">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-header-title">Connected Accounts</div>
+            <div class="social-inline-stack">
+              <input class="form-input social-backend-input" id="social-backend-base" placeholder="http://localhost:3000" style="margin:0">
+              <button class="btn-ghost" onclick="loadSocialConnections()">Refresh Connections</button>
+            </div>
+          </div>
+          <div class="social-note" style="margin-bottom:1rem">
+            This checks the local Mastermind social connector. Once app credentials are added there, these cards become the handoff point for real OAuth and scheduled publishing.
+          </div>
+          <div id="social-connection-grid" class="social-connection-grid">
+            <div class="social-empty">Checking provider status...</div>
+          </div>
+        </div>
+
+        <div class="stats-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:1.25rem">
+          <div class="stat-card"><div class="stat-val" id="social-stat-drafts">0</div><div class="stat-label">Drafts</div></div>
+          <div class="stat-card"><div class="stat-val" id="social-stat-scheduled">0</div><div class="stat-label">Scheduled</div></div>
+          <div class="stat-card"><div class="stat-val" id="social-stat-today">0</div><div class="stat-label">Due Today</div></div>
+          <div class="stat-card"><div class="stat-val" id="social-stat-posted">0</div><div class="stat-label">Posted This Month</div></div>
+        </div>
+
+        <div class="social-shell">
+          <div class="social-stack">
+            <div class="card">
+              <div class="card-header">
+                <div class="card-header-title">Social Publisher</div>
+                <div class="social-meta-row">
+                  <span class="social-chip manual">Admin Workflow</span>
+                  <span class="social-chip scheduled" id="social-editor-state">New Post</span>
+                </div>
+              </div>
+              <div class="social-note" style="margin-bottom:1rem">
+                Build the post once, generate channel-specific captions, and keep the full schedule in one place. This sets up the exact workflow we can later connect to direct Meta, X, TikTok, LinkedIn, and Google Business publishing.
+              </div>
+
+              <div class="social-form-grid">
+                <div>
+                  <label class="social-section-label" for="social-title">Campaign Or Post Title</label>
+                  <input class="form-input" id="social-title" placeholder="Spring garage cleanout push">
+                </div>
+                <div>
+                  <label class="social-section-label" for="social-content-type">Content Type</label>
+                  <select class="form-input" id="social-content-type">
+                    <option value="before_after">Before / After</option>
+                    <option value="promo">Offer / Promo</option>
+                    <option value="testimonial">Testimonial</option>
+                    <option value="educational">Educational Tip</option>
+                    <option value="crew_highlight">Crew Highlight</option>
+                    <option value="ugc">Customer Story</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="social-section-label" for="social-angle">Main Message</label>
+                  <input class="form-input" id="social-angle" placeholder="Fast same-day garage cleanouts without the stress">
+                </div>
+                <div>
+                  <label class="social-section-label" for="social-goal">Goal</label>
+                  <select class="form-input" id="social-goal">
+                    <option value="lead_gen">Lead Generation</option>
+                    <option value="awareness">Brand Awareness</option>
+                    <option value="retargeting">Retarget Warm Leads</option>
+                    <option value="review_push">Review / Trust Push</option>
+                    <option value="seasonal_offer">Seasonal Offer</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="social-section-label" for="social-offer">Offer Or Hook</label>
+                  <input class="form-input" id="social-offer" placeholder="Free quote in minutes, same-day pickup available">
+                </div>
+                <div>
+                  <label class="social-section-label" for="social-cta">Call To Action</label>
+                  <input class="form-input" id="social-cta" placeholder="DM us a photo or book your quote online">
+                </div>
+                <div>
+                  <label class="social-section-label" for="social-location">Location / Service Area</label>
+                  <input class="form-input" id="social-location" placeholder="Fresno, Clovis, and the Central Valley">
+                </div>
+                <div>
+                  <label class="social-section-label" for="social-schedule">Schedule Time</label>
+                  <input class="form-input" id="social-schedule" type="datetime-local">
+                </div>
+                <div>
+                  <label class="social-section-label" for="social-publish-mode">Publish Mode</label>
+                  <select class="form-input" id="social-publish-mode">
+                    <option value="MANUAL">Manual Approval</option>
+                    <option value="AUTO">Auto Publish When Connected</option>
+                  </select>
+                </div>
+                <div class="full">
+                  <label class="social-section-label" for="social-hashtags">Keywords / Hashtags</label>
+                  <input class="form-input" id="social-hashtags" placeholder="#JunkRemoval, #Fresno, #GarageCleanout, same day haul away">
+                </div>
+                <div class="full">
+                  <label class="social-section-label">Platforms</label>
+                  <div class="platform-grid">
+                    <label class="platform-opt"><input type="checkbox" id="social-platform-instagram" onchange="handleSocialPlatformChange()"><span><strong>Instagram</strong><small>Reels, feed, before/after visuals</small></span></label>
+                    <label class="platform-opt"><input type="checkbox" id="social-platform-facebook" onchange="handleSocialPlatformChange()"><span><strong>Facebook</strong><small>Neighborhood reach and comments</small></span></label>
+                    <label class="platform-opt"><input type="checkbox" id="social-platform-tiktok" onchange="handleSocialPlatformChange()"><span><strong>TikTok</strong><small>Fast hooks and transformation clips</small></span></label>
+                    <label class="platform-opt"><input type="checkbox" id="social-platform-x" onchange="handleSocialPlatformChange()"><span><strong>X</strong><small>Short-form promo and punchy updates</small></span></label>
+                    <label class="platform-opt"><input type="checkbox" id="social-platform-linkedin" onchange="handleSocialPlatformChange()"><span><strong>LinkedIn</strong><small>Operational wins and business credibility</small></span></label>
+                    <label class="platform-opt"><input type="checkbox" id="social-platform-google_business" onchange="handleSocialPlatformChange()"><span><strong>Google Business</strong><small>Local SEO and service-area updates</small></span></label>
+                  </div>
+                </div>
+                <div class="full">
+                  <label class="social-section-label" for="social-assets">Asset Links Or Shot Notes</label>
+                  <textarea class="form-input" id="social-assets" rows="3" placeholder="Paste drive links, photo notes, or shot list. One per line."></textarea>
+                </div>
+                <div class="full">
+                  <label class="social-section-label" for="social-notes">Internal Notes</label>
+                  <textarea class="form-input" id="social-notes" rows="3" placeholder="Crew footage, before/after angle, homeowner quote, promo expiration, etc."></textarea>
+                </div>
+              </div>
+
+              <div class="social-toolbar">
+                <button class="btn-secondary" onclick="generateSocialCaptions()">Generate Captions</button>
+                <button class="btn-primary" onclick="saveSocialPost('DRAFT')">Save Draft</button>
+                <button class="btn-primary" onclick="saveSocialPost('SCHEDULED')">Schedule Post</button>
+                <button class="btn-ghost" onclick="resetSocialComposer()">Reset</button>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <div class="card-header-title">Caption Variants</div>
+                <div class="social-toolbar" style="margin-top:0">
+                  <button class="social-mini-btn" onclick="copySocialBundle()">Copy All</button>
+                </div>
+              </div>
+              <div id="social-preview-list" class="social-preview-list">
+                <div class="social-empty">Select platforms and click Generate Captions to build channel-specific copy.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="social-stack">
+            <div class="card">
+              <div class="card-title">Upcoming Schedule</div>
+              <div id="social-upcoming-list"><div class="social-empty">No scheduled posts yet.</div></div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <div class="card-header-title">Content Queue</div>
+                <button class="btn-ghost" onclick="loadSocialPosts()">↻ Refresh</button>
+              </div>
+              <div class="retry-banner" id="retry-social"><span class="retry-msg">Social posts failed to load</span><button class="retry-btn" onclick="document.getElementById('retry-social').classList.remove('visible');loadSocialPosts()">Retry</button></div>
+              <div style="overflow-x:auto">
+                <table class="data-table" style="width:100%">
+                  <thead><tr><th>Post</th><th>Platforms</th><th>Schedule</th><th>Status</th><th>Updated</th><th>Actions</th></tr></thead>
+                  <tbody id="social-queue-body"><tr><td colspan="6"><div class="skeleton skeleton-row"></div></td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- JOB DETAIL PANEL -->
+<div class="job-panel-overlay" id="job-panel-overlay" onclick="closeJobDetail()"></div>
+<div class="job-detail-panel" id="job-detail-panel">
+  <div class="job-detail-header">
+    <div style="font-weight:700;color:var(--gold)">Job Details</div>
+    <button class="job-detail-close" onclick="closeJobDetail()">✕</button>
+  </div>
+  <div class="job-detail-content">
+    <div class="job-detail-section">
+      <div class="job-detail-label">Customer Name</div>
+      <div class="job-detail-value" id="job-detail-name">—</div>
+    </div>
+    <div class="job-detail-section">
+      <div class="job-detail-label">Phone</div>
+      <div class="job-detail-value" id="job-detail-phone">—</div>
+    </div>
+    <div class="job-detail-section">
+      <div class="job-detail-label">Email</div>
+      <div class="job-detail-value" id="job-detail-email">—</div>
+    </div>
+    <div class="job-detail-section">
+      <div class="job-detail-label">Address</div>
+      <div class="job-detail-value" id="job-detail-address">—</div>
+    </div>
+    <div class="job-detail-section">
+      <div class="job-detail-label">Status Timeline</div>
+      <div class="job-detail-timeline" id="job-detail-timeline">No timeline</div>
+    </div>
+    <div id="job-messages-section" style="margin-top:16px">
+      <h4 style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--gold);margin-bottom:8px">Messages</h4>
+      <div id="job-messages-list" style="max-height:200px;overflow-y:auto;margin-bottom:8px;background:var(--card);border-radius:8px;padding:8px"></div>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="job-reply-input" placeholder="Type a reply..." style="flex:1;padding:8px 12px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:13px;font-family:'Inter','DM Sans',sans-serif">
+        <button onclick="sendJobReply()" class="btn-primary" style="white-space:nowrap;margin:0">Send</button>
+      </div>
+    </div>
+    <div class="job-detail-actions">
+      <button class="btn-primary" onclick="jobDetailAction('paid')">✓ Mark Paid</button>
+      <button class="btn-primary" onclick="jobDetailAction('reassign')">↻ Reassign Crew</button>
+      <button class="btn-primary" style="background:rgba(239,68,68,0.1);color:var(--red)" onclick="jobDetailAction('cancel')">✕ Cancel Job</button>
+    </div>
+  </div>
+</div>
+
+      <!-- AI OS VIEW -->
+      <div class="view" id="view-aios">
+        <!-- Sub-tabs -->
+        <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap">
+          <button class="aios-tab active" onclick="showAIOSTab('agents')" id="aios-tab-agents">Agent Status</button>
+          <button class="aios-tab" onclick="showAIOSTab('approvals')" id="aios-tab-approvals">Pending Approvals <span id="aios-approval-count" class="aios-badge">0</span></button>
+          <button class="aios-tab" onclick="showAIOSTab('meeting')" id="aios-tab-meeting">Staff Meeting</button>
+          <button class="aios-tab" onclick="showAIOSTab('content')" id="aios-tab-content">Content Queue</button>
+        </div>
+
+        <!-- 6A: Agent Status Grid -->
+        <div id="aios-panel-agents" class="aios-panel">
+          <div class="card">
+            <div class="card-header"><div class="card-header-title">Agent Control Room</div><div style="font-size:11px;color:var(--gray)">Real-time agent status</div></div>
+            <div class="aios-grid" id="aios-agent-grid">
+              <div style="text-align:center;padding:2rem;color:var(--gray)">Loading agent states...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 6B: Pending Approvals -->
+        <div id="aios-panel-approvals" class="aios-panel" style="display:none">
+          <div class="card">
+            <div class="card-header"><div class="card-header-title">Pending Approvals</div></div>
+            <div id="aios-approvals-list">
+              <div style="text-align:center;padding:2rem;color:var(--gray)">No pending approvals</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 6C: Staff Meeting Chat -->
+        <div id="aios-panel-meeting" class="aios-panel" style="display:none">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-header-title">Weekly Staff Meeting <span id="aios-meeting-live" class="aios-live-badge" style="display:none">LIVE</span></div>
+              <select id="aios-meeting-select" onchange="loadMeetingWeek(this.value)" style="background:var(--card2);border:1px solid var(--border);color:var(--white);padding:6px 10px;border-radius:6px;font-size:12px;font-family:'Inter','DM Sans',sans-serif"></select>
+            </div>
+            <div id="aios-meeting-chat" class="aios-chat">
+              <div style="text-align:center;padding:2rem;color:var(--gray)">Select a meeting to view</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 6D: Content Queue -->
+        <div id="aios-panel-content" class="aios-panel" style="display:none">
+          <div class="card">
+            <div class="card-header"><div class="card-header-title">Content Queue</div></div>
+            <div id="aios-content-list">
+              <div style="text-align:center;padding:2rem;color:var(--gray)">No pending content</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { getAuth, RecaptchaVerifier, signInWithPhoneNumber, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+import { getFirestore, doc, setDoc, getDoc, collection, addDoc, onSnapshot, query, where, updateDoc, serverTimestamp, getDocs, deleteDoc, orderBy, limit, Timestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+const FB = {apiKey:"AIzaSyCtl7TaehqrgDCHhgNhOe5URh7YXfCzY8E",authDomain:"trashapp-reps.firebaseapp.com",projectId:"trashapp-reps",storageBucket:"trashapp-reps.firebasestorage.app",messagingSenderId:"146963908159",appId:"1:146963908159:web:d09090c0169186a45ada8a"};
+const app = initializeApp(FB);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const AVG_DEAL=350;
+
+// ── PHONE AUTH TEST MODE ──
+// Test phone numbers (must also be configured in Firebase Console → Authentication → Phone → Test numbers):
+// +15597744249 → 123456, +19096729370 → 000000
+if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+  auth.settings.appVerificationDisabledForTesting = true;
+  console.log('🔧 Phone auth test mode enabled (reCAPTCHA bypassed)');
+}
+
+// ── RECAPTCHA (pre-initialized on page load) ──
+let _adminRcv = null;
+let _adminRcvReady = false;
+
+function initAdminRecaptcha() {
+  if(_adminRcv) return;
+  try {
+    _adminRcv = new RecaptchaVerifier(auth, 'recaptcha-container', {
+      size: 'invisible',
+      callback: () => { console.log('Admin reCAPTCHA solved'); },
+      'expired-callback': () => { console.warn('Admin reCAPTCHA expired'); _adminRcvReady = false; }
+    });
+    _adminRcv.render().then(() => { _adminRcvReady = true; console.log('Admin reCAPTCHA rendered and ready'); }).catch(e => { console.error('Admin reCAPTCHA render failed:', e); });
+  } catch(e) { console.error('Admin reCAPTCHA init failed:', e); }
+}
+
+function resetAdminRecaptcha() {
+  if(_adminRcv) { try { _adminRcv.clear(); } catch(e) {} _adminRcv = null; _adminRcvReady = false; }
+  window._confirmResult = null;
+  setTimeout(() => initAdminRecaptcha(), 200);
+}
+
+// Initialize reCAPTCHA on DOM ready
+if(document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => initAdminRecaptcha());
+} else {
+  initAdminRecaptcha();
+}
+
+// ── EFFICIENCY HELPERS ──
+function todayTimestamp(){const d=new Date();d.setHours(0,0,0,0);return Timestamp.fromDate(d);}
+function daysAgoTimestamp(n){const d=new Date();d.setDate(d.getDate()-n);d.setHours(0,0,0,0);return Timestamp.fromDate(d);}
+function formatDate(ts){if(!ts)return'—';const d=ts.toDate?.()??new Date(ts);return d.toLocaleDateString();}
+function formatTime(ts){if(!ts)return'—';const d=ts.toDate?.()??new Date(ts);return d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});}
+// Shared reps cache
+let _repsCache={data:[],ts:0};
+const REPS_CACHE_TTL=30000;
+let socialPostsCache = [];
+let socialCaptionVariants = {};
+let socialEditingId = null;
+let socialConnectionCache = [];
+async function getCachedReps(){
+  if(_repsCache.data.length&&(Date.now()-_repsCache.ts)<REPS_CACHE_TTL) return _repsCache.data;
+  try{
+    const snap=await getDocs(collection(db,'reps'));
+    const reps=[];snap.forEach(d=>reps.push({id:d.id,...d.data()}));
+    _repsCache={data:reps,ts:Date.now()};
+    return reps;
+  }catch(e){
+    showError('Reps', () => getCachedReps());
+    return [];
+  }
+}
+
+const SOCIAL_PLATFORMS = [
+  { id:'instagram', label:'Instagram', limit:'up to 2,200 chars', voice:'visual and punchy' },
+  { id:'facebook', label:'Facebook', limit:'best under 500 chars', voice:'friendly and local' },
+  { id:'tiktok', label:'TikTok', limit:'best under 300 chars', voice:'fast hook and casual' },
+  { id:'x', label:'X', limit:'best under 280 chars', voice:'tight and direct' },
+  { id:'linkedin', label:'LinkedIn', limit:'best under 700 chars', voice:'credible and business-forward' },
+  { id:'google_business', label:'Google Business', limit:'best under 750 chars', voice:'local SEO and service info' }
+];
+const SOCIAL_CONNECTION_FALLBACK = [
+  { id:'meta', label:'Meta', description:'Facebook Pages + Instagram business publishing', docsUrl:'https://developers.facebook.com/docs/instagram-api/guides/content-publishing/' },
+  { id:'linkedin', label:'LinkedIn', description:'LinkedIn member or company posts', docsUrl:'https://learn.microsoft.com/en-us/linkedin/consumer/integrations/self-serve/share-on-linkedin' },
+  { id:'tiktok', label:'TikTok', description:'Creator content posting workflow', docsUrl:'https://developers.tiktok.com/products/content-posting-api' },
+  { id:'x', label:'X', description:'Short-form posts through X API', docsUrl:'https://developer.x.com/en/docs/twitter-api' },
+  { id:'google_business', label:'Google Business', description:'Business Profile local posts', docsUrl:'https://developers.google.com/my-business/content/overview' }
+];
+
+// ── ERROR HANDLING ──
+window.onerror=(msg,src,line,col,err)=>{
+  try{addDoc(collection(db,'client_errors'),{message:String(msg),source:src||'',line:line||0,col:col||0,stack:err?.stack||'',page:'admin-console',userAgent:navigator.userAgent,timestamp:serverTimestamp()});}catch(e){}
+};
+window.addEventListener('unhandledrejection',e=>{
+  try{addDoc(collection(db,'client_errors'),{message:String(e.reason),source:'promise',line:0,col:0,stack:e.reason?.stack||'',page:'admin-console',userAgent:navigator.userAgent,timestamp:serverTimestamp()});}catch(ex){}
+});
+
+function showError(section, retryFn) {
+  const container = document.querySelector('.content');
+  if (!container.querySelector('.error-banner')) {
+    const banner = document.createElement('div');
+    banner.className = 'error-banner';
+    banner.innerHTML = `${section} failed to load — tap to retry <button onclick="arguments[0].preventDefault(); location.reload();">Retry</button>`;
+    container.insertBefore(banner, container.firstChild);
+  }
+}
+
+// Admin phone numbers
+const ADMIN_PHONES = ['+19096729370', '+15597744249'];
+
+let currentAdmin = null;
+let adminMap = null;
+let adminMarkers = {};
+let adminKnockMarkers = {};
+let unsubs = [];
+let confirmResult = null;
+let allReps = [];
+let _currentJobDetailId = null;
+let _analyticsChartMode = false;
+let _selectedReviewIds = [];
+
+// ── MOBILE SIDEBAR ──
+window.toggleSidebar = () => {
+  const sidebar = document.getElementById('sidebar');
+  sidebar.classList.toggle('open');
+};
+window.closeSidebarOnNav = () => {
+  document.getElementById('sidebar').classList.remove('open');
+};
+
+// ── AUTH ──
+onAuthStateChanged(auth, async user => {
+  if(user && ADMIN_PHONES.includes(user.phoneNumber)) {
+    currentAdmin = user;
+    const snap = await getDoc(doc(db,'reps',user.uid));
+    if(!snap.exists()) {
+      await setDoc(doc(db,'reps',user.uid),{
+        name:'Admin',phone:user.phoneNumber,status:'approved',role:'owner',
+        commission:0,zipCode:null,doorsKnocked:0,dealsClosedTotal:0,commissionEarned:0,
+        createdAt:serverTimestamp()
+      });
+    } else if(snap.data().role!=='owner'&&snap.data().role!=='admin') {
+      await updateDoc(doc(db,'reps',user.uid),{role:'owner',status:'approved'});
+    }
+    const repData = snap.exists() ? snap.data() : {name:'Admin'};
+    document.getElementById('admin-user-name').textContent = repData.name||'Admin';
+    document.getElementById('auth-screen').classList.remove('visible');
+    document.getElementById('admin-shell').style.display='flex';
+    showView('overview');
+    unsubs.forEach(u => { if(typeof u === 'function') u(); });
+    unsubs = [];
+    loadAllData();
+    subscribeToLive();
+    checkApiHealth();
+    generateDailySummary();
+  } else if(user) {
+    await signOut(auth);
+    document.getElementById('admin-err').textContent = 'This phone number does not have admin access.';
+  } else {
+    currentAdmin = null;
+    document.getElementById('auth-screen').classList.add('visible');
+    document.getElementById('admin-shell').style.display='none';
+  }
+});
+
+// ── AUTH FLOW ──
+window.sendAdminOTP = async () => {
+  const raw = document.getElementById('admin-phone').value.trim();
+  const phone = raw.startsWith('+') ? raw : '+1'+raw.replace(/\D/g,'');
+  if(phone.length < 12) { document.getElementById('admin-err').textContent='Enter a valid phone number'; return; }
+  const btn = document.getElementById('admin-otp-btn');
+  const errEl = document.getElementById('admin-err');
+  const origText = btn.textContent;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin-ring" style="width:16px;height:16px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:6px"></span>Sending...';
+  errEl.textContent = '';
+  window._confirmResult = null;
+  try {
+    // Ensure reCAPTCHA is ready
+    if(!_adminRcv || !_adminRcvReady) {
+      resetAdminRecaptcha();
+      await new Promise(r=>setTimeout(r,500));
+    }
+    if(!_adminRcv) initAdminRecaptcha();
+    if(!_adminRcv) throw new Error('reCAPTCHA failed to initialize. Refresh the page and try again.');
+    window._confirmResult = await signInWithPhoneNumber(auth, phone, _adminRcv);
+    if(!window._confirmResult) throw new Error('No confirmation result returned');
+    document.getElementById('admin-step1').style.display='none';
+    document.getElementById('admin-step2').style.display='block';
+    document.getElementById('admin-code').focus();
+  } catch(e) {
+    console.error('sendAdminOTP failed:', e);
+    const msg = e.code==='auth/invalid-phone-number'?'Invalid phone number':(e.code==='auth/too-many-requests'?'Too many attempts. Wait a few minutes and try again.':e.message);
+    errEl.textContent = msg;
+    showToast('Failed to send code. Try again.', 'error');
+    resetAdminRecaptcha();
+  } finally {
+    btn.disabled = false;
+    btn.textContent = origText;
+  }
+};
+
+window.verifyAdminOTP = async () => {
+  const code = document.getElementById('admin-code').value.trim();
+  const errEl = document.getElementById('admin-err2');
+  if(!code||code.length<6){errEl.textContent='Enter the 6-digit code';return;}
+  if(!window._confirmResult){errEl.textContent='Session expired — click Try again to resend.';showToast('Session expired. Resend the code.','warning');return;}
+  const btn = document.getElementById('admin-verify-btn');
+  const origText = btn.textContent;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin-ring" style="width:16px;height:16px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:6px"></span>Verifying...';
+  try {
+    await window._confirmResult.confirm(code);
+  } catch(e) {
+    console.error('verifyAdminOTP failed:', e);
+    errEl.textContent = e.code==='auth/invalid-verification-code'?'Invalid code. Try again.':(e.code==='auth/code-expired'?'Code expired. Click "Try again" to resend.':'Invalid or expired code. Click "Try again" to resend.');
+    showToast('Verification failed. Check the code.', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = origText;
+  }
+};
+
+window.resetAdminAuth = () => {
+  document.getElementById('admin-step1').style.display='block';
+  document.getElementById('admin-step2').style.display='none';
+  document.getElementById('admin-code').value='';
+  document.getElementById('admin-err').textContent='';
+  document.getElementById('admin-err2').textContent='';
+  resetAdminRecaptcha();
+};
+
+window.adminSignOut = async () => {
+  if(!confirm('Sign out?'))return;
+  unsubs.forEach(u=>u()); unsubs=[];
+  await signOut(auth);
+};
+
+// ── VIEWS ──
+window.showView = view => {
+  const viewEl = document.getElementById('view-'+view);
+  if(!viewEl) return;
+  closeSidebarOnNav();
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(n=>n.classList.remove('active'));
+  Object.keys(adminMarkers).forEach(id=>{ adminMarkers[id].setMap(null); }); adminMarkers = {};
+  Object.keys(adminKnockMarkers).forEach(id=>{ adminKnockMarkers[id].setMap(null); }); adminKnockMarkers = {};
+  viewEl.classList.add('active');
+  document.getElementById('snav-'+view).classList.add('active');
+  const titles={overview:'Overview',reps:'Rep Management',live:'Live Activity',scripts:'Script Manager',doors:'Door Logs',analytics:'Analytics',schedule:'Schedule',intel:'Intel',territories:'Territories',broadcast:'Broadcasts',social:'Social Media',jobs:'Jobs',payouts:'Payouts',fulfillment:'Fulfillment',financials:'Financials',crews:'Crews',review:'Review Queue',health:'System Health',aios:'AI Operating System'};
+  document.getElementById('topbar-title').textContent = titles[view]||view;
+  document.title = 'TrashApp Admin — ' + (titles[view] || view);
+  if(view==='reps') loadReps();
+  if(view==='live') { if(window.google && window.google.maps) { initAdminMap(); } }
+  if(view==='scripts') loadAdminScripts();
+  if(view==='doors') { loadReps().then(()=>loadDoorLogs()); }
+  if(view==='analytics') { setPreset('today'); }
+  if(view==='broadcast') loadBroadcasts();
+  if(view==='schedule') { loadScheduleConfig(); scheduleNavigateWeek(0); }
+  if(view==='intel') { loadIntel(); loadTerritoryAssignments(); }
+  if(view==='social'){
+    if(!document.getElementById('social-location').value) resetSocialComposer(true);
+    const backendInput=document.getElementById('social-backend-base');
+    if(backendInput && !backendInput.value) backendInput.value=localStorage.getItem('trashapp_social_backend_base')||'http://localhost:3000';
+    loadSocialConnections();
+    loadSocialPosts();
+  }
+  if(view==='jobs') loadJobsKanban();
+  if(view==='payouts') loadPayouts();
+  if(view==='fulfillment') loadFulfillment();
+  if(view==='financials') loadFinancials();
+  if(view==='crews') loadCrews();
+  if(view==='review') loadReviewQueue();
+  if(view==='territories') loadTerritories();
+  if(view==='health') subscribeToHealth();
+  if(view==='aios') loadAIOS();
+};
+
+// ── LOAD ALL DATA ──
+async function loadAllData() {
+  await loadOverview();
+  await loadReps();
+}
+
+// ── OVERVIEW ──
+async function loadOverview() {
+  try {
+    const reps = await getCachedReps();
+    const todayTs = todayTimestamp();
+    const doorsSnap = await getDocs(query(collection(db,'doors'),where('timestamp','>=',todayTs)));
+    const liveSnap = await getDocs(query(collection(db,'live_reps'),where('active','==',true)));
+    const jobsSnap = await getDocs(query(collection(db,'jobs'),where('createdAt','>=',todayTs)));
+
+    let totalReps=0, pendingCount=0, todayDoors=0, todayDeals=0, todayEstRevenue=0;
+    const repStats={};
+
+    reps.forEach(data=>{
+      if(data.role==='rep'&&data.status==='approved') totalReps++;
+      if(data.status==='pending') pendingCount++;
+    });
+
+    doorsSnap.forEach(d=>{
+      const data=d.data();
+      todayDoors++;
+      if(data.status==='closed'||data.status==='deal_closed'||data.status==='pending_dispatch'||data.status==='quote_given') todayDeals++;
+      if(!repStats[data.repId]) repStats[data.repId]={name:data.repName,doors:0,deals:0};
+      repStats[data.repId].doors++;
+      if(data.status==='closed'||data.status==='deal_closed'||data.status==='pending_dispatch'||data.status==='quote_given') repStats[data.repId].deals++;
+    });
+
+    jobsSnap.forEach(d => {
+      const s = d.data().status;
+      if(s !== 'QUOTED' && d.data().estimated_revenue) todayEstRevenue += d.data().estimated_revenue;
+    });
+
+    document.getElementById('ov-reps').textContent=totalReps;
+    document.getElementById('ov-active').textContent=liveSnap.size;
+    document.getElementById('ov-doors').textContent=todayDoors;
+    document.getElementById('ov-deals').textContent=todayDeals;
+    document.getElementById('ov-pending').textContent=pendingCount;
+    document.getElementById('ov-today-est').textContent='$'+Math.round(todayEstRevenue).toLocaleString();
+    document.getElementById('active-rep-count').textContent=liveSnap.size+' reps active';
+
+    const sorted=Object.values(repStats).sort((a,b)=>b.doors-a.doors);
+    const lb=document.getElementById('ov-leaderboard');
+    lb.innerHTML=sorted.length===0?'<div class="empty">No activity today yet</div>':sorted.map((r,i)=>{
+      const convRate = r.doors > 0 ? Math.round((r.deals / r.doors) * 100) : null;
+      const convDisplay = convRate !== null ? ` · ${convRate}% conv.` : '';
+      return `
+      <div style="display:flex;align-items:center;gap:.75rem;padding:.55rem .5rem;border-bottom:1px solid var(--border)">
+        <span style="font-size:15px">${['🥇','🥈','🥉'][i]||(i+1)}</span>
+        <span style="flex:1;font-weight:600;font-size:13px">${r.name}</span>
+        <span style="font-size:12px;color:var(--gray)">${r.doors} doors</span>
+        <span style="font-size:12px;color:var(--green);font-weight:600">${r.deals} closed<span style="color:var(--gray);font-weight:400">${convDisplay}</span></span>
+      </div>`;
+    }).join('');
+
+    const pendingSnap=await getDocs(query(collection(db,'reps'),where('status','==','pending')));
+    const pendingEl=document.getElementById('ov-pending-list');
+    if(pendingSnap.empty){pendingEl.innerHTML='<div class="empty">No pending approvals</div>';}
+    else {
+      pendingEl.innerHTML=pendingSnap.docs.map(d=>`
+        <div style="display:flex;align-items:center;gap:.75rem;padding:.55rem .5rem;border-bottom:1px solid var(--border)">
+          <div style="flex:1"><div style="font-weight:600;font-size:13px">${d.data().name}</div><div style="font-size:11px;color:var(--gray)">${d.data().phone}</div></div>
+          <button class="action-btn btn-approve" onclick="quickApprove('${d.id}')">✓ Approve</button>
+          <button class="action-btn btn-deny" onclick="quickDeny('${d.id}')">✗ Deny</button>
+        </div>`).join('');
+    }
+
+    const forecastSnap=await getDocs(collection(db,'jobs'));
+    let forecastTotal=0, forecastCount=0;
+    forecastSnap.forEach(d=>{
+      const s=d.data().status;
+      if(s==='CUSTOMER_ACCEPTED'||s==='SCHEDULED'||s==='PENDING_DISPATCH'||s==='QUOTE_SENT'){
+        forecastTotal+=d.data().estimated_revenue||0;
+        forecastCount++;
+      }
+    });
+    document.getElementById('ov-forecast').textContent='$'+Math.round(forecastTotal).toLocaleString();
+    document.getElementById('ov-forecast-jobs').textContent=forecastCount;
+  }catch(e){
+    showError('Overview', loadOverview);
+  }
+}
+
+window.quickApprove = async id => {
+  await updateDoc(doc(db,'reps',id),{status:'approved'});
+  loadOverview(); loadReps();
+};
+window.quickDeny = async id => {
+  if(!confirm('Deny and remove this rep?'))return;
+  await updateDoc(doc(db,'reps',id),{status:'denied'});
+  loadOverview(); loadReps();
+};
+
+window.approveAllPending = async () => {
+  if(!confirm('Approve all pending reps?')) return;
+  try {
+    const pendingSnap = await getDocs(query(collection(db,'reps'),where('status','==','pending')));
+    for(const d of pendingSnap.docs) {
+      await updateDoc(doc(db,'reps',d.id),{status:'approved'});
+    }
+    loadOverview(); loadReps();
+  }catch(e){
+    showToast('Error approving reps: '+e.message, 'error');
+  }
+};
+
+// ── REP MANAGEMENT ──
+window.loadReps = async () => {
+  try {
+    _repsCache.ts=0;
+    const reps = await getCachedReps();
+    const todayTs=todayTimestamp();
+    const todayDoorsSnap=await getDocs(query(collection(db,'doors'),where('timestamp','>=',todayTs)));
+    const todayByRep={};
+    todayDoorsSnap.forEach(d=>{
+      const repId=d.data().repId;
+      if(!todayByRep[repId]) todayByRep[repId]=0;
+      todayByRep[repId]++;
+    });
+
+    allReps=reps.map(r=>({...r,_stats:{total:r.doorsKnocked||0,today:todayByRep[r.id]||0,deals:r.dealsClosedTotal||0}}));
+    allReps.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+
+    const repFilter=document.getElementById('door-filter-rep');
+    if(repFilter){
+      repFilter.innerHTML='<option value="">All Reps</option>'+allReps.map(r=>`<option value="${r.id}">${r.name||r.phone}</option>`).join('');
+    }
+
+    const tbody=document.getElementById('rep-table-body');
+    if(!tbody) return;
+    tbody.innerHTML=allReps.map(r=>`
+      <tr>
+        <td><strong>${r.name||'—'}</strong></td>
+        <td style="color:var(--gray);font-size:12px">${r.phone||'—'}</td>
+        <td><span class="role-badge role-${r.role||'rep'}">${r.role||'rep'}</span></td>
+        <td><span class="status-badge status-${r.status||'pending'}">${r.status||'pending'}</span></td>
+        <td><input class="inline-input" id="zip-${r.id}" value="${r.zipCode||''}" placeholder="zip" style="width:70px"></td>
+        <td><input class="inline-input" id="comm-${r.id}" type="number" value="${r.commission||15}" style="width:55px">%</td>
+        <td style="font-size:11px;color:var(--gray)">Today: ${r._stats.today}<br>Total: ${r._stats.total}<br>Deals: ${r._stats.deals}</td>
+        <td>
+          <div class="rep-actions">
+            <select class="inline-input" id="role-${r.id}" style="width:80px">
+              <option value="rep" ${(r.role||'rep')==='rep'?'selected':''}>Rep</option>
+              <option value="admin" ${r.role==='admin'?'selected':''}>Admin</option>
+              <option value="owner" ${r.role==='owner'?'selected':''}>Owner</option>
+            </select>
+            <button class="action-btn btn-save" onclick="saveRepChanges('${r.id}')">Save</button>
+            ${r.status==='deleted'?`<button class="action-btn" style="background:var(--blue);color:#fff" onclick="restoreRep('${r.id}')">Restore</button>`:`<button class="action-btn btn-delete" onclick="removeRep('${r.id}')">Delete</button>`}
+          </div>
+        </td>
+      </tr>`).join('');
+  }catch(e){
+    const banner = document.getElementById('retry-reps'); if(banner) banner.classList.add('visible');
+    showError('Rep Management', loadReps);
+  }
+};
+
+window.saveRepChanges = async id => {
+  const zip = document.getElementById('zip-'+id).value;
+  const comm = parseFloat(document.getElementById('comm-'+id).value)||15;
+  const role = document.getElementById('role-'+id).value;
+  try{
+    await updateDoc(doc(db,'reps',id),{zipCode:zip,commission:comm,role:role});
+    loadReps();
+  }catch(e){showToast('Error: '+e.message, 'error');}
+};
+
+window.removeRep = async id => {
+  if(!confirm('Remove this rep? They will be soft-deleted and can be restored later.'))return;
+  try{
+    await updateDoc(doc(db,'reps',id),{status:'deleted',deletedAt:serverTimestamp(),deletedBy:currentUser.uid});
+    loadReps();
+  }catch(e){showToast('Error: '+e.message, 'error');}
+};
+
+window.restoreRep = async id => {
+  if(!confirm('Restore this rep to pending status?'))return;
+  try{
+    await updateDoc(doc(db,'reps',id),{status:'pending',deletedAt:null,deletedBy:null});
+    loadReps();
+  }catch(e){showToast('Error: '+e.message, 'error');}
+};
+
+// ── LIVE ACTIVITY ──
+
+function initAdminMap() {
+  if (adminMap) return;
+  const mapEl = document.getElementById('admin-map');
+  if (!mapEl) return;
+  adminMap = new google.maps.Map(mapEl, {
+    center: { lat: 36.7765, lng: -119.8420 },
+    zoom: 11,
+    mapTypeId: 'roadmap',
+    styles: [
+      { elementType: 'geometry', stylers: [{ color: '#1a1a1a' }] },
+      { elementType: 'labels.text.fill', stylers: [{ color: '#757575' }] },
+      { elementType: 'labels.text.stroke', stylers: [{ color: '#212121' }] },
+      { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#2c2c2c' }] },
+      { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#212121' }] },
+      { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#3c3c3c' }] },
+      { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0a0a0a' }] },
+      { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+      { featureType: 'transit', stylers: [{ visibility: 'off' }] }
+    ],
+    disableDefaultUI: false,
+    zoomControl: true,
+    streetViewControl: false,
+    mapTypeControl: false,
+    fullscreenControl: true
+  });
+}
+window.initAdminMap = initAdminMap;
+
+// Initialize map if Google Maps already loaded
+if (window.google && window.google.maps) initAdminMap();
+
+window.subscribeToLive = async () => {
+  const liveQuery = query(collection(db,'live_reps'),where('active','==',true),orderBy('lastUpdate','desc'));
+  const unsubLive = onSnapshot(liveQuery, async snap => {
+    const liveList = document.getElementById('live-reps-list');
+    if(!liveList) return;
+    if(snap.empty){
+      liveList.innerHTML = '<div class="empty">No reps active</div>';
+      return;
+    }
+    liveList.innerHTML = snap.docs.map(d => {
+      const data = d.data();
+      return `
+        <div class="live-rep-row">
+          <div class="live-rep-dot" style="background:var(--green)"></div>
+          <div class="live-rep-name">${data.repName||'Unknown'}</div>
+          <div class="live-rep-stats">${data.doorsToday||0} doors | ${data.dealsToday||0} deals</div>
+        </div>`;
+    }).join('');
+    if(adminMap) updateAdminMapMarkers(snap.docs);
+  });
+  unsubs.push(unsubLive);
+};
+
+function updateAdminMapMarkers(docs) {
+  if (!adminMap) return;
+  const activeIds = new Set();
+  docs.forEach(d => {
+    const data = d.data();
+    if (!data.lat || !data.lng) return;
+    activeIds.add(d.id);
+    const position = { lat: parseFloat(data.lat), lng: parseFloat(data.lng) };
+    const isInSession = data.sessionActive;
+    const color = isInSession ? '#22c55e' : '#a855f7';
+    const markerIcon = {
+      path: google.maps.SymbolPath.CIRCLE,
+      scale: 9,
+      fillColor: color,
+      fillOpacity: 0.9,
+      strokeColor: '#ffffff',
+      strokeWeight: 2
+    };
+    if (!adminMarkers[d.id]) {
+      adminMarkers[d.id] = new google.maps.Marker({
+        position, map: adminMap, icon: markerIcon,
+        title: data.repName || 'Rep'
+      });
+      const infoWindow = new google.maps.InfoWindow({
+        content: `<div style="color:#000;font-weight:700">${data.repName || 'Rep'}</div><div style="color:#555;font-size:12px">${isInSession ? 'In session' : 'Online'}</div>`
+      });
+      adminMarkers[d.id].addListener('click', () => { infoWindow.open(adminMap, adminMarkers[d.id]); });
+    } else {
+      adminMarkers[d.id].setPosition(position);
+      adminMarkers[d.id].setIcon(markerIcon);
+    }
+    if (data.knock_lat && data.knock_lng) {
+      const knockPos = { lat: parseFloat(data.knock_lat), lng: parseFloat(data.knock_lng) };
+      const knockIcon = { path: google.maps.SymbolPath.CIRCLE, scale: 7, fillColor: '#ffffff', fillOpacity: 1, strokeColor: '#F5A623', strokeWeight: 2.5 };
+      if (!adminKnockMarkers[d.id]) {
+        adminKnockMarkers[d.id] = new google.maps.Marker({ position: knockPos, map: adminMap, icon: knockIcon, title: `${data.repName || 'Rep'} — knocking`, zIndex: 999 });
+        const knockInfo = new google.maps.InfoWindow({
+          content: `<div style="color:#000;font-weight:700">🚪 ${data.repName || 'Rep'}</div><div style="color:#555;font-size:12px">Door sheet open${data.knock_address ? ' — ' + data.knock_address : ''}</div>`
+        });
+        adminKnockMarkers[d.id].addListener('click', () => { knockInfo.open(adminMap, adminKnockMarkers[d.id]); });
+      } else { adminKnockMarkers[d.id].setPosition(knockPos); }
+    } else if (adminKnockMarkers[d.id]) {
+      adminKnockMarkers[d.id].setMap(null);
+      delete adminKnockMarkers[d.id];
+    }
+  });
+  Object.keys(adminMarkers).forEach(id => {
+    if (!activeIds.has(id)) {
+      adminMarkers[id].setMap(null);
+      delete adminMarkers[id];
+      if (adminKnockMarkers[id]) { adminKnockMarkers[id].setMap(null); delete adminKnockMarkers[id]; }
+    }
+  });
+}
+
+// ── SCRIPTS ──
+window.publishScript = async () => {
+  const title = document.getElementById('script-title').value.trim();
+  const body = document.getElementById('script-body').value.trim();
+  if(!title||!body){showToast('Enter title and body', 'warning');return;}
+  try{
+    await addDoc(collection(db,'scripts'),{title,body,publishedAt:serverTimestamp(),author:'Admin'});
+    document.getElementById('script-title').value='';
+    document.getElementById('script-body').value='';
+    loadAdminScripts();
+  }catch(e){showToast('Error: '+e.message, 'error');}
+};
+
+window.loadAdminScripts = async () => {
+  try{
+    const snap = await getDocs(query(collection(db,'scripts'),orderBy('publishedAt','desc')));
+    const list = document.getElementById('admin-scripts-list');
+    if(snap.empty){
+      list.innerHTML='<div class="empty">📝 No scripts published yet</div>';
+      return;
+    }
+    list.innerHTML = snap.docs.map(d => {
+      const data = d.data();
+      return `
+        <div class="script-card">
+          <div class="script-title-row">
+            <div class="script-name">${data.title||'Untitled'}</div>
+            <button class="action-btn btn-delete" onclick="deleteScript('${d.id}')">Delete</button>
+          </div>
+          <div class="script-body-text">${(data.body||'').substring(0,200)}...</div>
+        </div>`;
+    }).join('');
+  }catch(e){
+    showError('Scripts', loadAdminScripts);
+  }
+};
+
+window.deleteScript = async id => {
+  if(!confirm('Delete script?'))return;
+  try{
+    await deleteDoc(doc(db,'scripts',id));
+    loadAdminScripts();
+  }catch(e){showToast('Error: '+e.message, 'error');}
+};
+
+// ── DOOR LOGS ──
+window.loadDoorLogs = async () => {
+  try {
+    const repId = document.getElementById('door-filter-rep').value;
+    const status = document.getElementById('door-filter-status').value;
+    const todayTs = todayTimestamp();
+
+    let q = query(collection(db,'doors'),where('timestamp','>=',todayTs));
+    if(repId) q = query(collection(db,'doors'),where('timestamp','>=',todayTs),where('repId','==',repId));
+
+    const snap = await getDocs(q);
+    const filtered = snap.docs.map(d=>({id:d.id,...d.data()})).filter(d=>!status||d.status===status);
+
+    const container = document.getElementById('door-logs-table');
+    if(filtered.length===0){
+      container.innerHTML='<div class="empty">🚪 No doors logged today</div>';
+      return;
+    }
+    container.innerHTML=`<div class="table-wrapper"><table class="data-table" style="width:100%">
+      <thead><tr><th>Date</th><th>Rep</th><th>Address</th><th>Status</th><th>Notes</th></tr></thead>
+      <tbody>${filtered.map(d=>`<tr>
+        <td>${formatDate(d.timestamp)}</td>
+        <td>${d.repName||'—'}</td>
+        <td style="font-size:11px">${d.address||'—'}</td>
+        <td><span class="status-pill">${d.status||'—'}</span></td>
+        <td style="font-size:11px;color:var(--gray)">${d.notes||'—'}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>`;
+    window._lastDoorLogsFiltered = filtered;
+  }catch(e){
+    const banner = document.getElementById('retry-doors'); if(banner) banner.classList.add('visible');
+    showError('Door Logs', loadDoorLogs);
+  }
+};
+
+window.exportDoorLogsCSV = () => {
+  if(!window._lastDoorLogsFiltered || window._lastDoorLogsFiltered.length === 0){
+    showToast('No logs to export', 'info');
+    return;
+  }
+  const filtered = window._lastDoorLogsFiltered;
+  const rows = [['Date','Rep Name','Address','Status','Notes']];
+  filtered.forEach(d => {
+    rows.push([
+      formatDate(d.timestamp),
+      d.repName||'',
+      d.address||'',
+      d.status||'',
+      d.notes||''
+    ]);
+  });
+  const csv = rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv],{type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'door-logs-' + new Date().toISOString().split('T')[0] + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+// ── ANALYTICS ──
+window.setPreset = async (preset) => {
+  document.querySelectorAll('.analytics-preset').forEach(b=>b.classList.remove('active'));
+  document.getElementById('preset-'+preset).classList.add('active');
+  document.getElementById('custom-range').style.display = preset==='custom'?'flex':'none';
+  if(preset==='custom') return;
+
+  const now = new Date();
+  let start;
+  if(preset==='today'){
+    start = new Date();
+    start.setHours(0,0,0,0);
+  }else if(preset==='week'){
+    start = new Date(now);
+    start.setDate(now.getDate()-7);
+    start.setHours(0,0,0,0);
+  }else if(preset==='month'){
+    start = new Date(now);
+    start.setDate(1);
+    start.setHours(0,0,0,0);
+  }
+  window._analyticsStart = start;
+  window._analyticsEnd = now;
+  loadAnalytics();
+};
+
+window.setCustomRange = () => {
+  const start = new Date(document.getElementById('custom-start').value);
+  const end = new Date(document.getElementById('custom-end').value);
+  if(start >= end) { showToast('Start date must be before end date', 'warning'); return; }
+  window._analyticsStart = start;
+  window._analyticsEnd = end;
+  loadAnalytics();
+};
+
+window.toggleChartView = () => {
+  _analyticsChartMode = !_analyticsChartMode;
+  document.getElementById('toggle-chart-view').textContent = _analyticsChartMode?'📊 Table View':'📊 Chart View';
+  loadAnalytics();
+};
+
+window.loadAnalytics = async () => {
+  try {
+    const start = window._analyticsStart || new Date();
+    const startTs = Timestamp.fromDate(start);
+    const reps = await getCachedReps();
+    const doorsSnap = await getDocs(collection(db,'doors'));
+
+    const repStats = {};
+    reps.forEach(r=>{
+      repStats[r.id]={name:r.name||r.phone,doors:0,deals:0};
+    });
+
+    doorsSnap.forEach(d=>{
+      const data = d.data();
+      const ts = data.timestamp;
+      if(!ts||ts<startTs) return;
+      if(repStats[data.repId]){
+        repStats[data.repId].doors++;
+        if(['deal_closed','closed','pending_dispatch','quote_given'].includes(data.status)){
+          repStats[data.repId].deals++;
+        }
+      }
+    });
+
+    const sorted = Object.values(repStats).filter(r=>r.doors>0).sort((a,b)=>b.doors-a.doors);
+
+    if(_analyticsChartMode){
+      const chartContainer = document.getElementById('analytics-chart-container');
+      chartContainer.innerHTML = '<div class="chart-container">'+sorted.map(r=>{
+        const maxDoors = Math.max(...sorted.map(x=>x.doors),1);
+        const maxDeals = Math.max(...sorted.map(x=>x.deals),1);
+        const doorsHeight = (r.doors/maxDoors)*180;
+        const dealsHeight = (r.deals/maxDeals)*180;
+        return `<div class="chart-item">
+          <div class="chart-label">${r.name}</div>
+          <div class="chart-bars">
+            <div style="display:flex;flex-direction:column;align-items:center;flex:1">
+              <div class="chart-bar" style="height:${doorsHeight}px;"></div>
+              <div class="chart-bar-label">Doors</div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;flex:1">
+              <div class="chart-bar-deals" style="height:${dealsHeight}px;"></div>
+              <div class="chart-bar-label">Deals</div>
+            </div>
+          </div>
+          <div style="text-align:center;font-size:10px;color:var(--gray)">${r.doors} / ${r.deals}</div>
+        </div>`;
+      }).join('')+'</div>';
+      document.getElementById('analytics-table-container').style.display='none';
+      chartContainer.style.display='block';
+    }else{
+      const tbody = document.getElementById('analytics-body');
+      tbody.innerHTML = sorted.map(r=>`<tr>
+        <td><strong>${r.name}</strong></td>
+        <td>${r.doors}</td>
+        <td>${r.deals}</td>
+        <td>${r.doors>0?((r.deals/r.doors)*100).toFixed(0)+'%':'—'}</td>
+        <td>${r.deals>0?'$'+Math.round((r.doors*AVG_DEAL*0.3)/r.deals).toLocaleString():'—'}</td>
+      </tr>`).join('');
+      document.getElementById('analytics-table-container').style.display='block';
+      document.getElementById('analytics-chart-container').style.display='none';
+    }
+  }catch(e){
+    showError('Analytics', loadAnalytics);
+  }
+};
+
+// ── TERRITORIES ──
+window.loadTerritories = async () => {
+  try {
+    const snap = await getDocs(collection(db,'territories'));
+    const list = document.getElementById('territories-list');
+    if(snap.empty){
+      list.innerHTML='<div class="empty">🗺️ No territories defined yet</div>';
+      return;
+    }
+    list.innerHTML = snap.docs.map(d=>{
+      const data = d.data();
+      return `
+        <div class="territory-row">
+          <div class="territory-name">${data.name||'Territory'}</div>
+          <input class="territory-input" id="terr-zip-${d.id}" value="${(data.zipCodes||[]).join(',')}" placeholder="Zips">
+          <button class="btn-save-zone" onclick="saveTerritoryZips('${d.id}')">Save</button>
+        </div>`;
+    }).join('');
+  }catch(e){
+    showError('Territories', loadTerritories);
+  }
+};
+
+window.saveTerritoryZips = async id => {
+  const zips = document.getElementById('terr-zip-'+id).value.split(',').map(z=>z.trim()).filter(z=>z);
+  try{
+    await updateDoc(doc(db,'territories',id),{zipCodes:zips});
+    loadTerritories();
+  }catch(e){showToast('Error: '+e.message, 'error');}
+};
+
+// ── BROADCASTS ──
+window.sendBroadcast = async () => {
+  const title = document.getElementById('broadcast-title').value.trim();
+  const msg = document.getElementById('broadcast-msg').value.trim();
+  if(!title||!msg){showToast('Enter title and message', 'warning');return;}
+  try{
+    await addDoc(collection(db,'broadcasts'),{title,message:msg,sentAt:serverTimestamp(),sentBy:'Admin'});
+    document.getElementById('broadcast-title').value='';
+    document.getElementById('broadcast-msg').value='';
+    loadBroadcasts();
+  }catch(e){showToast('Error: '+e.message, 'error');}
+};
+
+window.loadBroadcasts = async () => {
+  try{
+    const snap = await getDocs(query(collection(db,'broadcasts'),orderBy('sentAt','desc')));
+    const list = document.getElementById('broadcasts-list');
+    if(snap.empty){
+      list.innerHTML='<div class="empty">📢 No broadcasts sent yet</div>';
+      return;
+    }
+    list.innerHTML = snap.docs.map(d => {
+      const data = d.data();
+      return `
+        <div class="bc-item">
+          <div class="bc-msg"><strong>${data.title||'Broadcast'}</strong></div>
+          <div class="bc-msg">${data.message||''}</div>
+          <div class="bc-meta">${formatDate(data.sentAt)} at ${formatTime(data.sentAt)}</div>
+        </div>`;
+    }).join('');
+  }catch(e){
+    const banner = document.getElementById('retry-broadcasts'); if(banner) banner.classList.add('visible');
+    showError('Broadcasts', loadBroadcasts);
+  }
+};
+
+// ── JOBS ──
+let _jobFilter = 'ALL';
+window.filterJobs = (status) => {
+  _jobFilter = status;
+  document.querySelectorAll('#view-jobs .filter-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`#view-jobs [onclick="filterJobs('${status}')"]`)?.classList.add('active');
+  loadJobsKanban();
+};
+
+window.loadJobsKanban = async () => {
+  try {
+    const snap = await getDocs(collection(db,'jobs'));
+    const all = snap.docs.map(d=>({id:d.id,...d.data()}));
+    const filtered = _jobFilter==='ALL'?all:all.filter(j=>j.status===_jobFilter);
+
+    const statuses = ['PENDING_DISPATCH','QUOTE_SENT','CUSTOMER_ACCEPTED','SCHEDULED','DEAL_CLOSED','INVOICED','PAID'];
+    const grouped = {};
+    statuses.forEach(s => grouped[s] = []);
+    filtered.forEach(j => {
+      const status = j.status || 'PENDING_DISPATCH';
+      if(grouped[status]) grouped[status].push(j);
+    });
+
+    const boardHtml = statuses.map(status => {
+      const jobs = grouped[status];
+      const statusLabel = status.replace(/_/g,' ');
+      return `
+        <div class="kanban-col">
+          <div class="kanban-header">${statusLabel}</div>
+          <div class="kanban-list">
+            ${jobs.length > 0 ? jobs.map(j => `
+              <div class="job-card" onclick="openJobDetail('${j.id}')">
+                <div class="job-card-name">${j.customerName||'—'}</div>
+                <div class="job-card-addr">${j.address||'—'}</div>
+                <div class="job-card-meta">
+                  <span>$${j.estimated_revenue||0}</span>
+                  <span>${j.assignedRep||'—'}</span>
+                </div>
+              </div>
+            `).join('') : '<div style="color:var(--gray);font-size:11px;padding:.5rem">—</div>'}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    const tableWrapper = document.querySelector('#view-jobs .table-wrapper');
+    if(tableWrapper) {
+      tableWrapper.innerHTML = `<div class="kanban-container">${boardHtml}</div>`;
+    }
+  }catch(e){
+    const banner = document.getElementById('retry-jobs'); if(banner) banner.classList.add('visible');
+    showError('Jobs', loadJobsKanban);
+  }
+};
+
+window.openJobDetail = async jobId => {
+  try {
+    _currentJobDetailId = jobId;
+    const snap = await getDoc(doc(db,'jobs',jobId));
+    if(!snap.exists()){showToast('Job not found', 'warning');return;}
+    const data = snap.data();
+    document.getElementById('job-detail-name').textContent = data.customerName||'—';
+    document.getElementById('job-detail-phone').textContent = data.customerPhone||'—';
+    document.getElementById('job-detail-email').textContent = data.customerEmail||'—';
+    document.getElementById('job-detail-address').textContent = data.address||'—';
+
+    const timeline = data.statusHistory||[];
+    const timelineHtml = timeline.length>0?timeline.map(t=>`
+      <div class="timeline-item">
+        <div class="timeline-status">${t.status||'Unknown'}</div>
+        <div class="timeline-time">${formatDate(t.timestamp)} ${formatTime(t.timestamp)}</div>
+      </div>`).join(''):'<div style="color:var(--gray);font-size:11px">No status history</div>';
+    document.getElementById('job-detail-timeline').innerHTML = timelineHtml;
+
+    document.getElementById('job-detail-panel').classList.add('open');
+    document.getElementById('job-panel-overlay').classList.add('open');
+
+    loadJobMessages(jobId);
+  } catch(e) {
+    showToast('Error loading job details: '+e.message, 'error');
+    closeJobDetail();
+  }
+};
+
+window.closeJobDetail = () => {
+  document.getElementById('job-detail-panel').classList.remove('open');
+  document.getElementById('job-panel-overlay').classList.remove('open');
+  _currentJobDetailId = null;
+};
+
+window.jobDetailAction = async (action) => {
+  if(!_currentJobDetailId) return;
+  try{
+    if(action==='paid'){
+      await updateDoc(doc(db,'jobs',_currentJobDetailId),{status:'PAID',paidAt:serverTimestamp()});
+    }else if(action==='reassign'){
+      const crew = prompt('Enter new crew name/ID:');
+      if(crew) await updateDoc(doc(db,'jobs',_currentJobDetailId),{crewAssigned:crew});
+    }else if(action==='cancel'){
+      if(!confirm('Cancel this job?')) return;
+      await updateDoc(doc(db,'jobs',_currentJobDetailId),{status:'CANCELLED',cancelledAt:serverTimestamp()});
+    }
+    closeJobDetail();
+    loadJobsKanban();
+  }catch(e){showToast('Error: '+e.message, 'error');}
+};
+
+// ── JOB MESSAGES ──
+window.loadJobMessages = async (jobId) => {
+  const list = document.getElementById('job-messages-list');
+  if(!list) return;
+  try {
+    const msgSnap = await getDocs(query(
+      collection(db,'jobs',jobId,'messages'),
+      orderBy('receivedAt','asc')
+    ));
+    if(msgSnap.empty) {
+      list.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:8px">No messages yet</div>';
+      return;
+    }
+    list.innerHTML = msgSnap.docs.map(d => {
+      const m = d.data();
+      const from = m.from || 'system';
+      const time = m.receivedAt ? new Date(m.receivedAt.seconds ? m.receivedAt.seconds*1000 : m.receivedAt).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true}) : '';
+      const bg = from === 'customer' ? '#1e2d1e' : '#1e1e2d';
+      return `<div style="padding:6px 10px;margin:3px 0;border-radius:8px;font-size:12px;background:${bg}"><b style="text-transform:capitalize">${escapeHtml(from)}</b> ${escapeHtml(m.body||'')} <span style="color:var(--muted);font-size:10px">${time}</span></div>`;
+    }).join('');
+    list.scrollTop = list.scrollHeight;
+  } catch(e) {
+    list.innerHTML = '<div style="color:var(--muted);font-size:12px">Error loading messages</div>';
+  }
+};
+
+// Send reply from admin console
+window.sendJobReply = async () => {
+  const input = document.getElementById('job-reply-input');
+  const message = input?.value?.trim();
+  if(!message || !_currentJobDetailId) return;
+  try {
+    await addDoc(collection(db,'jobs',_currentJobDetailId,'messages'),{
+      from:'admin',
+      body:message,
+      receivedAt:serverTimestamp()
+    });
+    input.value = '';
+    loadJobMessages(_currentJobDetailId);
+  } catch(e) {
+    showToast('Reply failed: '+e.message, 'error');
+  }
+};
+
+// ── PAYOUTS ──
+window.loadPayouts = async () => {
+  try {
+    const snap = await getDocs(collection(db,'commissions'));
+    const items = snap.docs.map(d=>({id:d.id,...d.data()}));
+
+    let pending=0,approved=0,paid=0;
+    items.forEach(i=>{
+      if(i.status==='pending') pending+=i.amount||0;
+      else if(i.status==='approved') approved+=i.amount||0;
+      else if(i.status==='paid') paid+=i.amount||0;
+    });
+
+    document.getElementById('pay-pending').textContent='$'+Math.round(pending).toLocaleString();
+    document.getElementById('pay-approved').textContent='$'+Math.round(approved).toLocaleString();
+    document.getElementById('pay-paid').textContent='$'+Math.round(paid).toLocaleString();
+
+    const tbody = document.getElementById('payouts-table-body');
+    tbody.innerHTML=items.slice(0,50).map(i=>`<tr>
+      <td>${i.repName||'—'}</td>
+      <td style="font-size:11px">${i.jobId||'—'}</td>
+      <td>$${i.amount||0}</td>
+      <td>${i.type||'—'}</td>
+      <td><span class="status-pill">${i.status||'—'}</span></td>
+      <td style="font-size:11px">${formatDate(i.createdAt)}</td>
+      <td><button class="btn-sm" onclick="updateCommissionStatus('${i.id}','approved')">Approve</button></td>
+    </tr>`).join('');
+  }catch(e){
+    showError('Payouts', loadPayouts);
+  }
+};
+
+window.updateCommissionStatus = async (id,status) => {
+  try{
+    await updateDoc(doc(db,'commissions',id),{status});
+    loadPayouts();
+  }catch(e){showToast('Error: '+e.message, 'error');}
+};
+
+// ── FULFILLMENT ──
+window.loadFulfillment = async () => {
+  try {
+    if(!window._fulfillmentMapInit){
+      setTimeout(() => initFulfillmentMap(),200);
+      window._fulfillmentMapInit=true;
+    }
+    await loadJobsKanban();
+  }catch(e){
+    showError('Fulfillment', loadFulfillment);
+  }
+};
+
+let territoriesMap = null;
+function initFulfillmentMap(){
+  if (territoriesMap) return;
+  const el = document.getElementById('fulfillment-map');
+  if (!el) return;
+  territoriesMap = new google.maps.Map(el, {
+    center: { lat: 36.7765, lng: -119.8420 },
+    zoom: 10,
+    mapTypeId: 'roadmap',
+    styles: [
+      { elementType: 'geometry', stylers: [{ color: '#1a1a1a' }] },
+      { elementType: 'labels.text.fill', stylers: [{ color: '#757575' }] },
+      { elementType: 'labels.text.stroke', stylers: [{ color: '#212121' }] },
+      { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#2c2c2c' }] },
+      { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#212121' }] },
+      { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#3c3c3c' }] },
+      { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0a0a0a' }] },
+      { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+      { featureType: 'transit', stylers: [{ visibility: 'off' }] }
+    ],
+    disableDefaultUI: true,
+    zoomControl: true
+  });
+}
+
+// ── FINANCIALS ──
+window.loadFinancials = async () => {
+  try {
+    const snap = await getDocs(collection(db,'daily_financials'));
+    const items = snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.date||0)-(a.date||0));
+
+    let totalRev=0,totalComm=0,totalCrew=0,totalProfit=0;
+    items.slice(0,7).forEach(i=>{
+      totalRev+=i.revenue||0;
+      totalComm+=i.commissions||0;
+      totalCrew+=i.crewCost||0;
+      totalProfit+=i.netProfit||0;
+    });
+
+    document.getElementById('fin-revenue').textContent='$'+Math.round(totalRev).toLocaleString();
+    document.getElementById('fin-commissions').textContent='$'+Math.round(totalComm).toLocaleString();
+    document.getElementById('fin-crew').textContent='$'+Math.round(totalCrew).toLocaleString();
+    document.getElementById('fin-profit').textContent='$'+Math.round(totalProfit).toLocaleString();
+
+    const tbody = document.getElementById('financials-table-body');
+    tbody.innerHTML=items.slice(0,30).map(i=>`<tr>
+      <td>${formatDate(i.date)}</td>
+      <td>$${i.revenue||0}</td>
+      <td>$${i.commissions||0}</td>
+      <td>$${i.crewCost||0}</td>
+      <td>$${i.expenses||0}</td>
+      <td>$${i.netProfit||0}</td>
+      <td>${i.jobsCompleted||0}</td>
+      <td><span class="status-pill">${i.status||'pending'}</span></td>
+      <td><button class="btn-sm" onclick="approveFinancialDay('${i.id}')">Approve</button></td>
+    </tr>`).join('');
+  }catch(e){
+    showError('Financials', loadFinancials);
+  }
+};
+
+window.approveFinancialDay = async id => {
+  try{
+    await updateDoc(doc(db,'daily_financials',id),{status:'approved'});
+    loadFinancials();
+  }catch(e){showToast('Error: '+e.message, 'error');}
+};
+
+// ── CREWS ──
+window.loadCrews = async () => {
+  try {
+    const snap = await getDocs(collection(db,'crews'));
+    const list = snap.docs.map(d=>({id:d.id,...d.data()}));
+    const tbody = document.getElementById('crews-table-body');
+    tbody.innerHTML=list.length>0?list.map(c=>`<tr>
+      <td><strong>${c.name||'—'}</strong></td>
+      <td style="font-size:11px">${c.phone||'—'}</td>
+      <td>$${c.hourlyRate||0}/hr</td>
+      <td style="font-size:11px">${(c.zones||[]).join(', ')||'—'}</td>
+      <td><span class="status-pill">${c.status||'active'}</span></td>
+      <td>${c.jobsCompleted||0}</td>
+      <td>${c.hoursWeek||0}h</td>
+      <td><button class="btn-sm red" onclick="removeCrew('${c.id}')">Remove</button></td>
+    </tr>`).join(''):'<tr><td colspan="8"><div class="empty">🚛 No crews added yet</div></td></tr>';
+  }catch(e){
+    showError('Crews', loadCrews);
+  }
+};
+
+window.addCrew = async () => {
+  const name = document.getElementById('crew-name').value.trim();
+  const phone = document.getElementById('crew-phone').value.trim();
+  const rate = parseFloat(document.getElementById('crew-rate').value)||0;
+  const zones = document.getElementById('crew-zones').value.split(',').map(z=>z.trim()).filter(z=>z);
+  if(!name||!phone){showToast('Enter name and phone', 'warning');return;}
+  try{
+    await addDoc(collection(db,'crews'),{name,phone,hourlyRate:rate,zones,status:'active',createdAt:serverTimestamp()});
+    document.getElementById('crew-name').value='';
+    document.getElementById('crew-phone').value='';
+    document.getElementById('crew-rate').value='';
+    document.getElementById('crew-zones').value='';
+    loadCrews();
+  }catch(e){showToast('Error: '+e.message, 'error');}
+};
+
+window.removeCrew = async id => {
+  if(!confirm('Remove crew?'))return;
+  try{
+    await deleteDoc(doc(db,'crews',id));
+    loadCrews();
+  }catch(e){showToast('Error: '+e.message, 'error');}
+};
+
+// ── REVIEW QUEUE ──
+window.loadReviewQueue = async () => {
+  try {
+    const snap = await getDocs(query(collection(db,'review_queue'),orderBy('createdAt','desc')));
+    const list = document.getElementById('review-queue-list');
+    if(snap.empty){
+      list.innerHTML='<div class="empty">No quotes pending review</div>';
+      return;
+    }
+    list.innerHTML = snap.docs.map(d => {
+      const data = d.data();
+      const checked = _selectedReviewIds.includes(d.id)?'checked':'';
+      return `
+        <div class="review-card">
+          <div class="review-card rc-header">
+            <input type="checkbox" class="review-checkbox" ${checked} onchange="toggleReviewSelection('${d.id}',this.checked)">
+            <div>
+              <div style="font-weight:600;font-size:13px">${data.customerName||'—'}</div>
+              <div style="font-size:11px;color:var(--gray)">${data.address||'—'}</div>
+            </div>
+            <div class="rc-price">$${data.aiQuotedPrice||0}</div>
+          </div>
+          <div class="rc-meta">
+            <div>AI Confidence: ${((data.confidence||0)*100).toFixed(0)}%</div>
+            <div style="margin-top:.25rem">Flagged: ${data.flagReason||'Low confidence'}</div>
+          </div>
+        </div>`;
+    }).join('');
+    updateBulkToolbar();
+  }catch(e){
+    showError('Review Queue', loadReviewQueue);
+  }
+};
+
+window.toggleReviewSelection = (id,checked) => {
+  if(checked) _selectedReviewIds.push(id);
+  else _selectedReviewIds = _selectedReviewIds.filter(x=>x!==id);
+  updateBulkToolbar();
+};
+
+window.clearReviewSelection = () => {
+  _selectedReviewIds = [];
+  document.querySelectorAll('.review-checkbox').forEach(cb=>cb.checked=false);
+  updateBulkToolbar();
+};
+
+function updateBulkToolbar(){
+  const toolbar = document.getElementById('bulk-toolbar');
+  if(_selectedReviewIds.length>0){
+    toolbar.classList.add('active');
+  }else{
+    toolbar.classList.remove('active');
+  }
+}
+
+window.bulkSendReviewed = async () => {
+  if(_selectedReviewIds.length===0){showToast('Select at least one quote', 'warning');return;}
+  const confirmedPrice = parseFloat(document.getElementById('bulk-confirm-price').value);
+  if(isNaN(confirmedPrice)||!confirmedPrice||confirmedPrice<=0){showToast('Enter confirmed price', 'warning');return;}
+
+  try{
+    for(const id of _selectedReviewIds){
+      await updateDoc(doc(db,'review_queue',id),{confirmedPrice,status:'QUOTE_SENT',sentAt:serverTimestamp()});
+    }
+    _selectedReviewIds = [];
+    loadReviewQueue();
+  }catch(e){showToast('Error: '+e.message, 'error');}
+};
+
+// ── SYSTEM HEALTH ──
+let _unsubHealth = null;
+window.subscribeToHealth = () => {
+  if(_unsubHealth) _unsubHealth();
+  const healthQuery = query(collection(db,'system_health'),orderBy('timestamp','desc'),limit(50));
+  const unsubHealth = onSnapshot(healthQuery, snap => {
+    const list = document.getElementById('health-log-list');
+    if(!list) return;
+    const logItems = snap.docs.map(d=>({id:d.id,...d.data()}));
+
+    let success=0,errors=0,partial=0;
+    logItems.slice(0,100).forEach(item => {
+      if(item.status==='success') success++;
+      else if(item.status==='error') errors++;
+      else if(item.status==='partial') partial++;
+    });
+    document.getElementById('health-success').textContent = success;
+    document.getElementById('health-errors').textContent = errors;
+    document.getElementById('health-partial').textContent = partial;
+
+    list.innerHTML = logItems.slice(0,20).map(item=>`
+      <div class="health-entry ${item.status||'partial'}">
+        <div style="flex:1">
+          <div style="font-weight:600;margin-bottom:.25rem">${item.component||'System'}</div>
+          <div style="font-size:10px;color:var(--gray);margin-bottom:.25rem">${item.message||'No message'}</div>
+          <div style="font-size:10px;color:var(--gray)">${formatTime(item.timestamp)}</div>
+        </div>
+      </div>`).join('');
+  });
+  _unsubHealth = unsubHealth;
+  unsubs.push(unsubHealth);
+};
+
+// ── API HEALTH CHECK ──
+function checkApiHealth(){
+  // Placeholder for API health monitoring
+  console.log('API health check initiated');
+}
+
+// ── DAILY SUMMARY ──
+function generateDailySummary(){
+  console.log('Daily summary generated');
+}
+
+// Expose functions
+window.closeSidebarOnNav = closeSidebarOnNav;
+
+// ── UTILITY FUNCTIONS ──
+function escapeHtml(str){const d=document.createElement('div');d.textContent=str;return d.innerHTML;}
+
+// ── SOCIAL FUNCTIONS ──
+function socialTimestampToDate(value){
+  if(!value) return null;
+  if(value?.toDate) return value.toDate();
+  if(value?.seconds) return new Date(value.seconds*1000);
+  if(value instanceof Date) return value;
+  const parsed=new Date(value);
+  return Number.isNaN(parsed.getTime())?null:parsed;
+}
+function formatSocialDate(value){
+  const dt=socialTimestampToDate(value);
+  return dt?dt.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'—';
+}
+function socialStatusClass(status='DRAFT'){
+  const key=(status||'DRAFT').toUpperCase();
+  if(key==='POSTED') return 'posted';
+  if(key==='PAUSED') return 'paused';
+  if(key==='SCHEDULED') return 'scheduled';
+  return 'draft';
+}
+function normalizeHashtags(raw=''){
+  const parts=raw.split(/[\n,]+/).map(s=>s.trim()).filter(Boolean);
+  return [...new Set(parts.map(tag=>{
+    const compact=tag.replace(/\s+/g,'');
+    return compact.startsWith('#')?compact:'#'+compact;
+  }))];
+}
+function socialDefaultScheduleValue(){
+  const d=new Date();
+  d.setMinutes(0,0,0);
+  d.setHours(d.getHours()+2);
+  const local=new Date(d.getTime()-d.getTimezoneOffset()*60000);
+  return local.toISOString().slice(0,16);
+}
+function getSocialBackendBase(){
+  const input=document.getElementById('social-backend-base');
+  const saved=localStorage.getItem('trashapp_social_backend_base')||'http://localhost:3000';
+  const value=(input?.value.trim()||saved).replace(/\/$/,'');
+  if(input) input.value=value;
+  localStorage.setItem('trashapp_social_backend_base',value);
+  return value;
+}
+function getSelectedSocialPlatforms(){
+  return SOCIAL_PLATFORMS.filter(p=>document.getElementById('social-platform-'+p.id)?.checked).map(p=>p.id);
+}
+function socialPlatformMeta(id){
+  return SOCIAL_PLATFORMS.find(p=>p.id===id)||{id:id,label:id,limit:'',voice:''};
+}
+function readSocialVariantInputs(){
+  SOCIAL_PLATFORMS.forEach(p=>{
+    const el=document.getElementById('social-caption-'+p.id);
+    if(el) socialCaptionVariants[p.id]=el.value.trim();
+  });
+}
+function socialFormData(){
+  readSocialVariantInputs();
+  return {
+    title:document.getElementById('social-title')?.value.trim()||'',
+    contentType:document.getElementById('social-content-type')?.value||'before_after',
+    angle:document.getElementById('social-angle')?.value.trim()||'',
+    goal:document.getElementById('social-goal')?.value||'lead_gen',
+    offer:document.getElementById('social-offer')?.value.trim()||'',
+    cta:document.getElementById('social-cta')?.value.trim()||'',
+    location:document.getElementById('social-location')?.value.trim()||'',
+    hashtags:document.getElementById('social-hashtags')?.value.trim()||'',
+    schedule:document.getElementById('social-schedule')?.value||'',
+    publishMode:document.getElementById('social-publish-mode')?.value||'MANUAL',
+    assetsRaw:document.getElementById('social-assets')?.value.trim()||'',
+    notes:document.getElementById('social-notes')?.value.trim()||'',
+    platforms:getSelectedSocialPlatforms()
+  };
+}
+function socialProviderStateClass(status='NOT_CONNECTED'){
+  const key=(status||'NOT_CONNECTED').toUpperCase();
+  if(key==='CONNECTED') return 'posted';
+  if(key==='ENV_MISSING'||key==='ERROR') return 'paused';
+  if(key==='CODE_RECEIVED'||key==='PENDING') return 'scheduled';
+  return 'draft';
+}
+function mapPlatformToProvider(platform){
+  if(platform==='instagram' || platform==='facebook') return 'meta';
+  return platform;
+}
+function renderSocialConnections(){
+  const el=document.getElementById('social-connection-grid');
+  if(!el) return;
+  if(!socialConnectionCache.length){
+    el.innerHTML='<div class="social-empty">No provider data available yet.</div>';
+    return;
+  }
+  el.innerHTML=socialConnectionCache.map(provider=>{
+    const statusLabel=provider.status_label||provider.connection_status||provider.status||'Not connected';
+    const accountName=provider.account_name||provider.display_name||provider.account_label||'No account connected yet';
+    const envMeta=provider.env_ready ? 'Connector configured' : 'App keys still needed on backend';
+    const docsUrl=provider.docs_url||provider.docsUrl||'#';
+    return `<div class="social-connection-card">
+      <div class="social-connection-head">
+        <div>
+          <div class="social-connection-name">${escapeHtml(provider.label||provider.id)}</div>
+          <div class="social-connection-desc">${escapeHtml(provider.description||'')}</div>
+        </div>
+        <span class="social-chip ${socialProviderStateClass(provider.connection_status||provider.status)}">${escapeHtml(statusLabel)}</span>
+      </div>
+      <div class="social-connection-meta">
+        <div><strong style="color:var(--white);font-size:12px">${escapeHtml(accountName)}</strong></div>
+        <div style="margin-top:4px">${escapeHtml(envMeta)}</div>
+        ${provider.last_error?`<div style="margin-top:6px;color:var(--orange)">Last issue: ${escapeHtml(provider.last_error)}</div>`:''}
+      </div>
+      <div class="social-meta-row">
+        ${(provider.scopes||[]).slice(0,2).map(scope=>`<span class="social-chip manual">${escapeHtml(scope)}</span>`).join('')}
+      </div>
+      <div class="social-connection-actions">
+        <button class="btn-secondary" onclick="launchSocialConnect('${provider.id}')">${provider.env_ready?'Launch Connect':'Setup Backend'}</button>
+        <button class="btn-ghost" onclick="window.open('${docsUrl}','_blank')">Docs</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+window.loadSocialConnections=async()=>{
+  const el=document.getElementById('social-connection-grid');
+  if(el) el.innerHTML='<div class="social-empty">Checking provider status...</div>';
+  const base=getSocialBackendBase();
+  try{
+    const resp=await fetch(base+'/api/social/providers');
+    if(!resp.ok) throw new Error('backend returned '+resp.status);
+    const data=await resp.json();
+    socialConnectionCache=Array.isArray(data.providers)?data.providers:[];
+  }catch(e){
+    socialConnectionCache=SOCIAL_CONNECTION_FALLBACK.map(item=>({
+      ...item,
+      env_ready:false,
+      connection_status:'OFFLINE',
+      status_label:'Backend Offline',
+      last_error:'Start Mastermind and set the backend URL above.'
+    }));
+  }
+  renderSocialConnections();
+};
+window.launchSocialConnect=(providerId)=>{
+  const base=getSocialBackendBase();
+  window.open(base+`/api/social/connect/${providerId}/start`,'_blank','noopener');
+};
+function buildSocialCaption(platform,payload){
+  const location=payload.location||'Fresno and the Central Valley';
+  const hashtags=normalizeHashtags(payload.hashtags);
+  const intro=payload.title||'TrashApp haul of the day';
+  const message=payload.angle||'We make junk removal fast, clean, and ridiculously easy.';
+  const offer=payload.offer?` ${payload.offer}`:'';
+  const cta=payload.cta||'DM us a photo for a fast quote.';
+  const openerByType={
+    before_after:`${intro}: another cleanup with a satisfying finish.`,
+    promo:`${intro}: if the pile is getting out of hand, this is the sign to clear it.`,
+    testimonial:`${intro}: another customer got their space back without the usual hassle.`,
+    educational:`${intro}: quick tip from the junk side of the business.`,
+    crew_highlight:`${intro}: shoutout to the crew making ugly jobs look easy.`,
+    ugc:`${intro}: a real-world cleanup with a real result.`
+  };
+  const opener=openerByType[payload.contentType]||openerByType.before_after;
+  const goalLine=payload.goal==='seasonal_offer'?'Perfect timing for a spring reset.'
+    :payload.goal==='review_push'?'Proof that reliable service still matters.'
+    :payload.goal==='retargeting'?'If you have been meaning to clean it out, now is a good time.'
+    :payload.goal==='awareness'?'If you did not know we handle this, now you do.'
+    :'Need a quick quote without the back and forth?';
+
+  if(platform==='instagram'){
+    return `${opener}\n\n${message}${offer}\n${goalLine} Serving ${location}.\n\n${cta}\n\n${hashtags.slice(0,8).join(' ')}`.trim();
+  }
+  if(platform==='facebook'){
+    return `${opener}\n\n${message}${offer}\nWe serve ${location} and can turn photo quotes around fast.\n${cta}\n\n${hashtags.slice(0,5).join(' ')}`.trim();
+  }
+  if(platform==='tiktok'){
+    return `${intro}.\n${message}${offer}\nServing ${location}.\n${cta}\n${hashtags.slice(0,6).join(' ')}`.trim();
+  }
+  if(platform==='x'){
+    const base=`${intro}: ${message}${offer} Serving ${location}. ${cta}`;
+    return (base+' '+hashtags.slice(0,3).join(' ')).trim().slice(0,280);
+  }
+  if(platform==='linkedin'){
+    return `${intro}\n\n${message}${offer}\nFor homeowners, property managers, and teams in ${location}, speed matters but trust matters more.\n${cta}\n\n${hashtags.slice(0,4).join(' ')}`.trim();
+  }
+  if(platform==='google_business'){
+    return `${intro}\n\n${message}${offer}\nTrashApp serves ${location} with fast quotes and dependable junk removal.\n${cta}`.trim();
+  }
+  return `${intro}\n\n${message}${offer}\n${cta}`.trim();
+}
+function renderSocialPreview(){
+  readSocialVariantInputs();
+  const wrap=document.getElementById('social-preview-list');
+  if(!wrap) return;
+  const selected=getSelectedSocialPlatforms();
+  if(!selected.length){
+    wrap.innerHTML='<div class="social-empty">Pick at least one platform to build captions.</div>';
+    return;
+  }
+  const payload=socialFormData();
+  wrap.innerHTML=selected.map(id=>{
+    const meta=socialPlatformMeta(id);
+    const value=socialCaptionVariants[id]||buildSocialCaption(id,payload);
+    if(!socialCaptionVariants[id]) socialCaptionVariants[id]=value;
+    return `<div class="social-preview-card">
+      <div class="social-preview-head">
+        <div>
+          <div class="social-preview-title">${escapeHtml(meta.label)}</div>
+          <div class="social-preview-limit">${escapeHtml(meta.voice)} • ${escapeHtml(meta.limit)}</div>
+        </div>
+        <button class="social-mini-btn" onclick="copySocialCaption('${id}')">Copy</button>
+      </div>
+      <textarea class="social-caption-input" id="social-caption-${id}">${escapeHtml(value)}</textarea>
+    </div>`;
+  }).join('');
+}
+window.handleSocialPlatformChange=()=>{renderSocialPreview();};
+window.generateSocialCaptions=()=>{
+  const payload=socialFormData();
+  if(!payload.platforms.length){showToast('Select at least one platform first.', 'warning');return;}
+  socialCaptionVariants={};
+  payload.platforms.forEach(id=>{socialCaptionVariants[id]=buildSocialCaption(id,payload);});
+  renderSocialPreview();
+  showToast('Caption variants generated.','var(--blue)');
+};
+window.copySocialCaption=async(platform)=>{
+  readSocialVariantInputs();
+  const text=socialCaptionVariants[platform]||'';
+  if(!text){showToast('Generate a caption first.', 'warning');return;}
+  try{
+    await navigator.clipboard.writeText(text);
+    showToast(`${socialPlatformMeta(platform).label} caption copied.`, 'var(--green)');
+  }catch(e){
+    showToast('Copy failed. Your browser blocked clipboard access.', 'error');
+  }
+};
+window.copySocialBundle=async()=>{
+  readSocialVariantInputs();
+  const selected=getSelectedSocialPlatforms();
+  if(!selected.length){showToast('Select platforms first.', 'warning');return;}
+  const bundle=selected.map(id=>`[${socialPlatformMeta(id).label}]\n${socialCaptionVariants[id]||''}`).join('\n\n');
+  try{
+    await navigator.clipboard.writeText(bundle);
+    showToast('All caption variants copied.', 'var(--green)');
+  }catch(e){
+    showToast('Copy failed. Your browser blocked clipboard access.', 'error');
+  }
+};
+window.resetSocialComposer=(quiet=false)=>{
+  socialEditingId=null;
+  socialCaptionVariants={};
+  document.getElementById('social-title').value='';
+  document.getElementById('social-content-type').value='before_after';
+  document.getElementById('social-angle').value='';
+  document.getElementById('social-goal').value='lead_gen';
+  document.getElementById('social-offer').value='';
+  document.getElementById('social-cta').value='';
+  document.getElementById('social-location').value='Fresno and the Central Valley';
+  document.getElementById('social-hashtags').value='#JunkRemoval,#Fresno,#TrashApp';
+  document.getElementById('social-schedule').value=socialDefaultScheduleValue();
+  document.getElementById('social-publish-mode').value='MANUAL';
+  document.getElementById('social-assets').value='';
+  document.getElementById('social-notes').value='';
+  SOCIAL_PLATFORMS.forEach((p,idx)=>{
+    const el=document.getElementById('social-platform-'+p.id);
+    if(el) el.checked=idx<3;
+  });
+  document.getElementById('social-editor-state').textContent='New Post';
+  renderSocialPreview();
+  if(!quiet) showToast('Social composer reset.','var(--blue)');
+};
+window.saveSocialPost=async(status)=>{
+  const payload=socialFormData();
+  if(!payload.title && !payload.angle && !payload.offer){
+    showToast('Add a title, message, or offer so the post has enough context.', 'warning');
+    return;
+  }
+  if(!payload.platforms.length){
+    showToast('Pick at least one platform.', 'warning');
+    return;
+  }
+  if(status==='SCHEDULED' && !payload.schedule){
+    showToast('Choose a date and time before scheduling.', 'warning');
+    return;
+  }
+  if(!Object.keys(socialCaptionVariants).length){
+    payload.platforms.forEach(id=>{socialCaptionVariants[id]=buildSocialCaption(id,payload);});
+  }
+  const assetLines=payload.assetsRaw.split('\n').map(s=>s.trim()).filter(Boolean);
+  const selectedVariants={};
+  payload.platforms.forEach(id=>{
+    selectedVariants[id]=(socialCaptionVariants[id]||buildSocialCaption(id,payload)).trim();
+  });
+  const scheduledFor=payload.schedule?Timestamp.fromDate(new Date(payload.schedule)):null;
+  const docData={
+    title:payload.title,
+    content_type:payload.contentType,
+    main_message:payload.angle,
+    goal:payload.goal,
+    offer:payload.offer,
+    cta:payload.cta,
+    location:payload.location,
+    hashtags:normalizeHashtags(payload.hashtags),
+    assets:assetLines,
+    notes:payload.notes,
+    platforms:payload.platforms,
+    caption_variants:selectedVariants,
+    status,
+    scheduled_for:scheduledFor,
+    publish_mode:payload.publishMode,
+    publish_state:payload.publishMode==='AUTO'?'PENDING':'MANUAL',
+    created_by:currentAdmin?.uid||'admin',
+    created_by_phone:currentAdmin?.phoneNumber||'',
+    updated_at:serverTimestamp()
+  };
+  try{
+    if(socialEditingId){
+      await updateDoc(doc(db,'social_posts',socialEditingId),docData);
+    }else{
+      await addDoc(collection(db,'social_posts'),{...docData,created_at:serverTimestamp(),posted_at:null});
+    }
+    await addDoc(collection(db,'system_logs'),{
+      workflow_name:'social_admin',
+      status:'SUCCESS',
+      message:`Social post ${socialEditingId?'updated':'created'}: ${payload.title||'Untitled post'} (${status})`,
+      timestamp:serverTimestamp(),
+      type:'social_post',
+      icon:'📣'
+    });
+    showToast(status==='SCHEDULED'?'Social post scheduled.':'Social draft saved.',status==='SCHEDULED'?'var(--green)':'var(--blue)');
+    await loadSocialPosts();
+    resetSocialComposer(true);
+  }catch(e){
+    showToast('Could not save social post: '+e.message, 'error');
+  }
+};
+async function loadSocialPosts(){
+  const tbody=document.getElementById('social-queue-body');
+  const upcoming=document.getElementById('social-upcoming-list');
+  if(!tbody||!upcoming) return;
+  try{
+    const snap=await getDocs(collection(db,'social_posts'));
+    socialPostsCache=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>{
+      const aTime=socialTimestampToDate(a.scheduled_for||a.updated_at||a.created_at)?.getTime()||0;
+      const bTime=socialTimestampToDate(b.scheduled_for||b.updated_at||b.created_at)?.getTime()||0;
+      return bTime-aTime;
+    });
+    renderSocialStats();
+    renderSocialQueue();
+  }catch(e){
+    const banner = document.getElementById('retry-social'); if(banner) banner.classList.add('visible');
+    tbody.innerHTML='<tr><td colspan="6" class="empty">Could not load social posts</td></tr>';
+    upcoming.innerHTML='<div class="social-empty">Could not load scheduled posts.</div>';
+  }
+}
+window.loadSocialPosts = loadSocialPosts;
+
+function renderSocialStats(){
+  const today=new Date();today.setHours(0,0,0,0);
+  const nextDay=new Date(today);nextDay.setDate(nextDay.getDate()+1);
+  const monthStart=new Date(today.getFullYear(),today.getMonth(),1);
+  let drafts=0,scheduled=0,dueToday=0,posted=0;
+  socialPostsCache.forEach(post=>{
+    const status=(post.status||'DRAFT').toUpperCase();
+    const scheduledFor=socialTimestampToDate(post.scheduled_for);
+    const postedAt=socialTimestampToDate(post.posted_at);
+    if(status==='DRAFT') drafts++;
+    if(status==='SCHEDULED') scheduled++;
+    if(status==='SCHEDULED' && scheduledFor && scheduledFor>=today && scheduledFor<nextDay) dueToday++;
+    if(status==='POSTED' && postedAt && postedAt>=monthStart) posted++;
+  });
+  document.getElementById('social-stat-drafts').textContent=drafts;
+  document.getElementById('social-stat-scheduled').textContent=scheduled;
+  document.getElementById('social-stat-today').textContent=dueToday;
+  document.getElementById('social-stat-posted').textContent=posted;
+}
+function renderSocialQueue(){
+  const tbody=document.getElementById('social-queue-body');
+  const upcoming=document.getElementById('social-upcoming-list');
+  if(!tbody||!upcoming) return;
+  if(!socialPostsCache.length){
+    tbody.innerHTML='<tr><td colspan="6" class="empty">No social posts saved yet</td></tr>';
+    upcoming.innerHTML='<div class="social-empty">No scheduled posts yet.</div>';
+    return;
+  }
+  tbody.innerHTML=socialPostsCache.slice(0,18).map(post=>{
+    const platforms=(post.platforms||[]).map(id=>`<span class="social-chip manual">${escapeHtml(socialPlatformMeta(id).label)}</span>`).join(' ');
+    const title=post.title||post.main_message||'Untitled post';
+    const publishMode=(post.publish_mode||'MANUAL').toUpperCase();
+    return `<tr>
+      <td style="max-width:220px">
+        <div style="font-weight:700">${escapeHtml(title)}</div>
+        <div style="font-size:11px;color:var(--gray);margin-top:4px;line-height:1.45">${escapeHtml(post.offer||post.main_message||'No hook added yet')}</div>
+        <div class="social-meta-row" style="margin-top:6px"><span class="social-chip ${publishMode==='AUTO'?'scheduled':'manual'}">${publishMode}</span>${post.publish_state?`<span class="social-chip ${socialProviderStateClass(post.publish_state)}">${escapeHtml(post.publish_state)}</span>`:''}</div>
+      </td>
+      <td>${platforms||'<span style="color:var(--gray)">—</span>'}</td>
+      <td>${formatSocialDate(post.scheduled_for)}</td>
+      <td><span class="social-chip ${socialStatusClass(post.status)}">${escapeHtml(post.status||'DRAFT')}</span></td>
+      <td>${formatSocialDate(post.updated_at||post.created_at)}</td>
+      <td>
+        <div class="rep-actions">
+          <button class="social-mini-btn" onclick="editSocialPost('${post.id}')">Edit</button>
+          <button class="social-mini-btn" onclick="duplicateSocialPost('${post.id}')">Duplicate</button>
+          ${(post.status||'').toUpperCase()!=='POSTED'?`<button class="social-mini-btn" onclick="markSocialPosted('${post.id}')">Mark Posted</button>`:''}
+          ${(post.status||'').toUpperCase()==='SCHEDULED'?`<button class="social-mini-btn" onclick="pauseSocialPost('${post.id}')">Pause</button>`:''}
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  const scheduled=socialPostsCache
+    .filter(post=>(post.status||'').toUpperCase()==='SCHEDULED')
+    .sort((a,b)=>{
+      const aTime=socialTimestampToDate(a.scheduled_for)?.getTime()||Infinity;
+      const bTime=socialTimestampToDate(b.scheduled_for)?.getTime()||Infinity;
+      return aTime-bTime;
+    })
+    .slice(0,5);
+  upcoming.innerHTML=scheduled.length?scheduled.map(post=>`
+    <div class="social-upcoming-item">
+      <div class="social-upcoming-title">${escapeHtml(post.title||post.main_message||'Untitled post')}</div>
+      <div class="social-upcoming-meta">${formatSocialDate(post.scheduled_for)} • ${(post.platforms||[]).map(id=>socialPlatformMeta(id).label).join(', ')||'No platforms selected'}</div>
+    </div>`).join(''):'<div class="social-empty">No scheduled posts in the queue.</div>';
+}
+window.editSocialPost=(id)=>{
+  const post=socialPostsCache.find(item=>item.id===id);
+  if(!post){showToast('Post not found.', 'warning');return;}
+  socialEditingId=id;
+  socialCaptionVariants={...(post.caption_variants||{})};
+  document.getElementById('social-title').value=post.title||'';
+  document.getElementById('social-content-type').value=post.content_type||'before_after';
+  document.getElementById('social-angle').value=post.main_message||'';
+  document.getElementById('social-goal').value=post.goal||'lead_gen';
+  document.getElementById('social-offer').value=post.offer||'';
+  document.getElementById('social-cta').value=post.cta||'';
+  document.getElementById('social-location').value=post.location||'';
+  document.getElementById('social-hashtags').value=(post.hashtags||[]).join(', ');
+  document.getElementById('social-publish-mode').value=(post.publish_mode||'MANUAL').toUpperCase();
+  document.getElementById('social-assets').value=(post.assets||[]).join('\n');
+  document.getElementById('social-notes').value=post.notes||'';
+  const scheduled=socialTimestampToDate(post.scheduled_for);
+  document.getElementById('social-schedule').value=scheduled?new Date(scheduled.getTime()-scheduled.getTimezoneOffset()*60000).toISOString().slice(0,16):socialDefaultScheduleValue();
+  SOCIAL_PLATFORMS.forEach(p=>{
+    const el=document.getElementById('social-platform-'+p.id);
+    if(el) el.checked=(post.platforms||[]).includes(p.id);
+  });
+  document.getElementById('social-editor-state').textContent='Editing';
+  renderSocialPreview();
+  showToast('Social post loaded into composer.','var(--blue)');
+};
+window.markSocialPosted=async(id)=>{
+  try{
+    await updateDoc(doc(db,'social_posts',id),{status:'POSTED',posted_at:serverTimestamp(),updated_at:serverTimestamp()});
+    showToast('Post marked as posted.','var(--green)');
+    loadSocialPosts();
+  }catch(e){showToast('Could not update post: '+e.message, 'error');}
+};
+window.pauseSocialPost=async(id)=>{
+  try{
+    await updateDoc(doc(db,'social_posts',id),{status:'PAUSED',updated_at:serverTimestamp()});
+    showToast('Scheduled post paused.','var(--orange)');
+    loadSocialPosts();
+  }catch(e){showToast('Could not pause post: '+e.message, 'error');}
+};
+window.duplicateSocialPost=async(id)=>{
+  const post=socialPostsCache.find(item=>item.id===id);
+  if(!post){showToast('Post not found.', 'warning');return;}
+  const clone={...post};
+  delete clone.id;
+  delete clone.created_at;
+  delete clone.updated_at;
+  delete clone.posted_at;
+  clone.status='DRAFT';
+  clone.scheduled_for=null;
+  clone.title=(post.title||'Untitled post')+' Copy';
+  try{
+    await addDoc(collection(db,'social_posts'),{...clone,created_at:serverTimestamp(),updated_at:serverTimestamp(),posted_at:null});
+    showToast('Post duplicated into drafts.','var(--green)');
+    loadSocialPosts();
+  }catch(e){showToast('Could not duplicate post: '+e.message, 'error');}
+};
+
+// ── SCHEDULE ──
+let _scheduleConfig = {};
+let _currentWeekStart = null;
+
+window.loadScheduleConfig = async () => {
+  try {
+    const snap = await getDoc(doc(db,'system_config','schedule'));
+    _scheduleConfig = snap.exists() ? snap.data() : {
+      operatingDays: ['MON','TUE','WED','THU','FRI'],
+      defaultStart: '07:00',
+      defaultEnd: '20:00',
+      slotDuration: 90,
+      maxJobsPerSlot: 1,
+      minNotice: 60,
+      bookDays: 14,
+      closures: []
+    };
+    renderScheduleSettings(_scheduleConfig);
+  }catch(e){
+    showError('Schedule', loadScheduleConfig);
+  }
+};
+
+function renderScheduleSettings(config) {
+  const days = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
+  const operating = config.operatingDays || [];
+  document.querySelectorAll('.day-toggle').forEach(btn => {
+    const day = btn.getAttribute('data-day');
+    if(operating.includes(day)) btn.classList.add('active');
+    else btn.classList.remove('active');
+  });
+  document.getElementById('schedule-default-start').value = config.defaultStart || '07:00';
+  document.getElementById('schedule-default-end').value = config.defaultEnd || '20:00';
+  document.getElementById('schedule-slot-duration').value = config.slotDuration || 90;
+  document.getElementById('schedule-max-jobs').value = config.maxJobsPerSlot || 1;
+  document.getElementById('schedule-min-notice').value = config.minNotice || 60;
+  document.getElementById('schedule-book-days').value = config.bookDays || 14;
+
+  const closureList = document.getElementById('schedule-closures');
+  if(config.closures && config.closures.length > 0) {
+    closureList.innerHTML = config.closures.map((c,i) => `
+      <div class="closure-item">
+        <span>${c.date} ${c.reason ? '— '+c.reason : ''}</span>
+        <button onclick="removeScheduleClosure(${i})">Remove</button>
+      </div>
+    `).join('');
+  } else {
+    closureList.innerHTML = '<div style="color:var(--gray);font-size:11px;padding:.5rem">No closures scheduled</div>';
+  }
+}
+
+window.toggleScheduleDay = (day) => {
+  const btn = document.querySelector(`[data-day="${day}"]`);
+  btn.classList.toggle('active');
+};
+
+window.addHoliday = (dateStr) => {
+  const date = new Date(dateStr).toLocaleDateString();
+  const reason = dateStr.includes('12-25') ? 'Christmas' : dateStr.includes('01-01') ? 'New Year' : dateStr.includes('07-04') ? 'July 4th' : 'Thanksgiving';
+  if(!_scheduleConfig.closures) _scheduleConfig.closures = [];
+  _scheduleConfig.closures.push({date, reason});
+  renderScheduleSettings(_scheduleConfig);
+};
+
+window.removeScheduleClosure = (index) => {
+  if(_scheduleConfig.closures) _scheduleConfig.closures.splice(index, 1);
+  renderScheduleSettings(_scheduleConfig);
+};
+
+window.saveScheduleConfig = async () => {
+  try {
+    const days = [];
+    document.querySelectorAll('.day-toggle.active').forEach(btn => days.push(btn.getAttribute('data-day')));
+    _scheduleConfig.operatingDays = days;
+    _scheduleConfig.defaultStart = document.getElementById('schedule-default-start').value;
+    _scheduleConfig.defaultEnd = document.getElementById('schedule-default-end').value;
+    _scheduleConfig.slotDuration = parseInt(document.getElementById('schedule-slot-duration').value);
+    _scheduleConfig.maxJobsPerSlot = parseInt(document.getElementById('schedule-max-jobs').value);
+    _scheduleConfig.minNotice = parseInt(document.getElementById('schedule-min-notice').value);
+    _scheduleConfig.bookDays = parseInt(document.getElementById('schedule-book-days').value);
+
+    await setDoc(doc(db,'system_config','schedule'), _scheduleConfig, {merge: true});
+    showToast('Schedule settings saved.', 'var(--green)');
+  }catch(e){
+    showToast('Error: '+e.message, 'error');
+  }
+};
+
+function getWeekStart(offset) {
+  const d = new Date();
+  d.setDate(d.getDate() + (offset * 7));
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  d.setDate(diff);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+window.scheduleNavigateWeek = (offset) => {
+  if(!_currentWeekStart || offset !== 0) _currentWeekStart = getWeekStart(offset || 0);
+  else _currentWeekStart.setDate(_currentWeekStart.getDate() + (offset * 7));
+
+  const weekEnd = new Date(_currentWeekStart);
+  weekEnd.setDate(weekEnd.getDate() + 6);
+  document.getElementById('schedule-week-display').textContent = `Week of ${_currentWeekStart.toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'})}`;
+
+  renderScheduleSlotGrid();
+};
+
+function renderScheduleSlotGrid() {
+  const times = ['7-9 AM','9-11 AM','11-1 PM','1-3 PM','3-5 PM','5-7 PM','7-9 PM'];
+  const days = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
+
+  let head = '<tr><th>Time</th>';
+  for(let i=0; i<7; i++) {
+    const d = new Date(_currentWeekStart);
+    d.setDate(d.getDate() + i);
+    const dateStr = d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    head += `<th>${days[i]}<br>${dateStr}</th>`;
+  }
+  head += '</tr>';
+  document.getElementById('schedule-grid-head').innerHTML = head;
+
+  let body = '';
+  times.forEach(time => {
+    body += '<tr><td style="font-weight:600;background:var(--card2)">' + time + '</td>';
+    for(let i=0; i<7; i++) {
+      body += '<td class="slot-open" onclick="toggleBlockSlot(this)">OPEN</td>';
+    }
+    body += '</tr>';
+  });
+  document.getElementById('schedule-grid-body').innerHTML = body;
+}
+
+window.toggleBlockSlot = (el) => {
+  if(el.classList.contains('slot-open')) {
+    el.classList.remove('slot-open');
+    el.classList.add('slot-blocked');
+    el.textContent = 'BLOCK';
+  } else {
+    el.classList.remove('slot-blocked');
+    el.classList.add('slot-open');
+    el.textContent = 'OPEN';
+  }
+};
+
+// ── INTEL ──
+let _intelData = [];
+let _territoryAssignments = [];
+
+window.loadIntel = async () => {
+  try {
+    const snap = await getDocs(collection(db,'zip_intel'));
+    _intelData = snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.weekScore||0)-(a.weekScore||0));
+    document.getElementById('intel-updated-time').textContent = 'Last updated: '+new Date().toLocaleString();
+    renderIntelGrid();
+  }catch(e){
+    showError('Intel', loadIntel);
+  }
+};
+
+function renderIntelGrid() {
+  if(_intelData.length === 0) {
+    document.getElementById('intel-zip-grid').innerHTML = '<div class="empty">No zip code intelligence available</div>';
+    return;
+  }
+
+  const html = _intelData.map(z => {
+    const score = z.weekScore || 0;
+    let scoreClass = score >= 80 ? 'hot' : score >= 60 ? 'good' : score >= 40 ? 'avg' : '';
+    return `
+      <div class="zip-card ${scoreClass}" onclick="expandZipDetails('${z.zipCode}')">
+        <div class="zip-code">${z.zipCode}</div>
+        <div class="zip-score">Score: ${score}</div>
+        <div class="zip-signal">${(z.signals||[]).slice(0,1).map(s=>s.summary).join(' ')}</div>
+      </div>
+    `;
+  }).join('');
+  document.getElementById('intel-zip-grid').innerHTML = html;
+}
+
+window.expandZipDetails = (zipCode) => {
+  const data = _intelData.find(z=>z.zipCode === zipCode);
+  if(!data) return;
+
+  const expanded = document.createElement('div');
+  expanded.className = 'zip-expanded';
+  expanded.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <div class="zip-expanded-title">${zipCode} — Score ${data.weekScore}</div>
+      <button class="btn-sm" onclick="this.parentElement.parentElement.remove()">Close</button>
+    </div>
+    ${(data.signals||[]).map(s=>`
+      <div class="signal-item">
+        <div style="font-weight:600;color:var(--gold)">${s.summary}</div>
+        <div class="signal-label">${s.detail || ''}</div>
+        ${s.date ? '<div class="signal-label">'+s.date+'</div>' : ''}
+      </div>
+    `).join('')}
+  `;
+  document.getElementById('intel-zip-grid').parentElement.insertBefore(expanded, document.getElementById('intel-zip-grid').nextSibling);
+}
+
+window.refreshIntel = async () => {
+  try {
+    await loadIntel();
+    showToast('Intel refreshed.', 'var(--green)');
+  }catch(e){
+    showToast('Error refreshing intel: '+e.message, 'error');
+  }
+};
+
+window.loadTerritoryAssignments = async () => {
+  try {
+    const weekStart = getWeekStart(0);
+    const weekId = weekStart.toISOString().split('T')[0];
+    const snap = await getDocs(query(collection(db,'territory_assignments'), where('weekId','==',weekId)));
+    _territoryAssignments = snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderTerritoryAssignments();
+  }catch(e){
+    showError('Territory Assignments', loadTerritoryAssignments);
+  }
+};
+
+function renderTerritoryAssignments() {
+  if(_territoryAssignments.length === 0) {
+    document.getElementById('intel-assignments').innerHTML = '<div class="empty">No assignments for this week</div>';
+    return;
+  }
+
+  const html = _territoryAssignments.map(a => `
+    <div class="assignment-item">
+      <div>
+        <div class="assignment-rep-name">${a.repName || '—'}</div>
+        <div class="assignment-territory">
+          ${a.primaryZip || '—'} (primary)${a.secondaryZips ? ' · '+a.secondaryZips.slice(0,2).join(' · ') : ''}
+        </div>
+        <div class="assignment-reasoning">${a.reasoning || 'AI-assigned based on performance'}</div>
+      </div>
+      <div class="assignment-actions">
+        <button class="btn-sm green" onclick="approveAssignment('${a.id}')" ${a.status==='approved'?'disabled':''}>${a.status==='approved'?'✓ Approved':'Approve'}</button>
+        <button class="btn-sm" onclick="overrideAssignment('${a.id}')">Override</button>
+      </div>
+    </div>
+  `).join('');
+
+  document.getElementById('intel-assignments').innerHTML = html;
+}
+
+window.approveAssignment = async (id) => {
+  try {
+    await updateDoc(doc(db,'territory_assignments',id), {status:'approved',approvedAt:serverTimestamp()});
+    showToast('Assignment approved.', 'var(--green)');
+    await loadTerritoryAssignments();
+  }catch(e){
+    showToast('Error: '+e.message, 'error');
+  }
+};
+
+window.overrideAssignment = async (id) => {
+  const newZips = prompt('Enter new primary zip code:');
+  if(!newZips) return;
+  try {
+    await updateDoc(doc(db,'territory_assignments',id), {primaryZip:newZips,status:'approved',overriddenAt:serverTimestamp()});
+    showToast('Assignment overridden.', 'var(--orange)');
+    await loadTerritoryAssignments();
+  }catch(e){
+    showToast('Error: '+e.message, 'error');
+  }
+};
+
+window.approveAllAssignments = async () => {
+  try {
+    const batch = [];
+    for(const a of _territoryAssignments) {
+      if(a.status !== 'approved') batch.push(updateDoc(doc(db,'territory_assignments',a.id), {status:'approved',approvedAt:serverTimestamp()}));
+    }
+    await Promise.all(batch);
+    showToast('All assignments approved.', 'var(--green)');
+    await loadTerritoryAssignments();
+  }catch(e){
+    showToast('Error: '+e.message, 'error');
+  }
+};
+
+// ── AI OS TAB ──
+let aiosUnsubs = [];
+let aiosMeetingUnsub = null;
+
+window.showAIOSTab = (tab) => {
+  document.querySelectorAll('.aios-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.aios-panel').forEach(p => p.style.display = 'none');
+  document.getElementById('aios-tab-' + tab).classList.add('active');
+  document.getElementById('aios-panel-' + tab).style.display = 'block';
+};
+
+window.loadAIOS = async () => {
+  // Clean up previous subscriptions
+  aiosUnsubs.forEach(u => u());
+  aiosUnsubs = [];
+  if (aiosMeetingUnsub) { aiosMeetingUnsub(); aiosMeetingUnsub = null; }
+
+  // Load all sub-sections
+  loadAgentStatus();
+  loadAgentApprovals();
+  loadMeetingList();
+  loadContentQueue();
+};
+
+function loadAgentStatus() {
+  const grid = document.getElementById('aios-agent-grid');
+  const q = query(collection(db, 'agent_state'));
+  const unsub = onSnapshot(q, snap => {
+    if (snap.empty) { grid.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--gray);grid-column:1/-1">No agents running yet</div>'; return; }
+    const agents = snap.docs.map(d => d.data());
+    grid.innerHTML = agents.map(a => {
+      const status = a.status || 'idle';
+      const lastRun = a.lastRunAt?.toDate ? a.lastRunAt.toDate() : (a.lastRunAt ? new Date(a.lastRunAt) : null);
+      const nextRun = a.nextRunAt?.toDate ? a.nextRunAt.toDate() : (a.nextRunAt ? new Date(a.nextRunAt) : null);
+      const ago = lastRun ? timeAgo(lastRun) : 'never';
+      const nextIn = nextRun ? timeUntil(nextRun) : '—';
+      return `<div class="aios-agent-card" style="border-left:3px solid ${a.color || 'var(--gold)'}">
+        <div class="aios-agent-header">
+          <span class="aios-agent-emoji">${a.emoji || '🤖'}</span>
+          <span class="aios-agent-name">${a.agentName || a.agentId}</span>
+          <span class="aios-agent-dot ${status}"></span>
+        </div>
+        <div class="aios-agent-meta">
+          <div>● ${status.toUpperCase()}</div>
+          <div>Cycle ${a.cycleCount || 0}</div>
+          <div>Last run: ${ago}</div>
+          <div>Next: ${nextIn}</div>
+          ${a.lastError ? `<div style="color:var(--red)">⚠ ${a.lastError.substring(0,50)}</div>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  });
+  aiosUnsubs.push(unsub);
+}
+
+function loadAgentApprovals() {
+  const list = document.getElementById('aios-approvals-list');
+  const q = query(collection(db, 'pending_approvals'), where('status', '==', 'pending'), orderBy('createdAt', 'desc'));
+  const unsub = onSnapshot(q, snap => {
+    const count = snap.size;
+    document.getElementById('aios-approval-count').textContent = count;
+    if (snap.empty) { list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--gray)">No pending approvals</div>'; return; }
+    list.innerHTML = snap.docs.map(d => {
+      const a = d.data();
+      const priorityColor = a.data?.priority === 'critical' ? 'var(--red)' : a.data?.priority === 'high' ? 'var(--orange)' : 'var(--gold)';
+      return `<div class="aios-approval-card">
+        <div class="aios-approval-header">
+          <span style="font-size:18px">${a.emoji || '🤖'}</span>
+          <span class="aios-approval-title">${a.agentName || a.agentId}</span>
+          <span style="font-size:10px;font-weight:700;color:${priorityColor};text-transform:uppercase;margin-left:auto">${a.data?.priority || 'medium'}</span>
+        </div>
+        <div class="aios-approval-title" style="margin-bottom:4px">${a.title}</div>
+        <div class="aios-approval-desc">${a.description}</div>
+        <div class="aios-approval-impact">${a.impact}</div>
+        <div class="aios-approval-btns">
+          <button class="aios-btn-approve" onclick="resolveApproval('${d.id}','approved')">✓ Approve</button>
+          <button class="aios-btn-decline" onclick="resolveApproval('${d.id}','declined')">✕ Decline</button>
+        </div>
+      </div>`;
+    }).join('');
+  });
+  aiosUnsubs.push(unsub);
+}
+
+window.resolveApproval = async (id, status) => {
+  try {
+    await updateDoc(doc(db, 'pending_approvals', id), {
+      status,
+      resolvedAt: serverTimestamp(),
+      resolvedBy: 'owner'
+    });
+    showToast(`Approval ${status}`, status === 'approved' ? 'var(--green)' : 'var(--red)');
+  } catch (e) { showToast('Error: ' + e.message, 'var(--red)'); }
+};
+
+async function loadMeetingList() {
+  try {
+    const q = query(collection(db, 'agent_meetings'), orderBy('startedAt', 'desc'), limit(10));
+    const snap = await getDocs(q);
+    const sel = document.getElementById('aios-meeting-select');
+    sel.innerHTML = '<option value="">Select a meeting...</option>';
+    snap.docs.forEach(d => {
+      const m = d.data();
+      const date = m.startedAt?.toDate ? m.startedAt.toDate() : new Date(m.startedAt);
+      sel.innerHTML += `<option value="${d.id}">${m.weekId} — ${date.toLocaleDateString()}</option>`;
+    });
+    // Auto-load latest if running
+    if (!snap.empty) {
+      const latest = snap.docs[0].data();
+      if (latest.status === 'running') {
+        sel.value = snap.docs[0].id;
+        loadMeetingWeek(snap.docs[0].id);
+      }
+    }
+  } catch (e) { console.error('Meeting list error:', e); }
+}
+
+window.loadMeetingWeek = (weekId) => {
+  if (aiosMeetingUnsub) { aiosMeetingUnsub(); aiosMeetingUnsub = null; }
+  if (!weekId) return;
+
+  const chat = document.getElementById('aios-meeting-chat');
+  const liveBadge = document.getElementById('aios-meeting-live');
+
+  const q = query(collection(db, 'agent_messages'), where('weekId', '==', weekId), orderBy('sentAt', 'asc'));
+  aiosMeetingUnsub = onSnapshot(q, async snap => {
+    // Check if meeting is live
+    try {
+      const meetDoc = await getDoc(doc(db, 'agent_meetings', weekId));
+      if (meetDoc.exists() && meetDoc.data().status === 'running') {
+        liveBadge.style.display = 'inline';
+      } else {
+        liveBadge.style.display = 'none';
+      }
+    } catch {}
+
+    if (snap.empty) { chat.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--gray)">No messages yet</div>'; return; }
+
+    chat.innerHTML = snap.docs.map(d => {
+      const m = d.data();
+      const time = m.sentAt?.toDate ? m.sentAt.toDate() : new Date(m.sentAt);
+      return `<div class="aios-chat-msg">
+        <div class="aios-chat-avatar">${m.fromEmoji || '🤖'}</div>
+        <div class="aios-chat-body">
+          <div class="aios-chat-sender">${m.fromName || m.from} <span>${time.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</span></div>
+          <div class="aios-chat-text">${escapeHtml(m.body || '')}</div>
+        </div>
+      </div>`;
+    }).join('');
+    chat.scrollTop = chat.scrollHeight;
+  });
+};
+
+function loadContentQueue() {
+  const list = document.getElementById('aios-content-list');
+  const q = query(collection(db, 'content_queue'), where('status', '==', 'pending'), orderBy('createdAt', 'desc'));
+  const unsub = onSnapshot(q, snap => {
+    if (snap.empty) { list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--gray)">No pending content</div>'; return; }
+    list.innerHTML = snap.docs.map(d => {
+      const p = d.data();
+      return `<div class="aios-content-card">
+        <div class="aios-content-header">
+          <span>${p.agentId === 'cmo' ? '📢' : p.agentId === 'hr' ? '👥' : '🤖'} ${(p.agentId || '').toUpperCase()}</span>
+          <span>•</span>
+          <span>${p.platform || 'unknown'}</span>
+          <span>•</span>
+          <span>${(p.postType || '').replace(/_/g, ' ')}</span>
+        </div>
+        ${p.title ? `<div style="font-size:13px;font-weight:600;margin-bottom:4px">${escapeHtml(p.title)}</div>` : ''}
+        <div class="aios-content-body">${escapeHtml(p.body || '')}</div>
+        <div class="aios-content-btns">
+          <button class="aios-btn-approve" onclick="approveContent('${d.id}')">✓ Approve & Post</button>
+          <button class="aios-btn-decline" onclick="declineContent('${d.id}')">✕ Decline</button>
+          <button class="aios-btn-approve" style="background:rgba(59,130,246,0.1);border-color:rgba(59,130,246,0.3);color:var(--blue)" onclick="copyContentText('${d.id}')">📋 Copy</button>
+        </div>
+      </div>`;
+    }).join('');
+    // Store data for copy
+    window._contentData = {};
+    snap.docs.forEach(d => { window._contentData[d.id] = d.data(); });
+  });
+  aiosUnsubs.push(unsub);
+}
+
+window.approveContent = async (id) => {
+  try {
+    await updateDoc(doc(db, 'content_queue', id), { status: 'approved', approvedAt: serverTimestamp() });
+    showToast('Content approved');
+  } catch (e) { showToast('Error: ' + e.message, 'var(--red)'); }
+};
+
+window.declineContent = async (id) => {
+  try {
+    await updateDoc(doc(db, 'content_queue', id), { status: 'declined', declinedAt: serverTimestamp() });
+    showToast('Content declined', 'var(--red)');
+  } catch (e) { showToast('Error: ' + e.message, 'var(--red)'); }
+};
+
+window.copyContentText = (id) => {
+  const data = window._contentData?.[id];
+  if (data) {
+    const text = (data.title ? data.title + '\n\n' : '') + (data.body || '');
+    navigator.clipboard.writeText(text).then(() => showToast('Copied to clipboard'));
+  }
+};
+
+function timeAgo(date) {
+  const mins = Math.floor((Date.now() - date.getTime()) / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return mins + ' min ago';
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + 'h ago';
+  return Math.floor(hrs / 24) + 'd ago';
+}
+
+function timeUntil(date) {
+  const mins = Math.floor((date.getTime() - Date.now()) / 60000);
+  if (mins < 0) return 'overdue';
+  if (mins < 60) return mins + 'm';
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + 'h ' + (mins % 60) + 'm';
+  return Math.floor(hrs / 24) + 'd ' + (hrs % 24) + 'h';
+}
+
+// ── TOAST NOTIFICATIONS ──
+function showToast(message, type = 'success') {
+  const colors = { success: 'var(--green)', error: 'var(--red)', warning: 'var(--yellow)', info: 'var(--brand)' };
+  const icons = { success: '✓', error: '✕', warning: '⚠', info: 'ℹ' };
+  const toast = document.createElement('div');
+  toast.style.cssText = `position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg-elevated,#1A1A1F);border:1px solid var(--border-strong,rgba(255,255,255,0.12));border-left:3px solid ${colors[type]||colors.info};color:var(--text-primary,#F0F0EA);padding:12px 18px;border-radius:10px;font-size:13px;font-weight:500;z-index:99999;white-space:nowrap;box-shadow:0 12px 40px rgba(0,0,0,0.6);display:flex;align-items:center;gap:8px;transition:all 300ms cubic-bezier(0.4,0,0.2,1);font-family:'Inter','DM Sans',sans-serif;max-width:90vw;overflow:hidden;text-overflow:ellipsis;`;
+  toast.innerHTML = `<span style="color:${colors[type]||colors.info};font-weight:700;flex-shrink:0">${icons[type]||icons.info}</span><span style="overflow:hidden;text-overflow:ellipsis">${message}</span>`;
+  document.body.appendChild(toast);
+  requestAnimationFrame(() => { toast.style.transform = 'translateX(-50%) translateY(0)'; toast.style.opacity = '1'; });
+  setTimeout(() => { toast.style.transform = 'translateX(-50%) translateY(20px)'; toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3500);
+}
+window.showToast = showToast;
+
+// ── KEYBOARD SHORTCUTS ──
+document.addEventListener('keydown', e => {
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT') return;
+  if(e.key==='n'||e.key==='N'){e.preventDefault();showView('jobs');}
+  if(e.key==='s'||e.key==='S'){e.preventDefault();showView('schedule');}
+  if(e.key==='a'||e.key==='A'){e.preventDefault();showView('aios');}
+  if(e.key==='?'){e.preventDefault();showToast('Shortcuts: N=Jobs, S=Schedule, A=AI OS, ?=Help','info');}
+});
+
+</script>
+</body>
+</html>
