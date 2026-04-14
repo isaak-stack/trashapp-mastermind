@@ -91,7 +91,10 @@ Respond only in JSON. No preamble.`
       }
     `, { maxTokens: 2000 });
 
-    if (!analysis) return;
+    if (!analysis || !analysis.weeklyPL) {
+      logger.log(this.agentId, 'WARN', 'Claude returned null/incomplete financial analysis, skipping cycle');
+      return;
+    }
 
     // 7. Write report
     await this.writeReport({

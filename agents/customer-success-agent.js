@@ -68,7 +68,10 @@ Respond only in JSON. No preamble.`
       }
     `, { maxTokens: 2000 });
 
-    if (!analysis) return;
+    if (!analysis || !analysis.summary) {
+      logger.log(this.agentId, 'WARN', 'Claude returned null/incomplete analysis, skipping cycle');
+      return;
+    }
 
     // 7. Send review request SMS via Twilio
     const { sendSMS } = require('../core/twilio');

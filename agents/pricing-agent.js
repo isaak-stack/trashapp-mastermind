@@ -79,7 +79,10 @@ Respond only in JSON. No preamble.`
       }
     `, { maxTokens: 1500 });
 
-    if (!analysis) return;
+    if (!analysis || !analysis.summary) {
+      logger.log(this.agentId, 'WARN', 'Claude returned null/incomplete pricing analysis, skipping cycle');
+      return;
+    }
 
     // 6. Write to pricing_intel collection
     const today = new Date().toISOString().split('T')[0];

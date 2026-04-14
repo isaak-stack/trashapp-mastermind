@@ -75,7 +75,10 @@ Respond only in JSON. No preamble.`
       }
     `, { maxTokens: 2500 });
 
-    if (!contentPlan) return;
+    if (!contentPlan || !contentPlan.summary) {
+      logger.log(this.agentId, 'WARN', 'Claude returned null/incomplete content plan, skipping cycle');
+      return;
+    }
 
     // 6. Queue content drafts in content_queue
     for (const draft of (contentPlan.contentDrafts || [])) {

@@ -1,0 +1,1541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TrashApp — Free Junk Removal Quote v1.6</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗑️</text></svg>">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#F5A623">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --brand:#F5A623;
+  --brand-dim:rgba(245,166,35,0.12);
+  --brand-hover:#E8941A;
+  --bg-base:#0A0A0B;
+  --bg-surface:#111113;
+  --bg-elevated:#1A1A1F;
+  --bg-overlay:#222228;
+  --border:rgba(255,255,255,0.06);
+  --border-strong:rgba(255,255,255,0.12);
+  --text-primary:#F0F0EA;
+  --text-secondary:#888896;
+  --text-tertiary:#555560;
+  --text-inverse:#0A0A0B;
+  --green:#22C55E;
+  --green-dim:rgba(34,197,94,0.12);
+  --red:#EF4444;
+  --red-dim:rgba(239,68,68,0.12);
+  --yellow:#EAB308;
+  --yellow-dim:rgba(234,179,8,0.12);
+  --blue:#3B82F6;
+  --blue-dim:rgba(59,130,246,0.12);
+  --shadow-sm:0 1px 3px rgba(0,0,0,0.4);
+  --shadow-md:0 4px 16px rgba(0,0,0,0.5);
+  --shadow-lg:0 12px 40px rgba(0,0,0,0.6);
+  --radius-sm:6px;
+  --radius-md:10px;
+  --radius-lg:14px;
+  --radius-xl:20px;
+  --transition:150ms cubic-bezier(0.4,0,0.2,1);
+}
+body{font-family:'Inter','DM Sans',sans-serif;background:var(--bg-base);color:var(--text-primary);min-height:100vh}
+header{background:var(--bg-surface);border-bottom:1px solid var(--border);padding:1rem 1.5rem;display:flex;align-items:center;justify-content:space-between}
+.logo-wrap{display:flex;align-items:center;gap:10px}
+.logo-icon{width:42px;height:42px;background:var(--brand-dim);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;border:1px solid var(--border-strong)}
+.logo-text .brand{font-size:18px;font-weight:800;letter-spacing:-0.5px;line-height:1.1;color:var(--text-primary)}
+.logo-text .brand span{color:var(--brand)}
+.logo-text .tagline{font-size:10px;color:var(--text-secondary);letter-spacing:1px;text-transform:uppercase}
+.header-badge{background:var(--brand-dim);border:1px solid var(--border-strong);color:var(--brand);font-size:11px;font-weight:600;padding:4px 10px;border-radius:99px}
+.trust-bar{background:var(--bg-surface);border-bottom:1px solid var(--border);padding:0.75rem 1.5rem;font-size:12px;color:var(--text-secondary);text-align:center;letter-spacing:0.5px}
+.trust-bar span{color:var(--green);font-weight:600;margin:0 0.25rem}
+.progress-bar{display:flex;gap:12px;padding:1.5rem;background:var(--bg-surface);border-bottom:1px solid var(--border);align-items:center;justify-content:center}
+.progress-step{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;max-width:120px}
+.progress-dot{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;border:2px solid var(--border-strong);color:var(--text-tertiary);transition:all 0.3s ease}
+.progress-dot.active{background:var(--brand);color:var(--text-inverse);border-color:var(--brand);transform:scale(1.1)}
+.progress-label{font-size:11px;color:var(--text-tertiary);text-align:center;transition:color 0.3s ease}
+.progress-dot.active ~ .progress-label{color:var(--text-primary)}
+.progress-step.active .progress-label{color:var(--brand);font-weight:600}
+.progress-step.complete .progress-dot{background:var(--green);border-color:var(--green);color:var(--text-inverse)}
+.progress-step.complete .progress-label{color:var(--green)}
+.progress-connector{flex:1;height:2px;background:var(--border);margin-top:-20px;display:none}
+@media(min-width:640px){.progress-connector{display:block}}
+.hero{padding:3rem 1.5rem 2rem;text-align:center;max-width:480px;margin:0 auto}
+.hero-eyebrow{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--brand);font-weight:600;margin-bottom:1rem}
+.hero h1{font-size:clamp(28px,6vw,42px);font-weight:900;line-height:1.1;margin-bottom:.75rem;letter-spacing:-1px;color:var(--text-primary)}
+.hero h1 span{color:var(--brand)}
+.hero p{font-size:15px;color:var(--text-secondary);line-height:1.6;margin-bottom:2rem}
+.main{padding:0 1rem 3rem;max-width:480px;margin:0 auto}
+.card{background:var(--bg-surface);border-radius:var(--radius-xl);border:1px solid var(--border);overflow:hidden;box-shadow:var(--shadow-md)}
+.upload-section{padding:1.5rem}
+.section-label{font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--brand);margin-bottom:.75rem}
+.photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:.5rem}
+@media(min-width:640px){.photo-grid{grid-template-columns:repeat(5,1fr)}}
+.photo-slot{aspect-ratio:1;background:var(--bg-elevated);border:2px dashed var(--border-strong);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;position:relative;transition:all var(--transition);min-height:48px;flex-direction:column}
+.photo-slot:active{transform:scale(0.97)}
+.photo-slot:hover{border-color:var(--brand);background:var(--brand-dim)}
+.photo-slot img{width:100%;height:100%;object-fit:cover}
+.photo-slot .plus{color:var(--text-tertiary);font-size:28px;font-weight:300}
+.photo-hint{font-size:11px;color:var(--text-tertiary);margin-bottom:1rem;margin-top:0.5rem}
+.photo-upload-title{font-size:14px;font-weight:600;color:var(--text-primary);margin-bottom:0.25rem}
+.photo-upload-subtitle{font-size:12px;color:var(--text-secondary);margin-bottom:1.5rem}
+.photo-slot .del{position:absolute;top:5px;right:5px;background:rgba(0,0,0,.7);color:var(--text-primary);border:none;border-radius:50%;width:22px;height:22px;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;min-width:22px;min-height:22px}
+.photo-slot .del:active{transform:scale(0.97)}
+.item-types-section{margin:1rem 0}
+.item-types-label{font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--brand);margin-bottom:.75rem;display:block}
+.item-types-chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:0.6rem 1rem;border:2px solid var(--border-strong);border-radius:20px;background:transparent;color:var(--text-secondary);font-size:12px;font-weight:600;cursor:pointer;transition:all var(--transition);min-height:40px;display:flex;align-items:center}
+.chip:active{transform:scale(0.97)}
+.chip.selected{background:var(--brand);color:var(--text-inverse);border-color:var(--brand)}
+.chip:hover:not(.selected){border-color:var(--brand);color:var(--brand)}
+.multi-toggle-wrap{text-align:center;margin-top:1rem;margin-bottom:0}
+.btn-multi-toggle{background:transparent;border:2px solid var(--border-strong);color:var(--brand);padding:.75rem 1.25rem;border-radius:var(--radius-md);font-size:13px;font-weight:600;cursor:pointer;transition:all var(--transition);min-height:44px;display:inline-flex;align-items:center;font-family:'Inter','DM Sans',sans-serif}
+.btn-multi-toggle:hover{background:var(--brand-dim);border-color:var(--brand)}
+.btn-multi-toggle:active{transform:scale(0.97)}
+.divider{height:1px;background:var(--border)}
+.addr-section{padding:1.25rem 1.5rem}
+.addr-section label{font-size:12px;color:var(--text-secondary);display:block;margin-bottom:6px}
+.addr-section input{width:100%;padding:.65rem .9rem;background:var(--bg-elevated);border:1px solid var(--border-strong);border-radius:var(--radius-md);color:var(--text-primary);font-size:14px;outline:none;transition:border-color var(--transition);min-height:44px;font-family:'Inter','DM Sans',sans-serif}
+.addr-section input:focus{border-color:var(--brand);background:var(--bg-overlay)}
+.addr-section input::placeholder{color:var(--text-tertiary)}
+.urgency-section{padding:1.25rem 1.5rem;border-top:1px solid var(--border)}
+.urgency-label{font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--brand);margin-bottom:0.75rem;display:block}
+.urgency-pills{display:flex;gap:8px;flex-wrap:wrap}
+@media(max-width:375px){.urgency-pills{flex-direction:column}}
+.urgency-pill{flex:1;min-width:100px;padding:0.7rem 1rem;border:2px solid var(--border-strong);border-radius:var(--radius-md);background:transparent;color:var(--text-secondary);font-size:12px;font-weight:600;cursor:pointer;transition:all var(--transition);min-height:44px;display:flex;align-items:center;justify-content:center;text-align:center;font-family:'Inter','DM Sans',sans-serif}
+.urgency-pill:active{transform:scale(0.97)}
+.urgency-pill.selected{background:var(--brand);color:var(--text-inverse);border-color:var(--brand)}
+.urgency-pill:hover:not(.selected){border-color:var(--brand);color:var(--brand)}
+.multi-areas-section{padding:1.5rem;display:none}
+.multi-areas-section.active{display:block}
+.area-card{background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem;margin-bottom:1rem;position:relative}
+.area-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem}
+.area-label-static{font-size:13px;font-weight:600;color:var(--brand)}
+.area-input-wrap{margin-bottom:.75rem}
+.area-input-wrap label{font-size:11px;color:var(--text-secondary);display:block;margin-bottom:4px;font-weight:500}
+.area-input-wrap input{width:100%;padding:.55rem .8rem;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-size:13px;outline:none;min-height:44px;font-family:'Inter','DM Sans',sans-serif}
+.area-input-wrap input:focus{border-color:var(--brand);background:var(--bg-overlay)}
+.area-input-wrap input::placeholder{color:var(--text-tertiary)}
+.area-remove-btn{background:transparent;border:none;color:var(--text-tertiary);font-size:20px;cursor:pointer;padding:0;width:24px;height:24px;display:flex;align-items:center;justify-content:center;transition:color var(--transition);min-width:24px;min-height:24px}
+.area-remove-btn:active{transform:scale(0.97)}
+.area-remove-btn:hover{color:var(--red)}
+.area-photos-label{font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--text-tertiary);margin-bottom:.5rem;display:block}
+.area-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:.5rem}
+@media(min-width:640px){.area-grid{grid-template-columns:repeat(5,1fr)}}
+.area-file-input{display:none}
+.add-area-btn{width:100%;padding:.75rem;background:transparent;border:1px dashed var(--border-strong);color:var(--text-secondary);border-radius:var(--radius-md);font-size:13px;font-weight:600;cursor:pointer;transition:all var(--transition);margin-bottom:1rem;min-height:44px;font-family:'Inter','DM Sans',sans-serif}
+.add-area-btn:active{transform:scale(0.97)}
+.add-area-btn:hover{border-color:var(--brand);color:var(--brand)}
+.cta-wrap{padding:1.25rem 1.5rem;border-top:1px solid var(--border)}
+.btn-cta{width:100%;padding:.85rem;background:var(--brand);color:var(--text-inverse);border:none;border-radius:var(--radius-md);font-size:16px;font-weight:800;cursor:pointer;transition:all var(--transition);min-height:48px;display:flex;align-items:center;justify-content:center;font-family:'Inter','DM Sans',sans-serif}
+.btn-cta:hover{background:var(--brand-hover)}
+.btn-cta:active{transform:scale(0.97)}
+.btn-cta.multi-mode{font-size:15px}
+.spinner{display:none;text-align:center;padding:2rem;color:var(--text-secondary)}
+.spin-ring{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--brand);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin-text{font-size:12px;color:var(--text-secondary)}
+.progress-info{font-size:11px;color:var(--brand);margin-top:8px}
+.error-banner{background:var(--red-dim);border:1px solid var(--border-strong);border-left:3px solid var(--red);border-radius:var(--radius-md);padding:1rem;margin-bottom:1rem;display:none}
+.error-banner.active{display:block}
+.error-banner-title{font-size:13px;font-weight:600;color:var(--red);margin-bottom:6px}
+.error-banner-text{font-size:12px;color:var(--text-secondary);margin-bottom:8px}
+.error-banner-btn{background:var(--red);color:var(--text-primary);border:none;border-radius:var(--radius-sm);padding:0.5rem 1rem;font-size:12px;font-weight:600;cursor:pointer;min-height:36px;font-family:'Inter','DM Sans',sans-serif}
+.error-banner-btn:active{transform:scale(0.97)}
+.result{display:none}
+.result-header{padding:1.5rem;background:linear-gradient(135deg,var(--bg-elevated) 0%,var(--bg-overlay) 100%);border-bottom:1px solid var(--border);position:relative;overflow:hidden}
+.result-header::before{content:'';position:absolute;top:0;right:0;width:200px;height:200px;background:radial-gradient(circle,var(--brand-dim) 0%,transparent 70%);opacity:0.5;pointer-events:none}
+.result-header-content{position:relative;z-index:1}
+.result-eyebrow{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--brand);opacity:.8;margin-bottom:.5rem}
+.result-price{font-size:38px;font-weight:900;letter-spacing:-1px;color:var(--text-primary)}
+.result-badges{display:flex;gap:8px;margin-top:.75rem;flex-wrap:wrap}
+.badge{font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px}
+.badge-ok{background:var(--green-dim);color:var(--green);border:1px solid var(--border-strong)}
+.badge-warn{background:var(--yellow-dim);color:var(--yellow);border:1px solid var(--border-strong)}
+.badge-flag{background:var(--red-dim);color:var(--red);border:1px solid var(--border-strong)}
+.result-body{padding:1.25rem 1.5rem}
+.info-row{display:flex;justify-content:space-between;font-size:13px;padding:8px 0;border-bottom:1px solid var(--border)}
+.info-row:last-child{border-bottom:none}
+.info-label{color:var(--text-secondary)}
+.info-val{font-weight:500;text-align:right;max-width:60%;color:var(--text-primary)}
+.travel-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
+.travel-left{font-size:13px;color:var(--text-secondary)}
+.travel-val{font-size:13px;font-weight:500;color:var(--brand)}
+.notes-text{font-size:13px;color:var(--text-secondary);line-height:1.6;padding:12px 0;border-top:1px solid var(--border);margin-top:4px}
+.multi-location-results{display:none}
+.multi-location-results.active{display:block}
+.multi-summary{background:var(--bg-elevated);padding:1.25rem 1.5rem;border-bottom:1px solid var(--border)}
+.multi-total-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--brand);opacity:.8;margin-bottom:.5rem}
+.multi-total-price{font-size:36px;font-weight:900;letter-spacing:-1px;color:var(--text-primary)}
+.multi-area-result{background:var(--bg-overlay);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem;margin-bottom:.75rem;margin-top:.75rem}
+.multi-area-name{font-size:13px;font-weight:700;color:var(--brand);margin-bottom:.5rem}
+.multi-area-price{font-size:16px;font-weight:800;color:var(--text-primary);margin-bottom:.5rem}
+.multi-notes-box{background:var(--brand-dim);border:1px solid var(--border-strong);border-radius:var(--radius-md);padding:1rem;margin-top:.75rem;margin-bottom:.75rem;color:var(--brand);font-size:12px;line-height:1.6}
+.lead-section{padding:1.5rem;border-top:1px solid var(--border);background:var(--bg-surface)}
+@media(max-width:640px){.lead-section{position:fixed;bottom:0;left:0;right:0;border-radius:var(--radius-xl) var(--radius-xl) 0 0;border-top:1px solid var(--border);max-height:80vh;overflow-y:auto;padding-bottom:2rem;animation:slideUp 0.3s ease;background:var(--bg-elevated)}}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.lead-title{font-size:15px;font-weight:700;margin-bottom:4px;color:var(--text-primary)}
+.lead-sub{font-size:12px;color:var(--text-secondary);margin-bottom:1rem}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media(max-width:640px){.form-row{grid-template-columns:1fr}}
+.form-field{margin-bottom:.5rem}
+.form-field label{font-size:11px;color:var(--text-secondary);display:block;margin-bottom:4px;font-weight:500}
+.form-field input{width:100%;padding:.6rem .8rem;background:var(--bg-surface);border:1px solid var(--border-strong);border-radius:var(--radius-md);color:var(--text-primary);font-size:14px;outline:none;min-height:44px;font-family:'Inter','DM Sans',sans-serif}
+.form-field input:focus{border-color:var(--brand);background:var(--bg-overlay)}
+.form-field input::placeholder{color:var(--text-tertiary)}
+.btn-book{width:100%;margin-top:.75rem;padding:.8rem;background:var(--brand);color:var(--text-inverse);border:none;border-radius:var(--radius-md);font-size:15px;font-weight:800;cursor:pointer;transition:all var(--transition);min-height:48px;display:flex;align-items:center;justify-content:center;font-family:'Inter','DM Sans',sans-serif}
+.btn-book:hover{background:var(--brand-hover)}
+.btn-book:active{transform:scale(0.97)}
+.btn-book:disabled{opacity:.6;cursor:not-allowed}
+.btn-reset{width:100%;margin-top:.5rem;padding:.7rem;background:transparent;color:var(--text-secondary);border:1px solid var(--border-strong);border-radius:var(--radius-md);font-size:14px;cursor:pointer;min-height:44px;display:flex;align-items:center;justify-content:center;font-family:'Inter','DM Sans',sans-serif}
+.btn-reset:hover{border-color:var(--border);color:var(--text-primary)}
+.btn-reset:active{transform:scale(0.97)}
+#booked-msg{display:none;background:var(--green-dim);border:1px solid var(--border-strong);border-radius:var(--radius-md);padding:1rem;text-align:center;margin-top:.75rem}
+#booked-msg .booked-title{font-size:15px;font-weight:700;color:var(--green);margin-bottom:4px}
+#booked-msg .booked-sub{font-size:12px;color:var(--text-secondary);line-height:1.6}
+#err{color:var(--red);font-size:13px;margin-top:.5rem;display:none}
+#err-multi{color:var(--red);font-size:13px;margin-top:.5rem;display:none}
+.slot-picker{margin:1rem 0}
+.slot-dates{display:flex;gap:8px;overflow-x:auto;padding:8px 0}
+.slot-date-btn{padding:8px 16px;border-radius:var(--radius-lg);border:1px solid var(--border-strong);background:transparent;color:var(--text-secondary);font-family:'Inter','DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all var(--transition)}
+.slot-date-btn.selected{background:var(--brand);color:var(--text-inverse);border-color:var(--brand)}
+.slot-grid{display:flex;flex-wrap:wrap;gap:8px;padding:8px 0}
+.slot-btn{padding:10px 16px;border-radius:var(--radius-md);font-family:'Inter','DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;text-align:center;min-width:100px;transition:all var(--transition)}
+.slot-btn.available{border:1px solid var(--border-strong);background:transparent;color:var(--text-primary)}
+.slot-btn.available:hover{background:var(--brand-dim);border-color:var(--brand)}
+.slot-btn.held-mine{background:var(--brand);color:var(--text-inverse);animation:slotPulse 2s infinite;border:none}
+.slot-btn.held-other{background:var(--bg-overlay);color:var(--text-tertiary);border:1px solid var(--border);cursor:not-allowed}
+.slot-btn.booked{background:var(--bg-overlay);color:var(--text-tertiary);border:1px solid var(--border);cursor:not-allowed}
+.slot-btn.blocked{background:var(--bg-overlay);color:var(--text-tertiary);border:1px solid var(--border);cursor:not-allowed}
+.slot-countdown{font-size:11px;color:var(--brand);margin-top:4px;font-weight:700}
+.slot-expired{font-size:12px;color:var(--red);margin-top:4px}
+@keyframes slotPulse{0%,100%{opacity:1}50%{opacity:0.8}}
+.slot-section-label{font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.5px;margin:12px 0 4px;font-weight:600}
+footer{text-align:center;padding:2rem 1rem;color:var(--text-tertiary);font-size:11px;letter-spacing:0.5px}
+footer strong{color:var(--text-secondary)}
+@media(max-width:640px){body{padding-bottom:400px}}
+/* v1.5 Bug 1 fix: booking form always visible below result (no slide-up sheet) */
+.booking-form-wrap { display: block !important; }
+.booking-form-overlay { display: none !important; }
+#result, .result, .multi-location-results { max-height: none !important; overflow: visible !important; }
+@media (max-width: 768px) {
+  .booking-form-wrap {
+    position: static;
+    padding: 1rem 1.25rem 1.5rem;
+    background: var(--bg-elevated);
+    border-top: 1px solid var(--border);
+    border-radius: 0;
+    transform: none;
+    max-height: none;
+    overflow: visible;
+    box-shadow: none;
+  }
+  .booking-form-wrap.active {
+    transform: none;
+  }
+  .booking-sheet-handle {
+    width: 36px;
+    height: 4px;
+    background: var(--border-strong);
+    border-radius: 2px;
+    margin: 0 auto .75rem;
+  }
+  .booking-form-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 199;
+  }
+  .booking-form-overlay.active { display: block; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-wrap">
+    <div class="logo-icon">🗑️</div>
+    <div class="logo-text">
+      <div class="brand">TRASH<span>APP</span></div>
+      <div class="tagline">Junk Removal</div>
+    </div>
+  </div>
+  <span class="header-badge">FREE QUOTE</span>
+</header>
+
+<div class="trust-bar">
+  <span>✓</span> Free estimate · <span>✓</span> Same-day available · <span>✓</span> Upfront pricing
+</div>
+
+<div class="progress-bar" id="progress-bar">
+  <div class="progress-step active" id="step-1">
+    <div class="progress-dot">1</div>
+    <div class="progress-label">Add Photos</div>
+  </div>
+  <div class="progress-step" id="step-2">
+    <div class="progress-dot">2</div>
+    <div class="progress-label">Get Quote</div>
+  </div>
+  <div class="progress-step" id="step-3">
+    <div class="progress-dot">3</div>
+    <div class="progress-label">Book It</div>
+  </div>
+</div>
+
+<div class="hero">
+  <p class="hero-eyebrow">Fresno & Central Valley</p>
+  <h1>One man's trash is<br><span>our whole business.</span></h1>
+  <p>Snap a photo of your junk pile. Get an instant price. We haul it — you forget it ever existed.</p>
+</div>
+
+<div class="main">
+  <div class="card">
+    <!-- Single Location Mode -->
+    <div id="single-mode" class="single-mode-section">
+      <div class="upload-section">
+        <div style="margin-bottom:1.5rem">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:0.5rem">
+            <span style="font-size:20px">📸</span>
+            <div class="photo-upload-title">Add photos of what needs to go</div>
+          </div>
+          <p class="photo-upload-subtitle">The more photos, the more accurate your quote</p>
+        </div>
+        <div class="photo-grid" id="photo-grid">
+          <div class="photo-slot" onclick="document.getElementById('file-input').click()">
+            <span class="plus">+</span>
+          </div>
+        </div>
+        <p class="photo-hint">More angles = more accurate quote. Try to show the full pile.</p>
+        <input type="file" id="file-input" accept="image/*" multiple style="display:none">
+
+        <div class="item-types-section">
+          <label class="item-types-label">What type of junk? (optional — helps accuracy)</label>
+          <div class="item-types-chips">
+            <button class="chip" data-type="furniture">Furniture</button>
+            <button class="chip" data-type="appliances">Appliances</button>
+            <button class="chip" data-type="mattress">Mattress</button>
+            <button class="chip" data-type="electronics">Electronics</button>
+            <button class="chip" data-type="yard_waste">Yard Waste</button>
+            <button class="chip" data-type="construction">Construction</button>
+            <button class="chip" data-type="general">General</button>
+          </div>
+        </div>
+
+        <div class="multi-toggle-wrap">
+          <button class="btn-multi-toggle" onclick="switchToMulti()">＋ I have junk in more than one spot</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="addr-section">
+        <label>Your address <span style="color:var(--text-tertiary)">(optional — used to estimate travel cost)</span></label>
+        <input type="text" id="address" placeholder="123 Main St, Fresno, CA">
+      </div>
+      <div class="urgency-section">
+        <label class="urgency-label">How soon?</label>
+        <div class="urgency-pills">
+          <button class="urgency-pill selected" data-urgency="standard">Standard<br>(2-3 days)</button>
+          <button class="urgency-pill" data-urgency="week">This Week</button>
+          <button class="urgency-pill" data-urgency="same_day">Same Day<br>(+$75)</button>
+        </div>
+      </div>
+      <div class="cta-wrap">
+        <div class="error-banner" id="err-banner-single"></div>
+        <button class="btn-cta" id="single-cta" onclick="getQuote()">Get my free quote →</button>
+        <div id="err"></div>
+      </div>
+    </div>
+
+    <!-- Multi Location Mode -->
+    <div id="multi-mode" class="multi-areas-section">
+      <div class="upload-section">
+        <div class="section-label">Your areas</div>
+        <div id="areas-container"></div>
+        <button class="add-area-btn" onclick="addArea()">＋ Add another area</button>
+      </div>
+      <div class="divider"></div>
+      <div class="addr-section">
+        <label>Your address <span style="color:var(--text-tertiary)">(optional — used to estimate travel cost)</span></label>
+        <input type="text" id="address-multi" placeholder="123 Main St, Fresno, CA">
+      </div>
+      <div class="urgency-section">
+        <label class="urgency-label">How soon?</label>
+        <div class="urgency-pills">
+          <button class="urgency-pill selected" data-urgency="standard">Standard<br>(2-3 days)</button>
+          <button class="urgency-pill" data-urgency="week">This Week</button>
+          <button class="urgency-pill" data-urgency="same_day">Same Day<br>(+$75)</button>
+        </div>
+      </div>
+      <div class="cta-wrap">
+        <div class="error-banner" id="err-banner-multi"></div>
+        <button class="btn-cta multi-mode" id="multi-cta" onclick="getMultiQuote()">Get combined quote →</button>
+        <div id="err-multi"></div>
+      </div>
+    </div>
+
+    <div id="blocked-msg" style="display:none;text-align:center;padding:2rem 1rem">
+      <div style="font-size:2.5rem;margin-bottom:.75rem">📍</div>
+      <div style="font-size:20px;font-weight:700;color:var(--text-primary);margin-bottom:.5rem">Custom quote needed</div>
+      <div style="color:var(--text-secondary);font-size:14px;margin-bottom:1.5rem">Your location is <span id="blocked-miles">—</span> miles away — too far for our instant estimator. Leave your info and we'll send a custom quote within 2 hours.</div>
+    </div>
+
+    <!-- Spinner -->
+    <div class="spinner" id="spinner">
+      <div class="spin-ring"></div>
+      <div class="spin-text">Our AI is sizing up your junk...</div>
+      <div class="progress-info" id="progress-info"></div>
+    </div>
+
+    <!-- Single Location Result -->
+    <div class="result" id="result">
+      <div class="result-header">
+        <div class="result-header-content">
+          <div class="result-eyebrow">Your instant estimate</div>
+          <div class="result-price" id="r-price">—</div>
+          <div id="r-travel-note" style="display:none;font-size:12px;color:var(--brand);margin-top:.25rem"></div>
+          <div id="r-gas-note" style="display:none;font-size:10px;color:var(--text-tertiary);margin-top:.1rem"></div>
+          <div class="result-badges" id="r-badges"></div>
+          <div id="r-longdistance-flag"></div>
+        </div>
+      </div>
+      <div class="result-body">
+        <div id="r-lines"></div>
+        <div id="travel-waive-row" style="display:none;align-items:center;justify-content:space-between;font-size:12px;color:var(--text-secondary);padding:8px 0;border-bottom:1px solid var(--border)">
+          <span>🚛 Crew already in your area?</span>
+          <label class="toggle" style="position:relative;width:34px;height:19px;flex-shrink:0"><input type="checkbox" id="waive-travel-toggle" onchange="toggleTravelWaive()" style="opacity:0;width:0;height:0"><span class="slider" style="position:absolute;inset:0;background:var(--border-strong);border-radius:10px;cursor:pointer;transition:var(--transition)"></span></label>
+        </div>
+        <div class="travel-row" id="travel-row" style="display:none">
+          <span class="travel-left">Travel fee</span>
+          <span class="travel-val" id="travel-val"></span>
+        </div>
+        <div class="notes-text" id="r-notes"></div>
+      </div>
+      <div class="booking-form-overlay" onclick="closeBookingSheet()"></div>
+      <div class="booking-form-wrap">
+        <div class="booking-sheet-handle"></div>
+        <div class="lead-section">
+          <div class="lead-title">Lock in this price 🔒</div>
+          <div class="lead-sub">Prices confirmed on-site. Book now and we'll reach out within 2 hours.</div>
+          <div class="form-row">
+            <div class="form-field"><label>First name</label><input type="text" id="f-name" placeholder="John"></div>
+            <div class="form-field"><label>Last name</label><input type="text" id="f-lname" placeholder="Smith"></div>
+          </div>
+          <div class="form-field"><label>Email <span style="color:var(--red)">*</span></label><input type="email" id="f-email" placeholder="john@email.com"></div>
+          <div class="form-field"><label>Phone number</label><input type="tel" id="f-phone" placeholder="(559) 000-0000"></div>
+          <div id="slot-picker-single" style="margin:1rem 0"></div>
+          <button class="btn-book" id="book-btn" onclick="bookJob()">Book this job — it's free to schedule!</button>
+          <button class="btn-reset" onclick="resetApp()">Start over</button>
+          <div id="booked-msg">
+            <div class="booked-title">You're on the list! 🎉</div>
+            <div class="booked-sub">We'll call you within 2 hours to confirm your pickup. Questions? Call (559) 774-4249</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Multi Location Result -->
+    <div class="multi-location-results" id="multi-result">
+      <div class="result-header">
+        <div class="result-header-content">
+          <div class="result-eyebrow">Your combined estimate</div>
+          <div class="result-price" id="multi-r-price">—</div>
+          <div id="multi-r-travel-note" style="display:none;font-size:12px;color:var(--brand);margin-top:.25rem"></div>
+          <div class="result-badges" id="multi-r-badges"></div>
+        </div>
+      </div>
+      <div class="result-body">
+        <div id="multi-r-areas"></div>
+        <div class="travel-row" id="multi-travel-row" style="display:none">
+          <span class="travel-left">Travel fee (charged once)</span>
+          <span class="travel-val" id="multi-travel-val"></span>
+        </div>
+        <div id="multi-notes-container"></div>
+      </div>
+      <div class="booking-form-overlay" onclick="closeBookingSheet()"></div>
+      <div class="booking-form-wrap">
+        <div class="booking-sheet-handle"></div>
+        <div class="lead-section">
+          <div class="lead-title">Lock in this price 🔒</div>
+          <div class="lead-sub">Prices confirmed on-site. Book now and we'll reach out within 2 hours.</div>
+          <div class="form-row">
+            <div class="form-field"><label>First name</label><input type="text" id="f-name-multi" placeholder="John"></div>
+            <div class="form-field"><label>Last name</label><input type="text" id="f-lname-multi" placeholder="Smith"></div>
+          </div>
+          <div class="form-field"><label>Email <span style="color:var(--red)">*</span></label><input type="email" id="f-email-multi" placeholder="john@email.com"></div>
+          <div class="form-field"><label>Phone number</label><input type="tel" id="f-phone-multi" placeholder="(559) 000-0000"></div>
+          <div id="slot-picker-multi" style="margin:1rem 0"></div>
+          <button class="btn-book" id="book-btn-multi" onclick="bookJobMulti()">Book this job — it's free to schedule!</button>
+          <button class="btn-reset" onclick="resetApp()">Start over</button>
+          <div id="booked-msg-multi">
+            <div class="booked-title">You're on the list! 🎉</div>
+            <div class="booked-sub">We'll call you within 2 hours to confirm your pickup. Questions? Call (559) 774-4249</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <strong>TRASHAPP JUNK REMOVAL</strong><br>
+  Fresno & Central Valley · Licensed & Insured<br>
+  "One man's trash is our whole business."
+</footer>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { getFirestore, doc, getDoc, collection, query, where, orderBy, getDocs, onSnapshot, setDoc, updateDoc, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+const _fbApp = initializeApp({apiKey:"AIzaSyCtl7TaehqrgDCHhgNhOe5URh7YXfCzY8E",authDomain:"trashapp-reps.firebaseapp.com",projectId:"trashapp-reps",storageBucket:"trashapp-reps.firebasestorage.app",messagingSenderId:"146963908159",appId:"1:146963908159:web:d09090c0169186a45ada8a"});
+const _fbDb = getFirestore(_fbApp);
+window._fbDb = _fbDb;
+window._fbGetDoc = getDoc;
+window._fbDoc = doc;
+window._fbCollection = collection;
+window._fbQuery = query;
+window._fbWhere = where;
+window._fbOrderBy = orderBy;
+window._fbGetDocs = getDocs;
+window._fbOnSnapshot = onSnapshot;
+window._fbSetDoc = setDoc;
+window._fbUpdateDoc = updateDoc;
+window._fbAddDoc = addDoc;
+window._fbServerTimestamp = serverTimestamp;
+</script>
+
+<script>
+const API = 'https://junk-quote-api-production.up.railway.app/api/quote';
+const API_MULTI = 'https://junk-quote-api-production.up.railway.app/api/quote/multi';
+const HS_PORTAL = '245673285';
+const HS_FORM = 'b243f733-e7e7-4418-8d99-e5a067d889e6';
+const HS_URL = `https://api.hsforms.com/submissions/v3/integration/submit/${HS_PORTAL}/${HS_FORM}`;
+const OFFICE_LAT = 36.7765;
+const OFFICE_LON = -119.8420;
+const GAS_PRICE_FALLBACK = 4.60;
+const MPG = 12;
+const TRAVEL_MIN = 15;
+let LIVE_GAS_PRICE = GAS_PRICE_FALLBACK;
+
+function getTravelPerMile() { return (LIVE_GAS_PRICE / MPG) * 2; }
+
+const TRAVEL_TIERS = [
+  { maxMiles: 30,  calc: (m) => Math.max(TRAVEL_MIN, Math.round(m * getTravelPerMile())) },
+  { maxMiles: 100, calc: (m) => Math.round(m * getTravelPerMile() + m * 0.50) },
+  { maxMiles: 200, calc: (m) => Math.round(m * getTravelPerMile() + m * 0.75), flagForReview: true },
+  { maxMiles: Infinity, calc: null, blockAutoQuote: true }
+];
+
+let photos = [], quoteData = null, travelCost = 0, isMultiMode = false;
+let travelMiles=0, travelBlocked=false, travelFlagForReview=false, travelLabel=null;
+let areas = [];
+let selectedItemTypes = [];
+let selectedUrgency = 'standard';
+let apiTimeoutHandle = null;
+let retryCallbacks = {};
+let window_uniqueUserId = null;
+let window_selectedSlot = null;
+let window_selectedSlotLabel = null;
+
+// Generate unique user ID on page load
+window_uniqueUserId = 'user_' + Math.random().toString(36).substr(2, 9);
+
+// Toast notification system
+function showToast(message, type = 'success') {
+  const colors = { success: 'var(--green)', error: 'var(--red)', warning: 'var(--yellow)', info: 'var(--brand)' };
+  const icons = { success: '✓', error: '✕', warning: '⚠', info: 'ℹ' };
+  const toast = document.createElement('div');
+  toast.style.cssText = `position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg-elevated);border:1px solid var(--border-strong);border-left:3px solid ${colors[type]};color:var(--text-primary);padding:12px 18px;border-radius:var(--radius-md);font-size:13px;font-weight:500;z-index:99999;white-space:nowrap;box-shadow:var(--shadow-lg);display:flex;align-items:center;gap:8px;transition:all 300ms cubic-bezier(0.4,0,0.2,1);font-family:'Inter','DM Sans',sans-serif;`;
+  toast.innerHTML = `<span style="color:${colors[type]};font-weight:700">${icons[type]}</span>${message}`;
+  document.body.appendChild(toast);
+  requestAnimationFrame(() => { toast.style.transform = 'translateX(-50%) translateY(0)'; toast.style.opacity = '1'; });
+  setTimeout(() => { toast.style.transform = 'translateX(-50%) translateY(20px)'; toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3500);
+}
+
+// Compress image before storing
+async function compressImage(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        const maxSide = 1200;
+        if (Math.max(width, height) > maxSide) {
+          const scale = maxSide / Math.max(width, height);
+          width = Math.round(width * scale);
+          height = Math.round(height * scale);
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => {
+          const reader2 = new FileReader();
+          reader2.onload = (e2) => {
+            const b64 = e2.target.result.split(',')[1];
+            resolve({ src: e2.target.result, b64, mime: 'image/jpeg' });
+          };
+          reader2.readAsDataURL(blob);
+        }, 'image/jpeg', 0.75);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// Update progress bar
+function updateProgressBar() {
+  const step1 = document.getElementById('step-1');
+  const step2 = document.getElementById('step-2');
+  const step3 = document.getElementById('step-3');
+
+  const hasPhotos = isMultiMode ? areas.some(a => a.photos.length > 0) : photos.length > 0;
+  const hasQuote = quoteData !== null;
+
+  step1.className = 'progress-step active' + (hasPhotos ? ' complete' : '');
+  step2.className = 'progress-step' + (hasPhotos ? ' active' : '') + (hasQuote ? ' complete' : '');
+  step3.className = 'progress-step' + (hasQuote ? ' active' : '');
+}
+
+// Chip selection
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      chip.classList.toggle('selected');
+      updateSelectedItemTypes();
+    });
+  });
+
+  document.querySelectorAll('.urgency-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      document.querySelectorAll('.urgency-pill').forEach(p => p.classList.remove('selected'));
+      pill.classList.add('selected');
+      selectedUrgency = pill.dataset.urgency;
+    });
+  });
+
+  // Also set up urgency pills for multi-mode
+  setTimeout(() => {
+    const multiSection = document.getElementById('multi-mode');
+    const multiUrgencyPills = multiSection.querySelectorAll('.urgency-pill');
+    multiUrgencyPills.forEach(pill => {
+      pill.addEventListener('click', () => {
+        multiUrgencyPills.forEach(p => p.classList.remove('selected'));
+        pill.classList.add('selected');
+        selectedUrgency = pill.dataset.urgency;
+      });
+    });
+  }, 100);
+});
+
+function updateSelectedItemTypes() {
+  selectedItemTypes = Array.from(document.querySelectorAll('.chip.selected')).map(c => c.dataset.type);
+}
+
+function enforceMinimumPrice(priceRange) {
+  if (!priceRange || priceRange === '—') return priceRange;
+  const parts = priceRange.replace(/\$/g, '').split(' - ');
+  if (parts.length !== 2) return priceRange;
+  const low = Math.max(parseInt(parts[0]) || 0, 175);
+  const high = Math.max(parseInt(parts[1]) || 0, 225);
+  return `$${low} - $${high}`;
+}
+
+// Single mode photo handler
+document.getElementById('file-input').addEventListener('change', async e => {
+  const showOptimizing = photos.length === 0;
+  if (showOptimizing) {
+    document.getElementById('spinner').style.display = 'block';
+    document.getElementById('spinner').querySelector('.spin-text').textContent = 'Optimizing photos...';
+  }
+
+  const filesToProcess = [...e.target.files].slice(0, 5 - photos.length);
+  for (const f of filesToProcess) {
+    const compressed = await compressImage(f);
+    photos.push(compressed);
+  }
+
+  if (showOptimizing) {
+    document.getElementById('spinner').style.display = 'none';
+  }
+
+  renderGrid();
+  updateProgressBar();
+  document.getElementById('file-input').value = '';
+});
+
+function renderGrid() {
+  const g = document.getElementById('photo-grid');
+  g.innerHTML = '';
+  photos.forEach((p, i) => {
+    const s = document.createElement('div');
+    s.className = 'photo-slot';
+    s.innerHTML = `<img src="${p.src}"><button class="del" onclick="removePhoto(${i})">×</button>`;
+    g.appendChild(s);
+  });
+  if (photos.length < 5) {
+    const a = document.createElement('div');
+    a.className = 'photo-slot';
+    a.onclick = () => document.getElementById('file-input').click();
+    a.innerHTML = '<span class="plus">+</span>';
+    g.appendChild(a);
+  }
+}
+
+function removePhoto(i) {
+  photos.splice(i, 1);
+  renderGrid();
+  updateProgressBar();
+}
+
+function switchToMulti() {
+  isMultiMode = true;
+  document.getElementById('single-mode').style.display = 'none';
+  document.getElementById('multi-mode').classList.add('active');
+  areas = [{ id: 0, photos: [], label: '' }];
+  renderAreas();
+  updateProgressBar();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function switchToSingle() {
+  isMultiMode = false;
+  document.getElementById('multi-mode').classList.remove('active');
+  document.getElementById('single-mode').style.display = 'block';
+  areas = [];
+  updateProgressBar();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function addArea() {
+  const newId = Math.max(...areas.map(a => a.id), -1) + 1;
+  areas.push({ id: newId, photos: [], label: '' });
+  renderAreas();
+  updateProgressBar();
+}
+
+function removeArea(id) {
+  if (areas.length === 1) return;
+  areas = areas.filter(a => a.id !== id);
+  renderAreas();
+  updateProgressBar();
+}
+
+function renderAreas() {
+  const container = document.getElementById('areas-container');
+  container.innerHTML = '';
+  areas.forEach((area, idx) => {
+    const div = document.createElement('div');
+    div.className = 'area-card';
+    div.id = `area-${area.id}`;
+    let removeBtn = '';
+    if (areas.length > 1) {
+      removeBtn = `<button class="area-remove-btn" onclick="removeArea(${area.id})">×</button>`;
+    }
+    div.innerHTML = `
+      <div class="area-header">
+        <span class="area-label-static">Area ${idx + 1}</span>
+        ${removeBtn}
+      </div>
+      <div class="area-input-wrap">
+        <label>Location name (optional)</label>
+        <input type="text" id="area-label-${area.id}" placeholder="e.g., Garage, Backyard" value="${area.label}">
+      </div>
+      <label class="area-photos-label">Photos (up to 5)</label>
+      <div class="area-grid" id="area-grid-${area.id}"></div>
+      <input type="file" id="area-input-${area.id}" accept="image/*" multiple class="area-file-input">
+    `;
+    container.appendChild(div);
+    renderAreaGrid(area.id);
+    document.getElementById(`area-label-${area.id}`).addEventListener('change', e => {
+      const a = areas.find(x => x.id === area.id);
+      if (a) a.label = e.target.value;
+    });
+    document.getElementById(`area-input-${area.id}`).addEventListener('change', e => {
+      handleAreaPhotos(area.id, e.target.files);
+    });
+  });
+}
+
+async function handleAreaPhotos(areaId, files) {
+  const area = areas.find(a => a.id === areaId);
+  if (!area) return;
+  const filesToProcess = [...files].slice(0, 5 - area.photos.length);
+  for (const f of filesToProcess) {
+    const compressed = await compressImage(f);
+    area.photos.push(compressed);
+  }
+  renderAreaGrid(areaId);
+  updateProgressBar();
+}
+
+function removeAreaPhoto(areaId, photoIdx) {
+  const area = areas.find(a => a.id === areaId);
+  if (area) {
+    area.photos.splice(photoIdx, 1);
+    renderAreaGrid(areaId);
+    updateProgressBar();
+  }
+}
+
+function renderAreaGrid(areaId) {
+  const area = areas.find(a => a.id === areaId);
+  if (!area) return;
+  const grid = document.getElementById(`area-grid-${areaId}`);
+  grid.innerHTML = '';
+  area.photos.forEach((p, i) => {
+    const slot = document.createElement('div');
+    slot.className = 'photo-slot';
+    slot.innerHTML = `<img src="${p.src}"><button class="del" onclick="removeAreaPhoto(${areaId}, ${i})">×</button>`;
+    grid.appendChild(slot);
+  });
+  if (area.photos.length < 5) {
+    const addSlot = document.createElement('div');
+    addSlot.className = 'photo-slot';
+    addSlot.onclick = () => document.getElementById(`area-input-${areaId}`).click();
+    addSlot.innerHTML = '<span class="plus">+</span>';
+    grid.appendChild(addSlot);
+  }
+}
+
+async function loadGasPrice() {
+  try {
+    if(!window._fbDb||!window._fbGetDoc||!window._fbDoc) return;
+    const snap = await window._fbGetDoc(window._fbDoc(window._fbDb, 'system_config', 'gas_price'));
+    if (snap.exists()) {
+      const price = parseFloat(snap.data().value);
+      if (!isNaN(price) && price > 2 && price < 8) {
+        LIVE_GAS_PRICE = price;
+        console.log('⛽ Gas price loaded: $'+price+'/gal');
+      }
+    }
+  } catch(e) { console.warn('Gas price load failed, using fallback'); }
+}
+
+function calcTravelFee(lat, lng) {
+  lat = parseFloat(lat); lng = parseFloat(lng);
+  const dLat = (lat - OFFICE_LAT) * Math.PI / 180;
+  const dLon = (lng - OFFICE_LON) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(OFFICE_LAT*Math.PI/180)*Math.cos(lat*Math.PI/180)*Math.sin(dLon/2)**2;
+  const miles = Math.round(3958.8 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+  const tier = TRAVEL_TIERS.find(t => miles <= t.maxMiles);
+  if (tier.blockAutoQuote) return { blocked: true, miles, fee: 0, flagForReview: false, label: null };
+  const fee = miles < 10 ? 0 : tier.calc(miles);
+  const label = miles < 10 ? null :
+                miles < 30 ? 'Travel fee' :
+                miles < 100 ? 'Travel fee ('+miles+' mi from Fresno)' :
+                'Long-distance travel ('+miles+' mi from Fresno)';
+  return { blocked: false, fee, miles, flagForReview: tier.flagForReview || false, label };
+}
+
+function buildAdjustedPrice(priceRange, travelFee, waived) {
+  if (waived || !travelFee) return { headline: priceRange, base: priceRange, travelIncluded: false, low: 0, high: 0 };
+  const parts = (priceRange || '').replace(/\$/g,'').split(/[-–\s]+/).map(s => parseFloat(s.trim())).filter(Boolean);
+  if (parts.length < 2) return { headline: priceRange, base: priceRange, travelIncluded: false, low: 0, high: 0 };
+  const low = Math.round(parts[0] + travelFee);
+  const high = Math.round(parts[1] + travelFee);
+  return { headline: '$'+low+'–$'+high, base: priceRange, travelIncluded: true, low, high, baseLow: parts[0], baseHigh: parts[1] };
+}
+
+function showBlockedMessage(miles) {
+  document.getElementById('spinner').style.display = 'none';
+  document.getElementById('result').style.display = 'none';
+  document.getElementById('blocked-msg').style.display = 'block';
+  document.getElementById('blocked-miles').textContent = miles;
+}
+
+function toggleTravelWaive() {
+  const waived = document.getElementById('waive-travel-toggle').checked;
+  const adj = waived
+    ? buildAdjustedPrice(quoteData.priceRange, 0, true)
+    : buildAdjustedPrice(quoteData.priceRange, travelCost, false);
+  document.getElementById('r-price').textContent = adj.headline;
+  const tNote = document.getElementById('r-travel-note');
+  if (tNote) tNote.textContent = waived ? 'Travel fee waived' : 'Includes $'+travelCost+' '+(travelLabel||'travel fee');
+}
+
+async function estimateTravel(addrOrCoords) {
+  try {
+    let lat, lng;
+    if (typeof addrOrCoords === 'string' && /^-?[\d.]+,-?[\d.]+$/.test(addrOrCoords)) {
+      [lat, lng] = addrOrCoords.split(',').map(parseFloat);
+    } else {
+      const inputEl = document.getElementById('address') || document.getElementById('address-multi');
+      if (inputEl?.dataset?.lat && inputEl?.dataset?.lng) {
+        lat = parseFloat(inputEl.dataset.lat);
+        lng = parseFloat(inputEl.dataset.lng);
+      } else {
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 10000);
+        try {
+          const r = await fetch('https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(addrOrCoords)+'&format=json&limit=1', { signal: ctrl.signal });
+          clearTimeout(t);
+          if (!r.ok) throw new Error('Geocoding service returned ' + r.status);
+          const d = await r.json();
+          if (!d.length) return { blocked: false, fee: 0, miles: 0, flagForReview: false, label: null };
+          lat = parseFloat(d[0].lat); lng = parseFloat(d[0].lon);
+        } catch (err) {
+          clearTimeout(t);
+          console.error('[Geocoding] Error:', err.message);
+          return { blocked: false, fee: 0, miles: 0, flagForReview: false, label: null };
+        }
+      }
+    }
+    return calcTravelFee(lat, lng);
+  } catch {
+    return { blocked: false, fee: 0, miles: 0, flagForReview: false, label: null };
+  }
+}
+
+function showSpinner(text) {
+  const spinner = document.getElementById('spinner');
+  spinner.style.display = 'block';
+  spinner.querySelector('.spin-text').textContent = text;
+  document.getElementById('progress-info').textContent = '';
+  document.getElementById('result').style.display = 'none';
+  document.getElementById('booked-msg').style.display = 'none';
+  document.getElementById('multi-result').style.display = 'none';
+  document.getElementById('booked-msg-multi').style.display = 'none';
+}
+
+async function getQuote() {
+  if (!photos.length) { showToast('Add at least one photo to get a quote!', 'warning'); return; }
+  hideErr();
+  document.getElementById('blocked-msg').style.display = 'none';
+  await loadGasPrice();
+  const addr = document.getElementById('address').value.trim();
+  const tResult = addr ? await estimateTravel(addr) : { fee: 0, miles: 0, blocked: false, flagForReview: false, label: null };
+  travelCost = tResult.fee; travelMiles = tResult.miles;
+  travelBlocked = tResult.blocked; travelFlagForReview = tResult.flagForReview; travelLabel = tResult.label;
+  if (travelBlocked) { showBlockedMessage(travelMiles); return; }
+  showSpinner('Analyzing your photos... Photo 1 of ' + photos.length);
+  document.getElementById('result').style.display = 'none';
+  document.getElementById('booked-msg').style.display = 'none';
+  try {
+    let timeoutReached = false;
+    const softTimeoutHandle = setTimeout(() => {
+      if (!timeoutReached) document.getElementById('progress-info').textContent = 'Taking longer than usual... still working on it.';
+    }, 30000);
+    const hardTimeoutHandle = setTimeout(() => {
+      timeoutReached = true; clearTimeout(softTimeoutHandle); clearTimeout(apiTimeoutHandle);
+      document.getElementById('spinner').style.display = 'none';
+      showErrorBanner('single', 'Something went wrong', 'The API request timed out. Please try again.', 'getQuote');
+    }, 60000);
+    apiTimeoutHandle = hardTimeoutHandle;
+    const urgencyAddon = selectedUrgency === 'same_day' ? 75 : 0;
+    const resp = await fetch(API, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ images: photos.map(p => p.b64), imageMime: photos[0].mime, hints: selectedItemTypes, urgency: selectedUrgency })
+    });
+    clearTimeout(softTimeoutHandle); clearTimeout(hardTimeoutHandle);
+    quoteData = await resp.json();
+    if (quoteData.error) throw new Error(quoteData.error);
+    if (urgencyAddon > 0 && quoteData.priceRange) {
+      const parts = quoteData.priceRange.replace('$', '').split(' - ');
+      if (parts.length === 2) {
+        const min = parseInt(parts[0]) + urgencyAddon;
+        const max = parseInt(parts[1]) + urgencyAddon;
+        quoteData.priceRange = '$'+min+' - $'+max;
+      }
+    }
+    quoteData.priceRange = enforceMinimumPrice(quoteData.priceRange);
+    renderResult();
+    updateProgressBar();
+  } catch(e) {
+    clearTimeout(apiTimeoutHandle);
+    document.getElementById('spinner').style.display = 'none';
+    showErrorBanner('single', 'Something went wrong', 'Error: ' + e.message, 'getQuote');
+  }
+}
+
+async function getMultiQuote() {
+  const nonEmptyAreas = areas.filter(a => a.photos.length > 0);
+  if (!nonEmptyAreas.length) { showToast('Add at least one photo to get a quote!', 'warning'); return; }
+  hideErrMulti();
+  showSpinner('Analyzing your areas... Area 1 of ' + nonEmptyAreas.length);
+
+  document.getElementById('blocked-msg').style.display = 'none';
+  await loadGasPrice();
+  const addr = document.getElementById('address-multi').value.trim();
+  const tResult = addr ? await estimateTravel(addr) : { fee: 0, miles: 0, blocked: false, flagForReview: false, label: null };
+  travelCost = tResult.fee; travelMiles = tResult.miles;
+  travelBlocked = tResult.blocked; travelFlagForReview = tResult.flagForReview; travelLabel = tResult.label;
+  if (travelBlocked) { showBlockedMessage(travelMiles); return; }
+
+  try {
+    let timeoutReached = false;
+    const softTimeoutHandle = setTimeout(() => {
+      if (!timeoutReached) {
+        document.getElementById('progress-info').textContent = 'Taking longer than usual... still working on it.';
+      }
+    }, 30000);
+
+    const hardTimeoutHandle = setTimeout(() => {
+      timeoutReached = true;
+      clearTimeout(softTimeoutHandle);
+      clearTimeout(apiTimeoutHandle);
+      document.getElementById('spinner').style.display = 'none';
+      showErrorBanner('multi', 'Something went wrong', 'The API request timed out. Please try again.', 'getMultiQuote');
+    }, 60000);
+
+    apiTimeoutHandle = hardTimeoutHandle;
+
+    const urgencyAddon = selectedUrgency === 'same_day' ? 75 : 0;
+
+    // Send individual API calls in parallel (each wrapped in try-catch)
+    const quotePromises = nonEmptyAreas.map((area, idx) => {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 30000);
+      return fetch(API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          images: area.photos.map(p => p.b64),
+          imageMime: area.photos[0].mime,
+          hints: selectedItemTypes,
+          urgency: selectedUrgency
+        }),
+        signal: ctrl.signal
+      }).then(r => { clearTimeout(t); return r.json(); }).then(data => ({
+        ...data,
+        label: area.label || `Area ${idx + 1}`,
+        areaIndex: idx
+      })).catch(err => ({
+        error: true,
+        message: err.name === 'AbortError' ? 'Timed out' : err.message,
+        label: area.label || `Area ${idx + 1}`,
+        areaIndex: idx
+      }));
+    });
+
+    const results = await Promise.allSettled(quotePromises).then(r => r.map(x => x.status === 'fulfilled' ? x.value : { error: true, message: x.reason?.message || 'Unknown error' }));
+    clearTimeout(softTimeoutHandle);
+    clearTimeout(hardTimeoutHandle);
+
+    // Combine results
+    let totalMin = 0, totalMax = 0;
+    const locations = results.map((res, idx) => {
+      if (res.error) {
+        return { ...res, label: res.label, priceRange: '—', status: 'manual_review' };
+      }
+
+      let priceRange = res.priceRange || '—';
+      let min = 0, max = 0;
+
+      if (priceRange !== '—') {
+        const parts = priceRange.replace('$', '').split(' - ');
+        if (parts.length === 2) {
+          min = parseInt(parts[0]);
+          max = parseInt(parts[1]);
+
+          // Apply 10% discount to 2nd+ areas
+          if (idx > 0) {
+            min = Math.round(min * 0.9);
+            max = Math.round(max * 0.9);
+          }
+
+          // Apply urgency surcharge
+          if (urgencyAddon > 0) {
+            min += urgencyAddon;
+            max += urgencyAddon;
+          }
+
+          priceRange = `$${min} - $${max}`;
+          totalMin += min;
+          totalMax += max;
+        }
+      }
+
+      // Apply minimum price floor
+      priceRange = enforceMinimumPrice(priceRange);
+
+      return {
+        label: res.label,
+        priceRange,
+        status: res.flag === 'call_for_quote' ? 'manual_review' : 'ok',
+        confidence: res.confidence,
+        itemsSeen: res.itemsSeen,
+        surcharges: res.surcharges
+      };
+    });
+
+    quoteData = {
+      locations,
+      totalMin: totalMin + travelCost,
+      totalMax: totalMax + travelCost,
+      travelCost: travelCost,
+      travelLabel: travelLabel,
+      travelMiles: travelMiles
+    };
+
+    renderMultiResult();
+    updateProgressBar();
+  } catch(e) {
+    clearTimeout(apiTimeoutHandle);
+    document.getElementById('spinner').style.display = 'none';
+    showErrorBanner('multi', 'Something went wrong', 'Error: ' + e.message, 'getMultiQuote');
+  }
+}
+
+function showErrorBanner(mode, title, message, retryFunc) {
+  const bannerId = mode === 'single' ? 'err-banner-single' : 'err-banner-multi';
+  const banner = document.getElementById(bannerId);
+
+  banner.innerHTML = `
+    <div class="error-banner-title">${title}</div>
+    <div class="error-banner-text">${message}</div>
+    <button class="error-banner-btn" onclick="retryCallbacks['${retryFunc}']()">Try Again</button>
+  `;
+  banner.classList.add('active');
+
+  retryCallbacks[retryFunc] = () => {
+    banner.classList.remove('active');
+    if (retryFunc === 'getQuote') getQuote();
+    else if (retryFunc === 'getMultiQuote') getMultiQuote();
+  };
+}
+
+function buildSlotPicker(containerId, options) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  const { mode = 'client', onSelect, onHold, onRelease } = options;
+  let selectedSlotId = null;
+  let holdTimer = null;
+  let holdExpiry = null;
+  let unsubSlots = null;
+
+  // Placeholder - basic implementation
+  // Generate date buttons for next 6 weekdays (skip Sunday)
+  const dateRow = document.createElement('div');
+  dateRow.className = 'slot-dates';
+
+  const today = new Date();
+  let daysAdded = 0;
+  const dates = [];
+
+  while (daysAdded < 6) {
+    const d = new Date(today);
+    d.setDate(d.getDate() + daysAdded);
+    if (d.getDay() !== 0) { // Skip Sunday
+      dates.push(d);
+    }
+    daysAdded++;
+  }
+
+  dates.slice(0, 6).forEach((date, idx) => {
+    const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+    const monthDay = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const btn = document.createElement('button');
+    btn.className = 'slot-date-btn' + (idx === 0 ? ' selected' : '');
+    btn.textContent = dayName + ' ' + monthDay;
+    dateRow.appendChild(btn);
+  });
+
+  container.innerHTML = '<div class="slot-section-label">Pick your slot</div>';
+  container.appendChild(dateRow);
+
+  const slotGrid = document.createElement('div');
+  slotGrid.className = 'slot-grid';
+  container.appendChild(slotGrid);
+
+  // Add some basic slot buttons
+  ['9:00 AM', '10:00 AM', '11:00 AM', '1:00 PM', '2:00 PM', '3:00 PM'].forEach(time => {
+    const btn = document.createElement('button');
+    btn.className = 'slot-btn available';
+    btn.textContent = time;
+    btn.onclick = () => {
+      if (onSelect) onSelect('slot_' + Math.random().toString(36).substr(2, 9), time);
+      window_selectedSlot = 'slot_' + Math.random().toString(36).substr(2, 9);
+      window_selectedSlotLabel = time;
+    };
+    slotGrid.appendChild(btn);
+  });
+}
+
+function renderResult() {
+  document.getElementById('spinner').style.display = 'none';
+  document.getElementById('result').style.display = 'block';
+  document.getElementById('blocked-msg').style.display = 'none';
+  const r = quoteData;
+  const adjPrice = buildAdjustedPrice(r.priceRange, travelCost, false);
+  document.getElementById('r-price').textContent = adjPrice.headline;
+  const tNoteEl = document.getElementById('r-travel-note');
+  if (tNoteEl) {
+    if (adjPrice.travelIncluded) {
+      tNoteEl.textContent = 'Includes $'+travelCost+' '+(travelLabel||'travel fee');
+      tNoteEl.style.display = 'block';
+    } else tNoteEl.style.display = 'none';
+  }
+  const gasNoteEl = document.getElementById('r-gas-note');
+  if (gasNoteEl && travelCost > 0) {
+    gasNoteEl.textContent = '⛽ Based on $'+LIVE_GAS_PRICE.toFixed(2)+'/gal West Coast average';
+    gasNoteEl.style.display = 'block';
+  } else if (gasNoteEl) gasNoteEl.style.display = 'none';
+  const flagEl = document.getElementById('r-longdistance-flag');
+  if (flagEl) flagEl.innerHTML = travelFlagForReview
+    ? '<div style="background:var(--yellow-dim);border:1px solid var(--border-strong);border-radius:var(--radius-md);padding:.75rem 1rem;margin:.75rem 0;font-size:13px;color:var(--yellow)">🚛 Long-distance haul ('+travelMiles+' mi) — our team will confirm availability within 2 hours.</div>'
+    : '';
+  const waiveRow = document.getElementById('travel-waive-row');
+  if (waiveRow) waiveRow.style.display = travelCost > 0 ? 'flex' : 'none';
+  document.getElementById('r-notes').textContent = r.notes || '';
+  const b = document.getElementById('r-badges');
+  b.innerHTML = '';
+  if (r.flag === 'hazmat') b.innerHTML += '<span class="badge badge-flag">Hazmat — call us</span>';
+  else if (r.flag === 'call_for_quote') b.innerHTML += '<span class="badge badge-warn">Call for custom quote</span>';
+  else if (r.flag === 'needs_more_photos') b.innerHTML += '<span class="badge badge-warn">More photos needed</span>';
+  b.innerHTML += '<span class="badge '+(r.confidence==='high'?'badge-ok':'badge-warn')+'">'+(r.confidence==='high'?'High confidence':'Estimate')+'</span>';
+  const rows = [['Load size', r.truckLoad], ['Items spotted', (r.itemsSeen||[]).join(', ')||'—']];
+  if ((r.surcharges||[]).length) rows.push(['Extras', r.surcharges.join(', ')]);
+  document.getElementById('r-lines').innerHTML = rows.map(function(row) {
+    return '<div class="info-row"><span class="info-label">'+row[0]+'</span><span class="info-val">'+row[1]+'</span></div>';
+  }).join('');
+  const tr = document.getElementById('travel-row');
+  tr.style.display = 'none';
+
+  // Initialize slot picker
+  buildSlotPicker('slot-picker-single', {
+    mode: 'client',
+    onSelect: (slotId, slotLabel) => {
+      window_selectedSlot = slotId;
+      window_selectedSlotLabel = slotLabel;
+    },
+    onHold: (slotId) => { /* slot held */ },
+    onRelease: (slotId) => { window_selectedSlot = null; window_selectedSlotLabel = null; }
+  });
+
+  // Booking form is always visible below the result (v1.5)
+  document.querySelectorAll('.booking-form-wrap').forEach(el => { el.classList.add('active'); el.style.display = 'block'; });
+  document.title = 'TrashApp — Your Quote';
+  document.getElementById('result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  setTimeout(() => {
+    const bookingSection = document.getElementById('booking-section') || document.getElementById('booking-form') || document.querySelector('.booking-form-wrap') || document.querySelector('[id*="booking"]');
+    if (bookingSection) bookingSection.style.display = 'block';
+  }, 300);
+}
+
+function renderMultiResult() {
+  document.getElementById('spinner').style.display = 'none';
+  document.getElementById('multi-result').classList.add('active');
+  document.getElementById('multi-result').style.display = 'block';
+  const r = quoteData;
+  const totalRange = r.totalMin && r.totalMax ? '$'+r.totalMin+' - $'+r.totalMax : '—';
+  document.getElementById('multi-r-price').textContent = totalRange;
+  const mtNote = document.getElementById('multi-r-travel-note');
+  if (mtNote) {
+    mtNote.textContent = travelCost > 0 ? 'Includes $'+travelCost+' travel (charged once)' : '';
+    mtNote.style.display = travelCost > 0 ? 'block' : 'none';
+  }
+  const b = document.getElementById('multi-r-badges');
+  b.innerHTML = '';
+  const hasManualReview = (r.locations || []).some(function(l) { return l.status === 'manual_review'; });
+  if (hasManualReview) b.innerHTML += '<span class="badge badge-warn">One area needs review</span>';
+  else b.innerHTML += '<span class="badge badge-ok">Ready to book</span>';
+  const areasHtml = (r.locations || []).map(function(loc, idx) {
+    var locLabel = loc.label || 'Area '+(idx+1);
+    var priceRange = loc.priceRange || '—';
+    var manualReviewNote = '';
+    if (loc.status === 'manual_review') manualReviewNote = '<div style="color:var(--red);font-size:11px;margin-top:6px">Needs closer look - we\'ll confirm within 1 hour</div>';
+    return '<div class="multi-area-result"><div class="multi-area-name">'+locLabel+'</div><div class="multi-area-price">'+priceRange+'</div>'+manualReviewNote+'</div>';
+  }).join('');
+  document.getElementById('multi-r-areas').innerHTML = areasHtml;
+  var tr = document.getElementById('multi-travel-row');
+  tr.style.display = 'none';
+  var notesContainer = document.getElementById('multi-notes-container');
+  notesContainer.innerHTML = '';
+  var notesHtml = '<div class="multi-notes-box">';
+  notesHtml += '<div>✓ Travel fee charged once</div>';
+  notesHtml += '<div>✓ 10% efficiency discount applied to additional areas</div>';
+  if (hasManualReview) notesHtml += '<div style="margin-top:8px;color:var(--brand)">One of your areas needs a closer look — our team will contact you within 1 hour with a confirmed quote</div>';
+  notesHtml += '</div>';
+  notesContainer.innerHTML = notesHtml;
+
+  // Initialize slot picker
+  buildSlotPicker('slot-picker-multi', {
+    mode: 'client',
+    onSelect: (slotId, slotLabel) => {
+      window_selectedSlot = slotId;
+      window_selectedSlotLabel = slotLabel;
+    },
+    onHold: (slotId) => { /* slot held */ },
+    onRelease: (slotId) => { window_selectedSlot = null; window_selectedSlotLabel = null; }
+  });
+
+  // Booking form is always visible below the result (v1.5)
+  document.querySelectorAll('.booking-form-wrap').forEach(el => { el.classList.add('active'); el.style.display = 'block'; });
+  document.title = 'TrashApp — Your Quote';
+  document.getElementById('multi-result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  setTimeout(() => {
+    const bookingSection = document.getElementById('booking-section') || document.getElementById('booking-form') || document.querySelector('.booking-form-wrap') || document.querySelector('[id*="booking"]');
+    if (bookingSection) bookingSection.style.display = 'block';
+  }, 300);
+}
+
+async function bookJob() {
+  const fname = document.getElementById('f-name').value.trim();
+  const lname = document.getElementById('f-lname').value.trim();
+  const email = document.getElementById('f-email').value.trim();
+  const phone = document.getElementById('f-phone').value.trim();
+  const address = document.getElementById('address').value.trim();
+
+  if (!fname || !phone || !email) { showToast('Please enter your name, email, and phone number.', 'warning'); return; }
+
+  const btn = document.getElementById('book-btn');
+  btn.disabled = true;
+  btn.textContent = 'Booking...';
+
+  const adjPrice = quoteData ? buildAdjustedPrice(quoteData.priceRange, travelCost, false) : null;
+  const quoteNote = quoteData
+    ? 'Quote: '+(adjPrice?.headline||quoteData.priceRange)+' | Base: '+quoteData.priceRange+' | Travel: $'+travelCost+' ('+travelMiles+' mi) | Load: '+quoteData.truckLoad+' | Items: '+(quoteData.itemsSeen||[]).join(', ')+' | Slot: '+(window_selectedSlotLabel||'Not selected')
+    : 'Quote tool submission';
+
+  try {
+    await fetch(HS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fields: [
+          { name: 'firstname', value: fname },
+          { name: 'lastname', value: lname },
+          { name: 'email', value: email || 'not provided' },
+          { name: 'phone', value: phone },
+          { name: 'address', value: address || 'not provided' },
+          { name: 'message', value: quoteNote }
+        ],
+        context: { pageUri: 'quote.trashappjunkremoval.com', pageName: 'TrashApp Quote Tool' }
+      })
+    });
+  } catch(e) {
+    console.error('HubSpot error:', e);
+  }
+
+  // Create job in Firestore
+  try {
+    if (window._fbDb && window._fbAddDoc && window._fbCollection && window._fbServerTimestamp) {
+      const jobData = {
+        customer_name: fname + ' ' + (lname||''),
+        phone, email: email || '',
+        address: address || '',
+        status: 'PENDING_DISPATCH',
+        aiQuote: adjPrice?.headline || quoteData?.priceRange || '',
+        source: 'quote_page',
+        scheduledSlot: window_selectedSlot || null,
+        scheduledSlotLabel: window_selectedSlotLabel || null,
+        travelFee: travelCost,
+        travelMiles: travelMiles,
+        created_at: window._fbServerTimestamp(),
+        updated_at: window._fbServerTimestamp()
+      };
+      await window._fbAddDoc(window._fbCollection(window._fbDb, 'jobs'), jobData);
+
+      // If slot was selected, mark it booked
+      if (window_selectedSlot) {
+        await window._fbUpdateDoc(window._fbDoc(window._fbDb, 'job_slots', window_selectedSlot), {
+          status: 'booked', bookedAt: window._fbServerTimestamp()
+        });
+      }
+    }
+  } catch(e) {
+    console.error('Firestore error:', e);
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Book this job — it\'s free to schedule!';
+
+  // Update success message with slot info if available
+  if (window_selectedSlotLabel) {
+    document.getElementById('booked-msg').innerHTML = `
+      <div class="booked-title">You're booked! 🎉</div>
+      <div class="booked-sub">Pickup: ${window_selectedSlotLabel}. We'll text you 30 min before arrival. Questions? Call (559) 774-4249</div>
+    `;
+  }
+
+  document.getElementById('booked-msg').style.display = 'block';
+  document.getElementById('booked-msg').scrollIntoView({ behavior: 'smooth' });
+}
+
+async function bookJobMulti() {
+  const fname = document.getElementById('f-name-multi').value.trim();
+  const lname = document.getElementById('f-lname-multi').value.trim();
+  const email = document.getElementById('f-email-multi').value.trim();
+  const phone = document.getElementById('f-phone-multi').value.trim();
+  const address = document.getElementById('address-multi').value.trim();
+
+  if (!fname || !phone || !email) { showToast('Please enter your name, email, and phone number.', 'warning'); return; }
+
+  const btn = document.getElementById('book-btn-multi');
+  btn.disabled = true;
+  btn.textContent = 'Booking...';
+
+  const locationsSummary = (quoteData.locations || [])
+    .map(l => `${l.label}: ${l.priceRange}`)
+    .join(' | ');
+  const quoteNote = quoteData
+    ? 'Multi-location quote: '+(quoteData.totalMin ? '$'+quoteData.totalMin+' - $'+quoteData.totalMax : '—')+' | Locations: '+locationsSummary+' | Travel: $'+travelCost+' ('+travelMiles+' mi, charged once) | Slot: '+(window_selectedSlotLabel||'Not selected')
+    : 'Multi-location quote submission';
+
+  try {
+    await fetch(HS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fields: [
+          { name: 'firstname', value: fname },
+          { name: 'lastname', value: lname },
+          { name: 'email', value: email || 'not provided' },
+          { name: 'phone', value: phone },
+          { name: 'address', value: address || 'not provided' },
+          { name: 'message', value: quoteNote }
+        ],
+        context: { pageUri: 'quote.trashappjunkremoval.com', pageName: 'TrashApp Quote Tool - Multi' }
+      })
+    });
+  } catch(e) {
+    console.error('HubSpot error:', e);
+  }
+
+  // Create job in Firestore
+  try {
+    if (window._fbDb && window._fbAddDoc && window._fbCollection && window._fbServerTimestamp) {
+      const jobData = {
+        customer_name: fname + ' ' + (lname||''),
+        phone, email: email || '',
+        address: address || '',
+        status: 'PENDING_DISPATCH',
+        aiQuote: quoteData?.totalMin && quoteData?.totalMax ? '$'+quoteData.totalMin+' - $'+quoteData.totalMax : '',
+        source: 'quote_page',
+        scheduledSlot: window_selectedSlot || null,
+        scheduledSlotLabel: window_selectedSlotLabel || null,
+        travelFee: travelCost,
+        travelMiles: travelMiles,
+        created_at: window._fbServerTimestamp(),
+        updated_at: window._fbServerTimestamp()
+      };
+      await window._fbAddDoc(window._fbCollection(window._fbDb, 'jobs'), jobData);
+
+      // If slot was selected, mark it booked
+      if (window_selectedSlot) {
+        await window._fbUpdateDoc(window._fbDoc(window._fbDb, 'job_slots', window_selectedSlot), {
+          status: 'booked', bookedAt: window._fbServerTimestamp()
+        });
+      }
+    }
+  } catch(e) {
+    console.error('Firestore error:', e);
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Book this job — it\'s free to schedule!';
+
+  // Update success message with slot info if available
+  if (window_selectedSlotLabel) {
+    document.getElementById('booked-msg-multi').innerHTML = `
+      <div class="booked-title">You're booked! 🎉</div>
+      <div class="booked-sub">Pickup: ${window_selectedSlotLabel}. We'll text you 30 min before arrival. Questions? Call (559) 774-4249</div>
+    `;
+  }
+
+  document.getElementById('booked-msg-multi').style.display = 'block';
+  document.getElementById('booked-msg-multi').scrollIntoView({ behavior: 'smooth' });
+}
+
+function resetApp() {
+  photos = [];
+  areas = [];
+  quoteData = null;
+  travelCost = 0;
+  isMultiMode = false;
+  selectedItemTypes = [];
+  selectedUrgency = 'standard';
+  travelMiles = 0; travelBlocked = false; travelFlagForReview = false; travelLabel = null;
+  window_selectedSlot = null;
+  window_selectedSlotLabel = null;
+  document.getElementById('blocked-msg').style.display = 'none';
+
+  renderGrid();
+  document.getElementById('result').style.display = 'none';
+  document.getElementById('multi-result').classList.remove('active');
+  document.getElementById('multi-result').style.display = 'none';
+  document.getElementById('spinner').style.display = 'none';
+  document.getElementById('address').value = '';
+  document.getElementById('address-multi').value = '';
+  document.getElementById('multi-mode').classList.remove('active');
+  document.getElementById('single-mode').style.display = 'block';
+
+  document.querySelectorAll('.urgency-pill').forEach(p => p.classList.remove('selected'));
+  document.querySelectorAll('.urgency-pill').forEach(p => {
+    if (p.dataset.urgency === 'standard') p.classList.add('selected');
+  });
+
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+
+  ['f-name','f-lname','f-email','f-phone'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  ['f-name-multi','f-lname-multi','f-email-multi','f-phone-multi'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+
+  document.getElementById('booked-msg').style.display = 'none';
+  document.getElementById('booked-msg-multi').style.display = 'none';
+  hideErr();
+  hideErrMulti();
+  document.getElementById('err-banner-single').classList.remove('active');
+  document.getElementById('err-banner-multi').classList.remove('active');
+
+  document.title = 'TrashApp — Free Junk Removal Quote';
+  updateProgressBar();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function showErr(m) { const e = document.getElementById('err'); e.textContent = m; e.style.display = 'block'; }
+function hideErr() { document.getElementById('err').style.display = 'none'; }
+function showErrMulti(m) { const e = document.getElementById('err-multi'); e.textContent = m; e.style.display = 'block'; }
+function hideErrMulti() { document.getElementById('err-multi').style.display = 'none'; }
+
+function closeBookingSheet() {
+  document.querySelector('.booking-form-overlay')?.classList.remove('active');
+  document.querySelector('.booking-form-wrap')?.classList.remove('active');
+}
+
+function initAddressAutocomplete(inputId) {
+  const input = document.getElementById(inputId);
+  if (!input || !window.google || !window.google.maps || !window.google.maps.places) return;
+  const ac = new window.google.maps.places.Autocomplete(input, {
+    componentRestrictions: { country: 'us' },
+    fields: ['formatted_address', 'geometry'],
+    types: ['address']
+  });
+  ac.addListener('place_changed', () => {
+    const place = ac.getPlace();
+    if (place.geometry) {
+      input.dataset.lat = place.geometry.location.lat();
+      input.dataset.lng = place.geometry.location.lng();
+      input.dataset.formattedAddress = place.formatted_address || '';
+    }
+  });
+}
+
+function initAutocompletes() {
+  initAddressAutocomplete('address');
+  const multiInput = document.getElementById('address-multi') || document.querySelector('[id*="multi"][id*="address"]');
+  if (multiInput) initAddressAutocomplete(multiInput.id);
+}
+
+window.addEventListener('load', () => { setTimeout(initAutocompletes, 1000); });
+
+// Initialize
+updateProgressBar();
+</script>
+</body>
+</html>

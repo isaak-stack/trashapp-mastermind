@@ -75,7 +75,10 @@ Respond only in JSON. No preamble.`
       }
     `, { maxTokens: 2500 });
 
-    if (!analysis) return;
+    if (!analysis || !analysis.summary) {
+      logger.log(this.agentId, 'WARN', 'Claude returned null/incomplete HR analysis, skipping cycle');
+      return;
+    }
 
     // 6. Write report
     await this.writeReport({

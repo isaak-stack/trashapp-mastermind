@@ -61,7 +61,10 @@ Respond only in JSON. No preamble.`
       }
     `, { maxTokens: 1500 });
 
-    if (!analysis) return;
+    if (!analysis || !analysis.summary) {
+      logger.log(this.agentId, 'WARN', 'Claude returned null/incomplete legal analysis, skipping cycle');
+      return;
+    }
 
     // 4. Write report
     await this.writeReport({
