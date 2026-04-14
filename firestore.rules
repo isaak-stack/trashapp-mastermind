@@ -1,0 +1,142 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      // Admin = phone number +15597744249
+      return isSignedIn() && request.auth.token.phone_number == '+15597744249';
+    }
+
+    function isRep() {
+      return isSignedIn();
+    }
+
+    function isOwner(repId) {
+      return isSignedIn() && request.auth.uid == repId;
+    }
+
+    function isRecentDoc() {
+      return request.resource.data.createdAt > request.time - duration.value(60, 's');
+    }
+
+    // ── PUBLIC READ ──────────────────────────────────────────
+    // Job slots — customers need to see availability
+    match /job_slots/{slotId} {
+      allow read: if true;
+      allow write: if isAdmin() || isRep();
+    }
+
+    // System config — needed by frontend for schedule, gas price
+    match /system_config/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Zip intel — reps need to read their territory data
+    match /zip_intel/{zipCode} {
+      allow read: if isRep();
+      allow write: if isAdmin();
+    }
+
+    // ── JOBS ────────────────────────────────────────────────
+    // Customers can create jobs (from quote page, no auth required)
+    // Reps and admin can read/update
+    match /jobs/{jobId} {
+      allow create: if true; // public — customers book without auth
+      allow read: if isRep();
+      allow update: if isRep();
+      allow delete: if isAdmin();
+
+      // Status history subcollection
+      match /statusHistory/{entryId} {
+        allow read: if isRep();
+        allow create: if isRep();
+      }
+
+      // Messages subcollection (two-way SMS)
+      match /messages/{messageId} {
+        allow read: if isRep();
+        allow create: if isRep();
+      }
+    }
+
+    // ── REP DATA ─────────────────────────────────────────────
+    match /rep_sessions/{sessionId} {
+      allow read: if isAdmin() || isOwner(resource.data.repId);
+      allow create: if isRep();
+      allow update: if isAdmin() || isOwner(resource.data.repId);
+      allow delete: if isAdmin();
+    }
+
+    match /live_reps/{repId} {
+      allow read: if isRep();
+      allow write: if isOwner(repId) || isAdmin();
+    }
+
+    match /crew_locations/{crewId} {
+      allow read: if isRep();
+      allow write: if isOwner(crewId) || isAdmin();
+    }
+
+    // ── TERRITORY ────────────────────────────────────────────
+    match /territory_assignments/{weekId} {
+      allow read: if isRep();
+      allow write: if isAdmin();
+    }
+
+    // ── AI OS ─────────────────────────────────────────────────
+    // Only admin can see agent data
+    match /agent_reports/{reportId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /agent_messages/{messageId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /pending_approvals/{approvalId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /agent_state/{agentId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /agent_meetings/{weekId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /content_queue/{postId} {
+      allow read, write: if isAdmin();
+    }
+
+    // ── PRICING + INTEL ──────────────────────────────────────
+    match /pricing_intel/{docId} {
+      allow read: if isRep();
+      allow write: if isAdmin();
+    }
+
+    match /job_applications/{appId} {
+      allow create: if true; // public — job seekers apply without auth
+      allow read, update, delete: if isAdmin();
+    }
+
+    match /customer_follow_ups/{followUpId} {
+      allow read, write: if isRep();
+    }
+
+    match /schedule_changes/{changeId} {
+      allow read, write: if isAdmin();
+    }
+
+    // ── DENY ALL ELSE ────────────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

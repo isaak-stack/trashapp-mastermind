@@ -445,3 +445,16 @@ trashapp-mastermind/
 ```
 
 Last update: ${new Date().toISOString()}
+
+## Firestore Security Rules
+File: `firestore.rules` (repo root)
+Deploy: `firebase deploy --only firestore:rules`
+Requires: firebase CLI installed (`npm install -g firebase-tools`) and logged in (`firebase login`)
+
+Key rules:
+- Public create on `jobs` and `job_applications` (customers book without auth)
+- Public read on `job_slots` and `system_config` (frontend needs these)
+- Rep auth required for `rep_sessions`, `live_reps`, `zip_intel`, `crew_locations`
+- Admin only (phone +15597744249) for all AI OS collections (`agent_reports`, `agent_messages`, `pending_approvals`, `agent_state`, `agent_meetings`, `content_queue`)
+- Deny-all default on any unmatched collection
+- Mastermind server uses ADC (Admin SDK) which bypasses these rules entirely

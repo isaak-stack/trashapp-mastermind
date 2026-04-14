@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>TrashApp — Rep Platform v1.7</title>
+<title>TrashApp — Rep Platform v1.8</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%231a1a1a'/%3E%3Crect x='28' y='36' width='44' height='46' rx='6' fill='%23F5A623'/%3E%3Crect x='20' y='27' width='60' height='11' rx='5' fill='%23F5A623'/%3E%3Crect x='40' y='16' width='20' height='13' rx='4' fill='%23F5A623'/%3E%3Crect x='40' y='49' width='6' height='22' rx='3' fill='%231a1a1a'/%3E%3Crect x='54' y='49' width='6' height='22' rx='3' fill='%231a1a1a'/%3E%3C/svg%3E">
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#F5A623">
@@ -260,7 +260,10 @@ input:checked+.slider:before{transform:translateX(15px)}
 .ql-btn.ql-flash{background:var(--gold);color:var(--black)}
 .sd-pay-btn{flex:1;padding:8px 4px;border:1px solid var(--border);border-radius:8px;background:var(--card2);color:var(--white);font-size:11px;font-weight:600;cursor:pointer;transition:.15s;font-family:'Inter','DM Sans',sans-serif}
 .sd-pay-btn.selected{border-color:var(--gold);background:rgba(245,166,35,.15);color:var(--gold)}
-.bottom-nav{display:none;background:var(--dark);border-top:1px solid var(--border);flex-shrink:0}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;height:64px;background:var(--bg-surface);border-top:1px solid var(--border);display:flex;align-items:stretch;z-index:100;padding-bottom:env(safe-area-inset-bottom)}
+.nav-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:10px;font-weight:600;color:var(--text-tertiary);cursor:pointer;transition:color var(--transition);border:none;background:none;font-family:'Inter','DM Sans',sans-serif}
+.nav-tab.active{color:var(--brand)}
+.nav-tab .tab-icon{font-size:20px;line-height:1}
 .bottom-nav-inner{display:flex}
 .bnav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:.55rem .3rem;border:none;background:none;color:var(--gray);font-size:9px;font-weight:600;cursor:pointer;font-family:'Inter','DM Sans',sans-serif;letter-spacing:.3px;transition:.15s}
 .bnav-item .bnav-icon{font-size:19px}
@@ -314,6 +317,18 @@ input:checked+.slider:before{transform:translateX(15px)}
 @keyframes pulse-glow{0%,100%{box-shadow:0 0 0 0 rgba(245,166,35,0.4)}50%{box-shadow:0 0 0 12px rgba(245,166,35,0)}}
 .btn-session-glow{animation:pulse-glow 2.5s infinite}
 
+/* ── BUTTON SPINNER ── */
+.spinner-sm {
+  display: inline-block;
+  width: 14px; height: 14px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  vertical-align: middle;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
 /* ── RESPONSIVE ── */
 @media(max-width:768px){
   .sidebar{display:none}
@@ -359,6 +374,11 @@ input:checked+.slider:before{transform:translateX(15px)}
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+/* ── HIDE OLD VIEWS (v1.8) ── */
+#view-dashboard, #view-map, #view-quote, #view-followup, #view-scripts, #view-stats {
+  display: none !important;
+}
 
 .nav-badge { display: inline-block; background: var(--gold); color: #000; border-radius: 50%; width: 20px; height: 20px; line-height: 20px; font-size: 11px; font-weight: 700; margin-left: 4px; }
 
@@ -740,6 +760,121 @@ body.field-sidebar-open .sidebar .sidebar-close{display:flex;position:absolute;t
           </div>
         </div>
 
+        <!-- VIEW-HOME (NEW) -->
+        <div class="view" id="view-home">
+          <div class="view-title">Hey, <span id="home-name" style="color:var(--gold)">Rep</span> 👋</div>
+          <div class="view-sub">Your performance today</div>
+          <!-- Session start section -->
+          <div id="home-session-start" style="padding:1rem">
+            <button onclick="showSessionStartModal()" style="width:100%;padding:1rem;background:var(--gold);color:var(--black);border:none;border-radius:12px;font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:1px;cursor:pointer">Start Session</button>
+          </div>
+          <!-- Territory card -->
+          <div class="rep-meta-row">
+            <div class="rep-meta-badge">📍 Zip: <span id="home-zip">—</span></div>
+            <div class="rep-meta-badge">💰 Commission (est.): <span id="home-comm">15%</span></div>
+          </div>
+          <!-- Stats row -->
+          <div class="stats-grid">
+            <div class="stat-card"><div class="stat-val" id="home-stat-doors">0</div><div class="stat-label">Doors Today</div></div>
+            <div class="stat-card"><div class="stat-val" id="home-stat-deals">0</div><div class="stat-label">Deals Today</div></div>
+            <div class="stat-card"><div class="stat-val" id="home-stat-comm">$0</div><div class="stat-label">Commission (est.)</div></div>
+            <div class="stat-card"><div class="stat-val" id="home-stat-total">0</div><div class="stat-label">All-Time Doors</div></div>
+          </div>
+          <!-- Map inline -->
+          <div id="home-map-canvas" style="height:300px;border-radius:12px;overflow:hidden;margin-bottom:1rem;border:1px solid var(--border)"></div>
+          <!-- Last session card -->
+          <div id="home-session-history"></div>
+          <!-- Leaderboard -->
+          <div class="card">
+            <div class="card-title">Leaderboard — Today</div>
+            <div id="home-leaderboard"><div class="empty-state">No activity yet today. Start knocking!</div></div>
+          </div>
+        </div>
+
+        <!-- VIEW-DOORS (NEW) -->
+        <div class="view" id="view-doors">
+          <div class="view-title">Today's Doors</div>
+          <div class="view-sub">Logged activity + follow-ups</div>
+
+          <!-- Today's doors section -->
+          <div id="doors-today-section" style="margin-bottom:1.5rem">
+            <div style="font-weight:700;font-size:13px;color:var(--gold);text-transform:uppercase;letter-spacing:1px;margin-bottom:.75rem">📍 Today's Doors</div>
+            <div id="doors-today-list"><div class="empty-state">No doors logged today. Start a session to begin.</div></div>
+          </div>
+
+          <!-- Follow-ups section -->
+          <div>
+            <div style="font-weight:700;font-size:13px;color:var(--gold);text-transform:uppercase;letter-spacing:1px;margin-bottom:.75rem">📞 Follow-ups</div>
+            <div id="doors-followup-list"><div class="skeleton-card"><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line short"></div></div></div>
+          </div>
+        </div>
+
+        <!-- VIEW-PROFILE (NEW) -->
+        <div class="view" id="view-profile">
+          <div class="view-title">Profile</div>
+          <div class="view-sub">Your stats, scripts, and settings</div>
+
+          <!-- My Stats section -->
+          <div style="margin-bottom:1.5rem">
+            <div style="font-weight:700;font-size:13px;color:var(--gold);text-transform:uppercase;letter-spacing:1px;margin-bottom:.75rem">📊 My Stats</div>
+            <div class="card">
+              <div class="stats-grid" style="grid-template-columns:repeat(2,1fr)">
+                <div class="stat-card"><div class="stat-val" id="profile-alltime-doors">—</div><div class="stat-label">All-Time Doors</div></div>
+                <div class="stat-card"><div class="stat-val" id="profile-alltime-deals">—</div><div class="stat-label">All-Time Deals</div></div>
+                <div class="stat-card"><div class="stat-val" id="profile-conv-rate">—</div><div class="stat-label">Conversion Rate</div></div>
+                <div class="stat-card"><div class="stat-val" id="profile-alltime-comm" style="font-size:24px">—</div><div class="stat-label">Est. Total Commission</div></div>
+              </div>
+            </div>
+          </div>
+
+          <hr style="border:none;border-top:1px solid var(--border);margin:1.5rem 0">
+
+          <!-- Scripts section -->
+          <div style="margin-bottom:1.5rem">
+            <div style="font-weight:700;font-size:13px;color:var(--gold);text-transform:uppercase;letter-spacing:1px;margin-bottom:.75rem">📝 Scripts</div>
+            <div class="script-tabs">
+              <button class="script-tab active" id="profile-stab-admin" onclick="showScriptTab('admin')">📋 Admin</button>
+              <button class="script-tab" id="profile-stab-personal" onclick="showScriptTab('personal')">✍️ My Scripts</button>
+            </div>
+            <div id="profile-admin-scripts"><div class="empty-state">No admin scripts yet.</div></div>
+            <div id="profile-personal-scripts" style="display:none">
+              <div class="add-script-form">
+                <div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:.5rem">Add New Script</div>
+                <input id="profile-script-title" type="text" placeholder="Script title..." style="width:100%;padding:0.5rem;margin-bottom:0.5rem;background:#2a2a2a;border:1px solid #444;border-radius:8px;color:#fff;font-family:'Inter','DM Sans',sans-serif;font-size:13px">
+                <textarea id="profile-script-body" placeholder="Your script text..." style="width:100%;padding:0.5rem;margin-bottom:0.5rem;background:#2a2a2a;border:1px solid #444;border-radius:8px;color:#fff;font-family:'Inter','DM Sans',sans-serif;font-size:13px;min-height:80px;resize:vertical"></textarea>
+                <button onclick="savePersonalScript(event)" style="width:100%;padding:.55rem;background:var(--gold);color:#000;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Inter','DM Sans',sans-serif">Save Script</button>
+              </div>
+              <div id="profile-my-scripts-list"><div class="empty-state">No personal scripts yet.</div></div>
+            </div>
+          </div>
+
+          <hr style="border:none;border-top:1px solid var(--border);margin:1.5rem 0">
+
+          <!-- Settings section -->
+          <div>
+            <div style="font-weight:700;font-size:13px;color:var(--gold);text-transform:uppercase;letter-spacing:1px;margin-bottom:.75rem">⚙️ Settings</div>
+            <div class="card" style="padding:1rem">
+              <div style="margin-bottom:1rem">
+                <div style="font-size:11px;color:var(--gray);margin-bottom:.3rem">Rep Name</div>
+                <div style="font-size:14px;color:var(--white);font-weight:600" id="profile-rep-name">—</div>
+              </div>
+              <div style="margin-bottom:1rem">
+                <div style="font-size:11px;color:var(--gray);margin-bottom:.3rem">Phone</div>
+                <div style="font-size:14px;color:var(--white);font-weight:600" id="profile-phone">—</div>
+              </div>
+              <div style="margin-bottom:1rem">
+                <div style="font-size:11px;color:var(--gray);margin-bottom:.3rem">Territory (Zip)</div>
+                <div style="font-size:14px;color:var(--white);font-weight:600" id="profile-zip">—</div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--gray);margin-bottom:.3rem">Commission Rate</div>
+                <div style="font-size:14px;color:var(--white);font-weight:600" id="profile-commission">15%</div>
+              </div>
+              <button class="btn-signout" onclick="doSignOut(event)" style="margin-top:1rem">Sign Out</button>
+            </div>
+          </div>
+        </div>
+
       </div><!-- /content-area -->
 
       <!-- Mobile Bottom Nav -->
@@ -748,16 +883,20 @@ body.field-sidebar-open .sidebar .sidebar-close{display:flex;position:absolute;t
         <button class="ql-btn ql-follow" onclick="quickLog('follow_up')">📞 Follow Up</button>
         <button class="ql-btn ql-quote" onclick="quickLog('quote_given')">💰 Quote Given</button>
       </div>
-      <div class="bottom-nav">
-        <div class="bottom-nav-inner">
-          <button class="bnav-item active" id="bnav-dashboard" onclick="showView('dashboard')"><span class="bnav-icon">📊</span>DASH</button>
-          <button class="bnav-item" id="bnav-map" onclick="showView('map')"><span class="bnav-icon">🗺️</span>MAP</button>
-          <button class="bnav-item" id="bnav-quote" onclick="showView('quote')"><span class="bnav-icon">💰</span>QUOTE</button>
-          <button class="bnav-item" id="bnav-followup" onclick="showView('followup')"><span class="bnav-icon">📞</span>FOLLOW UP<span id="followup-badge-mobile" class="nav-badge">0</span></button>
-          <button class="bnav-item" id="bnav-scripts" onclick="showView('scripts')"><span class="bnav-icon">📝</span>SCRIPTS</button>
-          <button class="bnav-item" id="bnav-stats" onclick="showView('stats')"><span class="bnav-icon">🏆</span>STATS</button>
-        </div>
-      </div>
+      <nav class="bottom-nav" id="bottom-nav">
+        <button class="nav-tab active" data-view="home" onclick="showView('home')">
+          <span class="tab-icon">🏠</span>
+          <span>Home</span>
+        </button>
+        <button class="nav-tab" data-view="doors" onclick="showView('doors')">
+          <span class="tab-icon">🚪</span>
+          <span id="doors-count">Doors</span>
+        </button>
+        <button class="nav-tab" data-view="profile" onclick="showView('profile')">
+          <span class="tab-icon">👤</span>
+          <span>Profile</span>
+        </button>
+      </nav>
     </div><!-- /main -->
 
   </div><!-- /app-shell -->
@@ -1576,12 +1715,28 @@ window.submitSetup = async () => {
 };
 
 // ── SIGN OUT ──
-window.doSignOut = async () => {
+window._legacySignOut = async () => {
   unsubs.forEach(u=>u()); unsubs=[];
   if(watchId)navigator.geolocation.clearWatch(watchId);
   clearInterval(sessionTimer);
   resetRecaptcha();
   await signOut(auth);
+};
+window.doSignOut = async (btnOrEvent) => {
+  const btn = (btnOrEvent && btnOrEvent.target) ? btnOrEvent.target.closest('button') : btnOrEvent;
+  if (!btn) return _legacySignOut();
+  const original = btn.innerHTML;
+  const wasDisabled = btn.disabled;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-sm"></span> Signing out...';
+  try {
+    await _legacySignOut();
+  } catch (err) {
+    showToast('Something went wrong — try again', 'error');
+    console.error('doSignOut:', err);
+    btn.disabled = wasDisabled;
+    btn.innerHTML = original;
+  }
 };
 
 // ── APP INIT ──
@@ -1662,26 +1817,65 @@ function initApp() {
 
 // ── VIEWS ──
 function _origShowView(view){
-  // Resume field mode if active and navigating back to dashboard
-  if(fieldModeActive && currentSessionDoc && view !== 'dashboard') {
+  // Map old view names to new ones
+  const viewMap = {
+    'dashboard': 'home',
+    'map': 'home',
+    'followup': 'doors',
+    'scripts': 'profile',
+    'stats': 'profile',
+    'quote': 'openQuoteOverlay'
+  };
+
+  const resolvedView = viewMap[view] || view;
+
+  // Special handler for quote overlay
+  if(resolvedView === 'openQuoteOverlay') {
+    window.openQuoteOverlay();
+    return;
+  }
+
+  // Resume field mode if active and navigating back to home
+  if(fieldModeActive && currentSessionDoc && resolvedView !== 'home') {
     // Keep field mode visible, don't switch views
     return;
   }
+
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(n=>n.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(n=>n.classList.remove('active'));
   document.querySelectorAll('.bnav-item').forEach(n=>n.classList.remove('active'));
-  const el=document.getElementById('view-'+view);
+
+  const el=document.getElementById('view-'+resolvedView);
   if(el)el.classList.add('active');
+
+  // Update nav-tab active state
+  const navTab = document.querySelector(`.nav-tab[data-view="${resolvedView}"]`);
+  if(navTab)navTab.classList.add('active');
+
   const snav=document.getElementById('snav-'+view);
   if(snav)snav.classList.add('active');
   const bnav=document.getElementById('bnav-'+view);
   if(bnav)bnav.classList.add('active');
   closeDrawer();
-  if(view==='map')setTimeout(initMap,150);
-  if(view==='dashboard')loadDashboard();
-  if(view==='followup')loadFollowUps();
-  if(view==='scripts')loadScripts();
-  if(view==='stats')loadMyStats();
+
+  // Load data based on resolved view
+  if(resolvedView==='home') {
+    loadDashboard();
+    setTimeout(() => {
+      if (window.map && google?.maps?.event) {
+        google.maps.event.trigger(window.map, 'resize');
+      }
+    }, 100);
+  }
+  if(resolvedView==='doors') {
+    loadFollowUps();
+    loadDoorsToday();
+  }
+  if(resolvedView==='profile') {
+    loadMyStats();
+    loadScripts();
+  }
 }
 window.showView = view => {
   // Nav guard: leaving map while session active?
@@ -1698,6 +1892,50 @@ window.showView = view => {
 // ── DRAWER ──
 window.openDrawer=()=>document.getElementById('mobile-drawer').classList.add('open');
 window.closeDrawer=()=>document.getElementById('mobile-drawer').classList.remove('open');
+
+// ── QUOTE OVERLAY ──
+window.openQuoteOverlay = function() {
+  document.getElementById('quote-overlay').style.transform = 'translateY(0)';
+  if(document.getElementById('floating-quote-btn')) {
+    document.getElementById('floating-quote-btn').style.display = 'none';
+  }
+};
+window.closeQuoteOverlay = function() {
+  document.getElementById('quote-overlay').style.transform = 'translateY(100%)';
+  if(!activeSession && document.querySelector('.nav-tab.active')?.dataset.view === 'home') {
+    const btn = document.getElementById('floating-quote-btn');
+    if(btn) btn.style.display = 'flex';
+  }
+};
+
+// ── LOAD DOORS TODAY ──
+async function loadDoorsToday() {
+  if(!currentUser) return;
+  const todayTs = todayTimestamp();
+  const snap = await getDocs(query(collection(db,'doors'),where('repId','==',currentUser.uid),where('timestamp','>=',todayTs)));
+  const list = document.getElementById('doors-today-list');
+  if(!snap.docs.length) {
+    list.innerHTML = '<div class="empty-state">No doors logged today. Start a session to begin.</div>';
+    return;
+  }
+  const doors = snap.docs.map(d=>({id:d.id,...d.data()}));
+  const statusColors = {
+    'quote_given':'#F5A623',
+    'pending_dispatch':'#3b82f6',
+    'deal_closed':'#22c55e',
+    'not_home':'#888',
+    'not_interested':'#ef4444'
+  };
+  list.innerHTML = doors.map(door=>`
+    <div class="card" style="margin-bottom:.5rem">
+      <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem">
+        <div style="width:12px;height:12px;border-radius:50%;background:${statusColors[door.status]||'#999'}"></div>
+        <div style="flex:1"><div style="font-weight:600;font-size:13px">${door.address||'Unknown'}</div><div style="font-size:11px;color:#999">${new Date(door.timestamp?.toDate?.()).toLocaleTimeString()}</div></div>
+      </div>
+      <div style="font-size:12px;color:var(--gray);padding:.5rem 0;border-top:1px solid var(--border)">Status: <strong style="color:var(--gold)">${door.status.replace(/_/g,' ')}</strong></div>
+    </div>
+  `).join('');
+};
 
 // ── DASHBOARD ──
 async function loadDashboard() {
@@ -1739,15 +1977,27 @@ function renderDashboard({tDoors,tDeals,repStats}){
   const todayCommission=Math.round(tDeals*AVG_DEAL*commRate);
   setText('stat-comm-earned','$'+todayCommission);
   setText('stat-doors-total',currentRep?.doorsKnocked||0);
+
+  // Also update home view (v1.8)
+  setText('home-name',currentRep?.name||'Rep');
+  setText('home-zip',currentRep?.zipCode||'Not assigned');
+  setText('home-comm',(currentRep?.commission||15)+'%');
+  setText('home-stat-doors',tDoors);
+  setText('home-stat-deals',tDeals);
+  setText('home-stat-comm','$'+todayCommission);
+  setText('home-stat-total',currentRep?.doorsKnocked||0);
+
   const sorted=Object.values(repStats).sort((a,b)=>b.doors-a.doors);
   const lb=document.getElementById('leaderboard');
-  if(!sorted.length){lb.innerHTML='<div class="empty-state">No activity today yet. Start knocking!</div>';return;}
-  lb.innerHTML=sorted.map((r,i)=>`
+  const homeLeaderboard=document.getElementById('home-leaderboard');
+  const html=sorted.length?sorted.map((r,i)=>`
     <div class="lb-row ${r.name===currentRep?.name?'lb-me':''}">
       <div class="lb-rank">${['🥇','🥈','🥉'][i]||(i+1)}</div>
       <div class="lb-name">${r.name}</div>
       <div class="lb-stats"><span>${r.doors} doors</span><span class="lb-deals">${r.deals} closed</span></div>
-    </div>`).join('');
+    </div>`).join(''):'<div class="empty-state">No activity today yet. Start knocking!</div>';
+  if(lb)lb.innerHTML=html;
+  if(homeLeaderboard)homeLeaderboard.innerHTML=html;
 }
 
 // ── SESSION ──
@@ -1833,8 +2083,7 @@ window.startSession = async () => {
   showView('map');
 };
 
-window.endSession = async () => {
-  if(!confirm('End session?'))return;
+window._legacyEndSession = async () => {
   // Capture stats BEFORE clearing
   const recapSeconds=sessionSeconds;
   const recapDoors=sessionDoors;
@@ -1865,9 +2114,26 @@ window.endSession = async () => {
     loadDashboard(); showView('dashboard');
   }
 };
+window.endSession = async (btnOrEvent) => {
+  if(!confirm('End session?'))return;
+  const btn = (btnOrEvent && btnOrEvent.target) ? btnOrEvent.target.closest('button') : btnOrEvent;
+  if (!btn) return _legacyEndSession();
+  const original = btn.innerHTML;
+  const wasDisabled = btn.disabled;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-sm"></span> Ending session...';
+  try {
+    await _legacyEndSession();
+  } catch (err) {
+    showToast('Something went wrong — try again', 'error');
+    console.error('endSession:', err);
+    btn.disabled = wasDisabled;
+    btn.innerHTML = original;
+  }
+};
 
 // ── PAUSE / RESUME ──
-window.togglePauseSession = async () => {
+window._legacyTogglePause = async () => {
   if(!activeSession) return;
   sessionPaused = !sessionPaused;
   if(sessionPaused) {
@@ -1881,6 +2147,27 @@ window.togglePauseSession = async () => {
     await setDoc(doc(db,'sessions',currentUser.uid),{paused:sessionPaused,lastUpdate:serverTimestamp()},{merge:true});
     await setDoc(doc(db,'live_reps',currentUser.uid),{paused:sessionPaused},{merge:true});
   } catch(e) {}
+};
+window.togglePauseSession = async (btnOrEvent) => {
+  if(!activeSession) return;
+  const btn = (btnOrEvent && btnOrEvent.target) ? btnOrEvent.target.closest('button') : btnOrEvent;
+  const wasSessionPaused = sessionPaused;
+  sessionPaused = !sessionPaused;
+  applyPauseUI();
+  if(sessionPaused) {
+    stopPitchTimer();
+  } else if(document.getElementById('door-sheet').classList.contains('open')) {
+    startPitchTimer();
+  }
+  try {
+    await setDoc(doc(db,'sessions',currentUser.uid),{paused:sessionPaused,lastUpdate:serverTimestamp()},{merge:true});
+    await setDoc(doc(db,'live_reps',currentUser.uid),{paused:sessionPaused},{merge:true});
+  } catch(e) {
+    sessionPaused = wasSessionPaused;
+    applyPauseUI();
+    showToast('Could not pause — try again', 'error');
+    console.error('togglePauseSession:', e);
+  }
 };
 
 function applyPauseUI() {
@@ -3315,43 +3602,65 @@ async function loadScripts(){
   if(!currentUser)return;
   // Admin scripts
   const adminSnap=await getDocs(query(collection(db,'scripts'),where('type','==','admin')));
+  const adminHtml=adminSnap.empty?'<div class="empty-state">No admin scripts yet. Ask your manager to add some.</div>':adminSnap.docs.map(d=>{
+    const s=d.data();
+    return `<div class="script-card">
+      <div class="script-card-header"><div class="script-card-title">${s.title}</div><span class="script-card-badge">📋 Admin</span></div>
+      <div class="script-card-body">${s.body}</div>
+    </div>`;
+  }).join('');
   const adminEl=document.getElementById('admin-scripts-panel');
-  if(adminSnap.empty){adminEl.innerHTML='<div class="empty-state">No admin scripts yet. Ask your manager to add some.</div>';}
-  else {
-    adminEl.innerHTML=adminSnap.docs.map(d=>{
-      const s=d.data();
-      return `<div class="script-card">
-        <div class="script-card-header"><div class="script-card-title">${s.title}</div><span class="script-card-badge">📋 Admin</span></div>
-        <div class="script-card-body">${s.body}</div>
-      </div>`;
-    }).join('');
-  }
+  if(adminEl) adminEl.innerHTML=adminHtml;
+  const profileAdminEl=document.getElementById('profile-admin-scripts');
+  if(profileAdminEl) profileAdminEl.innerHTML=adminHtml;
+
   // Personal scripts
   const mySnap=await getDocs(query(collection(db,'scripts'),where('type','==','personal'),where('uid','==',currentUser.uid)));
+  const myHtml=mySnap.empty?'<div class="empty-state">No personal scripts yet. Add one above.</div>':mySnap.docs.map(d=>{
+    const s=d.data();
+    return `<div class="script-card">
+      <div class="script-card-header"><div class="script-card-title">${s.title}</div></div>
+      <div class="script-card-body">${s.body}</div>
+      <div class="script-card-actions">
+        <button class="btn-script-sm btn-del-script" onclick="deleteScript('${d.id}')">Delete</button>
+      </div>
+    </div>`;
+  }).join('');
   const myEl=document.getElementById('my-scripts-list');
-  if(mySnap.empty){myEl.innerHTML='<div class="empty-state">No personal scripts yet. Add one above.</div>';}
-  else {
-    myEl.innerHTML=mySnap.docs.map(d=>{
-      const s=d.data();
-      return `<div class="script-card">
-        <div class="script-card-header"><div class="script-card-title">${s.title}</div></div>
-        <div class="script-card-body">${s.body}</div>
-        <div class="script-card-actions">
-          <button class="btn-script-sm btn-del-script" onclick="deleteScript('${d.id}')">Delete</button>
-        </div>
-      </div>`;
-    }).join('');
-  }
+  if(myEl) myEl.innerHTML=myHtml;
+  const profileMyEl=document.getElementById('profile-my-scripts-list');
+  if(profileMyEl) profileMyEl.innerHTML=myHtml;
 }
 
-window.savePersonalScript = async () => {
-  const title=document.getElementById('new-script-title').value.trim();
-  const body=document.getElementById('new-script-body').value.trim();
+window._legacySaveScript = async () => {
+  // Try to get from profile view first (active on profile tab), then from scripts view
+  let titleEl=document.getElementById('profile-script-title') || document.getElementById('new-script-title');
+  let bodyEl=document.getElementById('profile-script-body') || document.getElementById('new-script-body');
+  const title=titleEl.value.trim();
+  const body=bodyEl.value.trim();
   if(!title||!body){showToast('Enter title and script text', 'warning');return;}
   await addDoc(collection(db,'scripts'),{type:'personal',uid:currentUser.uid,title,body,createdAt:serverTimestamp()});
-  document.getElementById('new-script-title').value='';
-  document.getElementById('new-script-body').value='';
+  titleEl.value='';
+  bodyEl.value='';
   loadScripts();
+};
+window.savePersonalScript = async (btnOrEvent) => {
+  const btn = (btnOrEvent && btnOrEvent.target) ? btnOrEvent.target.closest('button') : btnOrEvent;
+  if (!btn) return _legacySaveScript();
+  const original = btn.innerHTML;
+  const wasDisabled = btn.disabled;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-sm"></span> Saving...';
+  try {
+    await _legacySaveScript();
+    showToast('Script saved ✓', 'success');
+  } catch (err) {
+    showToast('Something went wrong — try again', 'error');
+    console.error('savePersonalScript:', err);
+  } finally {
+    btn.disabled = wasDisabled;
+    btn.innerHTML = original;
+  }
 };
 
 window.deleteScript = async id => {
@@ -3559,7 +3868,7 @@ window.checkPin=val=>{
   if(val===MARGIN_PIN){pinUnlocked=true;document.getElementById('pin-entry').style.display='none';document.getElementById('pin-input').value='';document.getElementById('margin-table').style.display='block';setText('lock-icon','🔓');renderMargin();}
 };
 
-window.bookJob = async () => {
+window._legacyBookJob = async () => {
   const fname=document.getElementById('q-fname').value.trim();
   const lname=document.getElementById('q-lname').value.trim();
   const email=document.getElementById('q-email').value.trim();
@@ -3567,10 +3876,11 @@ window.bookJob = async () => {
   const address=document.getElementById('q-address').value.trim();
   const notes=document.getElementById('q-notes').value.trim();
   if(!fname||!email||!phone){showToast('Name, email and phone required', 'warning');return;}
-  setBtn('book-btn',true);
   const adjPrice=quoteData?._adjPrice||buildAdjustedPrice(quoteData?.priceRange,travelCost,travelWaived);
   const qNote=quoteData?`Quote: ${adjPrice?.headline||quoteData.priceRange} | Base: ${adjPrice?.base||quoteData.priceRange} | Travel: $${travelCost} (${travelMiles} mi) | Items: ${(quoteData.itemsSeen||[]).join(', ')}`:'Rep tool submission';
-  try{
+
+  // Step 1: HS contact
+  try {
     await fetch(HS_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
       fields:[
         {name:'firstname',value:fname},{name:'lastname',value:lname},
@@ -3583,9 +3893,17 @@ window.bookJob = async () => {
       ],
       context:{pageUri:'reps.trashappjunkremoval.com',pageName:'TrashApp Rep Tool'}
     })});
-    document.getElementById('book-success').style.display='block';
-    document.getElementById('book-btn').style.display='none';
-    const doorRef=await addDoc(collection(db,'doors'),{repId:currentUser.uid,repName:currentRep.name,address:address||'Quote Tool',status:'pending_dispatch',lat:null,lng:null,zipCode:currentRep.zipCode,timestamp:serverTimestamp()});
+  } catch(e) { throw new Error('Couldn\'t create contact'); }
+
+  // Step 2: Create door record
+  let doorRef;
+  try {
+    doorRef=await addDoc(collection(db,'doors'),{repId:currentUser.uid,repName:currentRep.name,address:address||'Quote Tool',status:'pending_dispatch',lat:null,lng:null,zipCode:currentRep.zipCode,timestamp:serverTimestamp()});
+  } catch(e) { throw new Error('Couldn\'t create door'); }
+
+  // Step 3: Create job and update rep stats
+  let jobRef;
+  try {
     const newDeals=(currentRep.dealsClosedTotal||0)+1;
     const newDoors=(currentRep.doorsKnocked||0)+1;
     await updateDoc(doc(db,'reps',currentUser.uid),{dealsClosedTotal:newDeals,doorsKnocked:newDoors});
@@ -3596,7 +3914,7 @@ window.bookJob = async () => {
     }
     updateSessionStats();
     const custId=await findOrCreateCustomer({name:fname+' '+lname,phone,email,address:address||''});
-    const jobRef=await addDoc(collection(db,'jobs'),{
+    jobRef=await addDoc(collection(db,'jobs'),{
       repId:currentUser.uid, repName:currentRep?.name||'',
       customerId:custId, customer_name:fname+' '+lname, address:address||'', zip_code:currentRep.zipCode||'',
       phone, email, status:'PENDING_DISPATCH', same_day:false,
@@ -3605,17 +3923,36 @@ window.bookJob = async () => {
       paymentMethod:null, commissionAmount:0, paidAt:null,
       created_at:serverTimestamp(), updated_at:serverTimestamp()
     });
-    // Store job ID for slot picker
     lastBookedJobId = jobRef.id;
     lastBookedJobAddress = address || 'Quote Tool';
-    // Initialize slot picker
     buildSlotPicker('slot-picker-quote', {
       mode: 'rep',
       onSelect: (slotId, slotLabel) => { holdSlot(slotId, slotLabel); },
       onHold: (slotId) => { holdSlot(slotId, ''); }
     });
-  }catch(e){showToast('Error: '+e.message, 'error');}
-  finally{setBtn('book-btn',false);}
+  } catch(e) { throw new Error('Couldn\'t create job'); }
+};
+
+window.bookJob = async (btnOrEvent) => {
+  const btn = (btnOrEvent && btnOrEvent.target) ? btnOrEvent.target.closest('button') : btnOrEvent;
+  if (!btn) return _legacyBookJob();
+  const original = btn.innerHTML;
+  const wasDisabled = btn.disabled;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-sm"></span> Booking...';
+  try {
+    await _legacyBookJob();
+    document.getElementById('book-success').style.display='block';
+    document.getElementById('book-btn').style.display='none';
+    showToast('Booking confirmed ✓', 'success');
+  } catch (err) {
+    const msg = err.message || 'Something went wrong';
+    showToast(msg + ' — try again', 'error');
+    console.error('bookJob:', err);
+  } finally {
+    btn.disabled = wasDisabled;
+    btn.innerHTML = original;
+  }
 };
 
 window.copyQuoteSummary=()=>{
@@ -3976,6 +4313,16 @@ async function loadMyStats() {
   setText('my-alltime-deals', myDeals);
   setText('my-conv-rate', myConv);
   setText('my-alltime-comm', myComm);
+
+  // Also update profile view (v1.8)
+  setText('profile-alltime-doors', myDoors);
+  setText('profile-alltime-deals', myDeals);
+  setText('profile-conv-rate', myConv);
+  setText('profile-alltime-comm', myComm);
+  setText('profile-rep-name', currentRep?.name || '—');
+  setText('profile-phone', currentRep?.phone || '—');
+  setText('profile-zip', currentRep?.zipCode || 'Not assigned');
+  setText('profile-commission', (currentRep?.commission||15)+'%');
 
   // ── PERSONAL RECORDS: best session + current streak ──
   // Single query for this rep's data (sessions + doors) — not full collection
@@ -4742,6 +5089,34 @@ async function loadSessionHistory() {
     container.innerHTML = '';
   }
 }
+
+// ── INIT QUOTE OVERLAY & FLOATING BTN ──
+window.addEventListener('DOMContentLoaded', () => {
+  // Create floating quote button
+  if(!document.getElementById('floating-quote-btn')) {
+    const floatingBtn = document.createElement('button');
+    floatingBtn.id = 'floating-quote-btn';
+    floatingBtn.textContent = '💰';
+    floatingBtn.onclick = window.openQuoteOverlay;
+    floatingBtn.style.cssText = 'position:fixed;bottom:80px;right:16px;width:56px;height:56px;border-radius:50%;background:var(--brand);border:none;font-size:22px;cursor:pointer;z-index:50;box-shadow:var(--shadow-lg);display:none';
+    document.body.appendChild(floatingBtn);
+  }
+
+  // Create quote overlay
+  if(!document.getElementById('quote-overlay')) {
+    const overlay = document.createElement('div');
+    overlay.id = 'quote-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:200;background:var(--bg-base);transform:translateY(100%);transition:transform 300ms cubic-bezier(0.4,0,0.2,1);overflow-y:auto;';
+    overlay.innerHTML = `
+      <div style="display:flex;align-items:center;gap:12px;padding:16px;border-bottom:1px solid var(--border)">
+        <button onclick="closeQuoteOverlay()" style="background:none;border:none;color:var(--text-secondary);font-size:20px;cursor:pointer">✕</button>
+        <span style="font-weight:700;font-size:16px">Quick Quote</span>
+      </div>
+      <div id="quote-overlay-content" style="padding:1rem"></div>
+    `;
+    document.body.appendChild(overlay);
+  }
+});
 
 </script>
 </body>
