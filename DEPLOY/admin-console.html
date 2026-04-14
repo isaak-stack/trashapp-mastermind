@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TrashApp — Admin Console v1.7.3</title>
+<title>TrashApp — Admin Console v1.7.6</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%231a1a1a'/%3E%3Crect x='28' y='36' width='44' height='46' rx='6' fill='%23F5A623'/%3E%3Crect x='20' y='27' width='60' height='11' rx='5' fill='%23F5A623'/%3E%3Crect x='40' y='16' width='20' height='13' rx='4' fill='%23F5A623'/%3E%3Crect x='40' y='49' width='6' height='22' rx='3' fill='%231a1a1a'/%3E%3Crect x='54' y='49' width='6' height='22' rx='3' fill='%231a1a1a'/%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDtkh_G25Kr6YaAeNJOd9D9YJuyZnKvu08&libraries=places,geocoding" async defer></script>
@@ -1779,6 +1779,71 @@ window.initAdminMap = initAdminMap;
 // Initialize map if Google Maps already loaded
 if (window.google && window.google.maps) initAdminMap();
 
+// ── CREW LIVE LOCATIONS (v1.7.4) ──
+// Gold pulsing dots on adminMap for active crew members. Updates in realtime.
+const adminCrewMarkers = {};
+let crewPulseStyleInjected = false;
+function ensureCrewPulseStyle() {
+  if (crewPulseStyleInjected) return;
+  const s = document.createElement('style');
+  s.textContent = `.crew-pulse-dot{width:18px;height:18px;border-radius:50%;background:#F5A623;border:2px solid #fff;box-shadow:0 0 0 0 rgba(245,166,35,0.65);animation:crewPulse 1.6s infinite;transform:translate(-50%,-50%);cursor:pointer}@keyframes crewPulse{0%{box-shadow:0 0 0 0 rgba(245,166,35,0.65)}70%{box-shadow:0 0 0 14px rgba(245,166,35,0)}100%{box-shadow:0 0 0 0 rgba(245,166,35,0)}}`;
+  document.head.appendChild(s);
+  crewPulseStyleInjected = true;
+}
+window.subscribeToCrewLocations = async () => {
+  try {
+    const crewQ = query(collection(db,'crew_locations'), where('active','==',true));
+    const unsubCrew = onSnapshot(crewQ, (snap) => {
+      if (!adminMap) return;
+      ensureCrewPulseStyle();
+      const activeIds = new Set();
+      snap.docs.forEach(d => {
+        const data = d.data();
+        if (!data.lat || !data.lng) return;
+        activeIds.add(d.id);
+        const position = { lat: parseFloat(data.lat), lng: parseFloat(data.lng) };
+        const lastUpdate = data.updatedAt?.toDate ? data.updatedAt.toDate() : null;
+        const lastStr = lastUpdate ? new Date(lastUpdate).toLocaleTimeString() : 'unknown';
+        const content = `<div style="color:#000;font-weight:700">🚛 ${data.name || 'Crew'}</div>
+          <div style="color:#555;font-size:12px">${data.currentJobAddress || 'No active job'}</div>
+          <div style="color:#888;font-size:11px;margin-top:4px">Updated: ${lastStr}</div>`;
+        if (!adminCrewMarkers[d.id]) {
+          // Use OverlayView for pulsing CSS marker
+          const marker = new google.maps.Marker({
+            position, map: adminMap, title: data.name || 'Crew',
+            icon: {
+              path: google.maps.SymbolPath.CIRCLE,
+              scale: 11,
+              fillColor: '#F5A623',
+              fillOpacity: 0.95,
+              strokeColor: '#ffffff',
+              strokeWeight: 3
+            },
+            zIndex: 9999
+          });
+          const iw = new google.maps.InfoWindow({ content });
+          marker.addListener('click', () => iw.open(adminMap, marker));
+          adminCrewMarkers[d.id] = { marker, iw };
+        } else {
+          adminCrewMarkers[d.id].marker.setPosition(position);
+          adminCrewMarkers[d.id].iw.setContent(content);
+        }
+      });
+      // Remove stale
+      Object.keys(adminCrewMarkers).forEach(id => {
+        if (!activeIds.has(id)) {
+          adminCrewMarkers[id].marker.setMap(null);
+          delete adminCrewMarkers[id];
+        }
+      });
+    });
+    unsubs.push(unsubCrew);
+  } catch(e) { console.warn('crew locations subscribe failed', e); }
+};
+
+// Auto-subscribe once map is up (non-blocking)
+setTimeout(() => { if (typeof subscribeToCrewLocations === 'function') subscribeToCrewLocations(); }, 1500);
+
 window.subscribeToLive = async () => {
   const liveQuery = query(collection(db,'live_reps'),where('active','==',true),orderBy('lastUpdate','desc'));
   const unsubLive = onSnapshot(liveQuery, async snap => {
@@ -2146,50 +2211,85 @@ window.filterJobs = (status) => {
   _jobFilter = status;
   document.querySelectorAll('#view-jobs .filter-btn').forEach(b => b.classList.remove('active'));
   document.querySelector(`#view-jobs [onclick="filterJobs('${status}')"]`)?.classList.add('active');
-  loadJobsKanban();
+  if(_unsubJobs) _renderJobsKanban(); else loadJobsKanban();
 };
 
-window.loadJobsKanban = async () => {
-  try {
-    const snap = await getDocs(collection(db,'jobs'));
-    const all = snap.docs.map(d=>({id:d.id,...d.data()}));
-    const filtered = _jobFilter==='ALL'?all:all.filter(j=>j.status===_jobFilter);
+let _allJobs = [];
+let _unsubJobs = null;
+let _knownJobIds = null; // null = first load (suppress toasts); Set thereafter
 
-    const statuses = ['PENDING_DISPATCH','QUOTE_SENT','CUSTOMER_ACCEPTED','SCHEDULED','DEAL_CLOSED','INVOICED','PAID'];
-    const grouped = {};
-    statuses.forEach(s => grouped[s] = []);
-    filtered.forEach(j => {
-      const status = j.status || 'PENDING_DISPATCH';
-      if(grouped[status]) grouped[status].push(j);
-    });
+function _renderJobsKanban() {
+  const filtered = _jobFilter==='ALL'?_allJobs:_allJobs.filter(j=>j.status===_jobFilter);
 
-    const boardHtml = statuses.map(status => {
-      const jobs = grouped[status];
-      const statusLabel = status.replace(/_/g,' ');
-      return `
-        <div class="kanban-col">
-          <div class="kanban-header">${statusLabel}</div>
-          <div class="kanban-list">
-            ${jobs.length > 0 ? jobs.map(j => `
-              <div class="job-card" onclick="openJobDetail('${j.id}')">
-                <div class="job-card-name">${j.customerName||'—'}</div>
-                <div class="job-card-addr">${j.address||'—'}</div>
-                <div class="job-card-meta">
-                  <span>$${j.estimated_revenue||0}</span>
-                  <span>${j.assignedRep||'—'}</span>
-                </div>
+  const statuses = ['PENDING_DISPATCH','QUOTE_SENT','CUSTOMER_ACCEPTED','SCHEDULED','DEAL_CLOSED','INVOICED','PAID'];
+  const grouped = {};
+  statuses.forEach(s => grouped[s] = []);
+  filtered.forEach(j => {
+    const status = j.status || 'PENDING_DISPATCH';
+    if(grouped[status]) grouped[status].push(j);
+  });
+
+  const boardHtml = statuses.map(status => {
+    const jobs = grouped[status];
+    const statusLabel = status.replace(/_/g,' ');
+    return `
+      <div class="kanban-col">
+        <div class="kanban-header">${statusLabel}</div>
+        <div class="kanban-list">
+          ${jobs.length > 0 ? jobs.map(j => `
+            <div class="job-card" onclick="openJobDetail('${j.id}')">
+              <div class="job-card-name">${j.customerName||'—'}</div>
+              <div class="job-card-addr">${j.address||'—'}</div>
+              <div class="job-card-meta">
+                <span>$${j.estimated_revenue||0}</span>
+                <span>${j.assignedRep||'—'}</span>
               </div>
-            `).join('') : '<div style="color:var(--gray);font-size:11px;padding:.5rem">—</div>'}
-          </div>
+            </div>
+          `).join('') : '<div style="color:var(--gray);font-size:11px;padding:.75rem;text-align:center;font-style:italic">No jobs yet</div>'}
         </div>
-      `;
-    }).join('');
+      </div>
+    `;
+  }).join('');
 
-    const tableWrapper = document.querySelector('#view-jobs .table-wrapper');
-    if(tableWrapper) {
-      tableWrapper.innerHTML = `<div class="kanban-container">${boardHtml}</div>`;
-    }
-  }catch(e){
+  const tableWrapper = document.querySelector('#view-jobs .table-wrapper');
+  if(tableWrapper) {
+    tableWrapper.innerHTML = `<div class="kanban-container">${boardHtml}</div>`;
+  }
+}
+
+window.loadJobsKanban = () => {
+  try {
+    if(_unsubJobs) { try { _unsubJobs(); } catch(_){} _unsubJobs = null; }
+    const jobsQ = query(collection(db,'jobs'), orderBy('createdAt','desc'), limit(50));
+    _unsubJobs = onSnapshot(jobsQ, snap => {
+      _allJobs = snap.docs.map(d=>({id:d.id,...d.data()}));
+      // New-job toast: after initial load, fire toast for any job with createdAt within last 60s not seen before
+      const currentIds = new Set(_allJobs.map(j => j.id));
+      if (_knownJobIds !== null) {
+        const nowMs = Date.now();
+        _allJobs.forEach(j => {
+          if (_knownJobIds.has(j.id)) return;
+          let createdMs = 0;
+          try {
+            if (j.createdAt?.toMillis) createdMs = j.createdAt.toMillis();
+            else if (j.createdAt?.seconds) createdMs = j.createdAt.seconds * 1000;
+            else if (typeof j.createdAt === 'number') createdMs = j.createdAt;
+          } catch(_){}
+          if (createdMs && (nowMs - createdMs) < 60000) {
+            try { showToast(`New job booked — ${j.customerName||'Customer'}, ${j.address||'address pending'}`, 'success'); } catch(_){}
+          }
+        });
+      }
+      _knownJobIds = currentIds;
+      _renderJobsKanban();
+      const banner = document.getElementById('retry-jobs'); if(banner) banner.classList.remove('visible');
+    }, err => {
+      console.error('Jobs snapshot error:', err);
+      const banner = document.getElementById('retry-jobs'); if(banner) banner.classList.add('visible');
+      showError('Jobs', loadJobsKanban);
+    });
+  } catch(e) {
+    console.error('Jobs snapshot error:', e);
     const banner = document.getElementById('retry-jobs'); if(banner) banner.classList.add('visible');
     showError('Jobs', loadJobsKanban);
   }
