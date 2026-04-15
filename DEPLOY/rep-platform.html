@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>TrashApp — Rep Platform v1.8</title>
+<title>TrashApp — Rep Platform v1.8.2</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%231a1a1a'/%3E%3Crect x='28' y='36' width='44' height='46' rx='6' fill='%23F5A623'/%3E%3Crect x='20' y='27' width='60' height='11' rx='5' fill='%23F5A623'/%3E%3Crect x='40' y='16' width='20' height='13' rx='4' fill='%23F5A623'/%3E%3Crect x='40' y='49' width='6' height='22' rx='3' fill='%231a1a1a'/%3E%3Crect x='54' y='49' width='6' height='22' rx='3' fill='%231a1a1a'/%3E%3C/svg%3E">
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#F5A623">
@@ -61,8 +61,9 @@ html,body{height:100%;font-family:'Inter','DM Sans',sans-serif;background:var(--
 .content-area{flex:1;overflow-y:auto;overflow-x:hidden;position:relative;display:flex;flex-direction:column;min-height:0}
 
 /* Views */
-.view{display:none;padding:1.5rem;max-width:900px}
+.view{display:none;padding:1.5rem;padding-bottom:80px;max-width:900px}
 .view.active{display:block}
+#home-map-canvas{height:280px !important;width:100% !important;border-radius:12px}
 .view-title{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:.5px;margin-bottom:.25rem}
 .view-sub{font-size:13px;color:var(--gray);margin-bottom:1.5rem}
 
@@ -1278,6 +1279,16 @@ const app = initializeApp(FB);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+// ── EXPOSE FIREBASE GLOBALS (so inline scripts + onclick handlers can access them) ──
+window.db = db;
+window.auth = auth;
+window.doc = doc; window.setDoc = setDoc; window.getDoc = getDoc; window.collection = collection;
+window.addDoc = addDoc; window.onSnapshot = onSnapshot; window.query = query; window.where = where;
+window.updateDoc = updateDoc; window.serverTimestamp = serverTimestamp; window.getDocs = getDocs;
+window.orderBy = orderBy; window.limit = limit; window.Timestamp = Timestamp;
+window.onAuthStateChanged = onAuthStateChanged; window.signOut = signOut;
+window.RecaptchaVerifier = RecaptchaVerifier; window.signInWithPhoneNumber = signInWithPhoneNumber;
+
 // ── PHONE AUTH TEST MODE ──
 // Test phone numbers (must also be configured in Firebase Console → Authentication → Phone → Test numbers):
 // +15597744249 → 123456, +19096729370 → 000000
@@ -1863,10 +1874,12 @@ function _origShowView(view){
   if(resolvedView==='home') {
     loadDashboard();
     setTimeout(() => {
-      if (window.map && google?.maps?.event) {
-        google.maps.event.trigger(window.map, 'resize');
-      }
-    }, 100);
+      try {
+        if (window.map && google?.maps?.event) {
+          google.maps.event.trigger(window.map, 'resize');
+        }
+      } catch(_){}
+    }, 150);
   }
   if(resolvedView==='doors') {
     loadFollowUps();
@@ -2427,6 +2440,7 @@ function initMap() {
         if(c.type==='modified'){if(doorMarkers[c.doc.id])doorMarkers[c.doc.id].setMap(null);addDoorMarker(dd,c.doc.id);}
       });
     }, err => {
+      if(err.code === 'permission-denied') return;
       console.error('Map doors query failed:', err);
     });
     unsubs.push(unsub);
@@ -2529,6 +2543,7 @@ function addDoorMarker(data,id){
 }
 
 function subscribeToLiveReps(){
+  if(!currentUser) return;
   const q=query(collection(db,'live_reps'),where('active','==',true));
   const unsub=onSnapshot(q,snap=>{
     snap.forEach(d=>{
@@ -2552,6 +2567,9 @@ function subscribeToLiveReps(){
         if(repMarkers[rid]){repMarkers[rid].setMap(null);delete repMarkers[rid];}
       }
     });
+  }, err => {
+    if(err.code === 'permission-denied') return;
+    console.error('Live reps snapshot error:', err);
   });
   unsubs.push(unsub);
 }
@@ -4023,6 +4041,7 @@ let _lastBroadcastId = null;
 let _dismissedBroadcastId = null;
 
 function subscribeTobroadcasts() {
+  if(!currentUser) return;
   // Uses already-imported Firestore functions (module scope)
   try {
     const bq = query(collection(db,'broadcasts'), orderBy('createdAt','desc'), limit(1));
@@ -4039,6 +4058,9 @@ function subscribeTobroadcasts() {
       _lastBroadcastId = id;
       setText('broadcast-msg', data.message || '');
       document.getElementById('broadcast-banner').classList.add('visible');
+    }, err => {
+      if(err.code === 'permission-denied') return;
+      console.error('Broadcast snapshot error:', err);
     });
     unsubs.push(unsub);
   } catch(e) { console.log('Broadcast subscribe error:', e); }
@@ -4104,6 +4126,9 @@ function subscribeToNotifications(){
     const unsub=onSnapshot(nq,snap=>{
       snap.docs.forEach(d=>allDocs.set(d.id,{id:d.id,data:d.data()}));
       renderNotifs();
+    }, err => {
+      if(err.code === 'permission-denied') return;
+      console.error('Notifications snapshot error:', err);
     });
     unsubs.push(unsub);
   });
@@ -4124,6 +4149,9 @@ function subscribeToCommissionLog(){
     commissionState.confirmed=confirmed;
     commissionState.paid=paid;
     updateCommissionDisplay();
+  }, err => {
+    if(err.code === 'permission-denied') return;
+    console.error('Commission log snapshot error:', err);
   });
   unsubs.push(unsub);
 }

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TrashApp — Admin Console v1.7.6</title>
+<title>TrashApp — Admin Console v1.7.8</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%231a1a1a'/%3E%3Crect x='28' y='36' width='44' height='46' rx='6' fill='%23F5A623'/%3E%3Crect x='20' y='27' width='60' height='11' rx='5' fill='%23F5A623'/%3E%3Crect x='40' y='16' width='20' height='13' rx='4' fill='%23F5A623'/%3E%3Crect x='40' y='49' width='6' height='22' rx='3' fill='%231a1a1a'/%3E%3Crect x='54' y='49' width='6' height='22' rx='3' fill='%231a1a1a'/%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDtkh_G25Kr6YaAeNJOd9D9YJuyZnKvu08&libraries=places,geocoding" async defer></script>
@@ -1292,6 +1292,16 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const AVG_DEAL=350;
 
+// ── EXPOSE FIREBASE GLOBALS (so inline scripts + onclick handlers can access them) ──
+window.db = db;
+window.auth = auth;
+window.doc = doc; window.setDoc = setDoc; window.getDoc = getDoc; window.collection = collection;
+window.addDoc = addDoc; window.onSnapshot = onSnapshot; window.query = query; window.where = where;
+window.updateDoc = updateDoc; window.serverTimestamp = serverTimestamp; window.getDocs = getDocs;
+window.deleteDoc = deleteDoc; window.orderBy = orderBy; window.limit = limit; window.Timestamp = Timestamp;
+window.onAuthStateChanged = onAuthStateChanged; window.signOut = signOut;
+window.RecaptchaVerifier = RecaptchaVerifier; window.signInWithPhoneNumber = signInWithPhoneNumber;
+
 // ── PHONE AUTH TEST MODE ──
 // Test phone numbers (must also be configured in Firebase Console → Authentication → Phone → Test numbers):
 // +15597744249 → 123456, +19096729370 → 000000
@@ -1836,6 +1846,9 @@ window.subscribeToCrewLocations = async () => {
           delete adminCrewMarkers[id];
         }
       });
+    }, err => {
+      if(err.code === 'permission-denied') return;
+      console.error('Crew locations snapshot error:', err);
     });
     unsubs.push(unsubCrew);
   } catch(e) { console.warn('crew locations subscribe failed', e); }
@@ -1863,6 +1876,9 @@ window.subscribeToLive = async () => {
         </div>`;
     }).join('');
     if(adminMap) updateAdminMapMarkers(snap.docs);
+  }, err => {
+    if(err.code === 'permission-denied') return;
+    console.error('Live reps snapshot error:', err);
   });
   unsubs.push(unsubLive);
 };
@@ -2653,6 +2669,9 @@ window.subscribeToHealth = () => {
           <div style="font-size:10px;color:var(--gray)">${formatTime(item.timestamp)}</div>
         </div>
       </div>`).join('');
+  }, err => {
+    if(err.code === 'permission-denied') return;
+    console.error('Health log snapshot error:', err);
   });
   _unsubHealth = unsubHealth;
   unsubs.push(unsubHealth);
@@ -3488,6 +3507,9 @@ function loadAgentStatus() {
         </div>
       </div>`;
     }).join('');
+  }, err => {
+    if(err.code === 'permission-denied') return;
+    console.error('Agent status snapshot error:', err);
   });
   aiosUnsubs.push(unsub);
 }
@@ -3517,6 +3539,9 @@ function loadAgentApprovals() {
         </div>
       </div>`;
     }).join('');
+  }, err => {
+    if(err.code === 'permission-denied') return;
+    console.error('Agent approvals snapshot error:', err);
   });
   aiosUnsubs.push(unsub);
 }
@@ -3587,6 +3612,9 @@ window.loadMeetingWeek = (weekId) => {
       </div>`;
     }).join('');
     chat.scrollTop = chat.scrollHeight;
+  }, err => {
+    if(err.code === 'permission-denied') return;
+    console.error('Meeting chat snapshot error:', err);
   });
 };
 
@@ -3617,6 +3645,9 @@ function loadContentQueue() {
     // Store data for copy
     window._contentData = {};
     snap.docs.forEach(d => { window._contentData[d.id] = d.data(); });
+  }, err => {
+    if(err.code === 'permission-denied') return;
+    console.error('Content queue snapshot error:', err);
   });
   aiosUnsubs.push(unsub);
 }
