@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TrashApp — Admin Console v1.7.8</title>
+<title>TrashApp — Admin Console v1.8.0</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%231a1a1a'/%3E%3Crect x='28' y='36' width='44' height='46' rx='6' fill='%23F5A623'/%3E%3Crect x='20' y='27' width='60' height='11' rx='5' fill='%23F5A623'/%3E%3Crect x='40' y='16' width='20' height='13' rx='4' fill='%23F5A623'/%3E%3Crect x='40' y='49' width='6' height='22' rx='3' fill='%231a1a1a'/%3E%3Crect x='54' y='49' width='6' height='22' rx='3' fill='%231a1a1a'/%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDtkh_G25Kr6YaAeNJOd9D9YJuyZnKvu08&libraries=places,geocoding" async defer></script>
@@ -1388,15 +1388,27 @@ window.addEventListener('unhandledrejection',e=>{
   try{addDoc(collection(db,'client_errors'),{message:String(e.reason),source:'promise',line:0,col:0,stack:e.reason?.stack||'',page:'admin-console',userAgent:navigator.userAgent,timestamp:serverTimestamp()});}catch(ex){}
 });
 
+function _errorBannerId(section) {
+  return 'error-banner-' + String(section).toLowerCase().replace(/\s+/g, '-');
+}
 function showError(section, retryFn) {
   const container = document.querySelector('.content');
-  if (!container.querySelector('.error-banner')) {
-    const banner = document.createElement('div');
+  if (!container) return;
+  const id = _errorBannerId(section);
+  let banner = document.getElementById(id);
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = id;
     banner.className = 'error-banner';
-    banner.innerHTML = `${section} failed to load — tap to retry <button onclick="arguments[0].preventDefault(); location.reload();">Retry</button>`;
     container.insertBefore(banner, container.firstChild);
   }
+  banner.innerHTML = `${section} failed to load — tap to retry <button onclick="arguments[0].preventDefault(); location.reload();">Retry</button>`;
 }
+function clearError(section) {
+  const el = document.getElementById(_errorBannerId(section));
+  if (el) el.remove();
+}
+window.clearError = clearError;
 
 // Admin phone numbers
 const ADMIN_PHONES = ['+19096729370', '+15597744249'];
@@ -1425,6 +1437,8 @@ window.closeSidebarOnNav = () => {
 onAuthStateChanged(auth, async user => {
   if(user && ADMIN_PHONES.includes(user.phoneNumber)) {
     currentAdmin = user;
+    window.currentUser = user;
+    window.currentAdmin = user;
     const snap = await getDoc(doc(db,'reps',user.uid));
     if(!snap.exists()) {
       await setDoc(doc(db,'reps',user.uid),{
@@ -1451,6 +1465,8 @@ onAuthStateChanged(auth, async user => {
     document.getElementById('admin-err').textContent = 'This phone number does not have admin access.';
   } else {
     currentAdmin = null;
+    window.currentUser = null;
+    window.currentAdmin = null;
     document.getElementById('auth-screen').classList.add('visible');
     document.getElementById('admin-shell').style.display='none';
   }
@@ -1578,6 +1594,7 @@ async function loadAllData() {
 // ── OVERVIEW ──
 async function loadOverview() {
   try {
+    clearError('Overview');
     const reps = await getCachedReps();
     const todayTs = todayTimestamp();
     const doorsSnap = await getDocs(query(collection(db,'doors'),where('timestamp','>=',todayTs)));
@@ -1682,6 +1699,8 @@ window.approveAllPending = async () => {
 // ── REP MANAGEMENT ──
 window.loadReps = async () => {
   try {
+    clearError('Rep Management');
+    document.getElementById('retry-reps')?.classList.remove('visible');
     _repsCache.ts=0;
     const reps = await getCachedReps();
     const todayTs=todayTimestamp();
@@ -1986,6 +2005,8 @@ window.deleteScript = async id => {
 // ── DOOR LOGS ──
 window.loadDoorLogs = async () => {
   try {
+    clearError('Door Logs');
+    document.getElementById('retry-doors')?.classList.remove('visible');
     const repId = document.getElementById('door-filter-rep').value;
     const status = document.getElementById('door-filter-status').value;
     const todayTs = todayTimestamp();
@@ -2200,6 +2221,8 @@ window.sendBroadcast = async () => {
 
 window.loadBroadcasts = async () => {
   try{
+    clearError('Broadcasts');
+    document.getElementById('retry-broadcasts')?.classList.remove('visible');
     const snap = await getDocs(query(collection(db,'broadcasts'),orderBy('sentAt','desc')));
     const list = document.getElementById('broadcasts-list');
     if(snap.empty){
@@ -2275,6 +2298,8 @@ function _renderJobsKanban() {
 
 window.loadJobsKanban = () => {
   try {
+    clearError('Jobs');
+    document.getElementById('retry-jobs')?.classList.remove('visible');
     if(_unsubJobs) { try { _unsubJobs(); } catch(_){} _unsubJobs = null; }
     const jobsQ = query(collection(db,'jobs'), orderBy('createdAt','desc'), limit(50));
     _unsubJobs = onSnapshot(jobsQ, snap => {
@@ -3030,6 +3055,8 @@ async function loadSocialPosts(){
   const upcoming=document.getElementById('social-upcoming-list');
   if(!tbody||!upcoming) return;
   try{
+    clearError('Social');
+    document.getElementById('retry-social')?.classList.remove('visible');
     const snap=await getDocs(collection(db,'social_posts'));
     socialPostsCache=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>{
       const aTime=socialTimestampToDate(a.scheduled_for||a.updated_at||a.created_at)?.getTime()||0;
@@ -3713,6 +3740,17 @@ document.addEventListener('keydown', e => {
   if(e.key==='a'||e.key==='A'){e.preventDefault();showView('aios');}
   if(e.key==='?'){e.preventDefault();showToast('Shortcuts: N=Jobs, S=Schedule, A=AI OS, ?=Help','info');}
 });
+
+// ── EXPOSE MODULE-SCOPED LOAD FUNCTIONS (for inline scripts / onclick handlers) ──
+// (showView, subscribeToLive, showToast are already on window via their declarations)
+window.loadAllData = loadAllData;
+window.loadOverview = loadOverview;
+window.loadAgentStatus = loadAgentStatus;
+window.loadAgentApprovals = loadAgentApprovals;
+window.loadMeetingList = loadMeetingList;
+window.loadContentQueue = loadContentQueue;
+window.checkApiHealth = checkApiHealth;
+window.generateDailySummary = generateDailySummary;
 
 </script>
 </body>
