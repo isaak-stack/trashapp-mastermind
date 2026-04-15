@@ -133,7 +133,87 @@ service cloud.firestore {
     match /schedule_changes/{changeId} {
       allow read, write: if isAdmin();
     }
+match /doors/{doorId} {
+      allow read: if isAdmin() || isRep();
+      allow create: if isRep();
+      allow update: if isAdmin() || isRep();
+      allow delete: if isAdmin();
+    }
 
+    match /reps/{repId} {
+      allow read: if isRep();
+      allow write: if isAdmin() || isOwner(repId);
+    }
+
+    match /broadcasts/{broadcastId} {
+      allow read: if isRep();
+      allow write: if isAdmin();
+    }
+
+    match /scripts/{scriptId} {
+      allow read: if isRep();
+      allow write: if isAdmin();
+    }
+
+    match /commission_log/{entryId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /notifications/{notifId} {
+      allow read: if isRep();
+      allow write: if isAdmin();
+    }
+
+    match /health_log/{entryId} {
+      allow read, write: if isAdmin();
+    }
+match /crews/{crewId} {
+      allow read: if isRep();
+      allow write: if isAdmin();
+    }
+
+    match /financials/{docId} {
+      allow read, write: if isAdmin();
+    }
+
+match /payouts/{payoutId} {
+      allow read: if isAdmin() || isRep();
+      allow write: if isAdmin();
+    }
+    match /review_queue/{itemId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /territories/{territoryId} {
+      allow read: if isRep();
+      allow write: if isAdmin();
+    }
+
+    match /fulfillment/{jobId} {
+      allow read: if isRep();
+      allow write: if isAdmin() || isRep();
+    }
+
+    match /social_posts/{postId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /analytics/{docId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /intel/{docId} {
+      allow read: if isRep();
+      allow write: if isAdmin();
+    }
+match /commissions/{commissionId} {
+      allow read: if isAdmin() || isRep();
+      allow write: if isAdmin();
+    }
+
+    match /daily_financials/{docId} {
+      allow read, write: if isAdmin();
+    }
     // ── DENY ALL ELSE ────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;
