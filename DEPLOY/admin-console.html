@@ -30,7 +30,7 @@ html,body{height:100%;font-family:'Inter','DM Sans',sans-serif;background:var(--
 .nav-icon{font-size:15px;width:20px;text-align:center}
 .sidebar-bottom{padding:.75rem;border-top:1px solid var(--border)}
 .btn-signout{width:100%;padding:.55rem;background:transparent;color:var(--gray);border:1px solid var(--border);border-radius:7px;font-size:12px;cursor:pointer;font-family:'Inter','DM Sans',sans-serif}
-.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.main{flex:1;display:flex;flex-direction:column;overflow:auto}
 .topbar{background:var(--dark);border-bottom:1px solid var(--border);padding:.75rem 1.5rem;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
 .topbar-title{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.5px}
 .topbar-right{display:flex;align-items:center;gap:.75rem;font-size:13px;color:var(--gray)}
@@ -1226,10 +1226,8 @@ select.inline-input{cursor:pointer}
       <button class="btn-primary" style="background:rgba(239,68,68,0.1);color:var(--red)" onclick="jobDetailAction('cancel')">✕ Cancel Job</button>
     </div>
   </div>
-</div>
 
-      <!-- AI OS VIEW -->
-      <div class="view" id="view-aios">
+<div class="view" id="view-aios">
         <!-- Sub-tabs -->
         <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap">
           <button class="aios-tab active" onclick="showAIOSTab('agents')" id="aios-tab-agents">Agent Status</button>
@@ -1281,6 +1279,10 @@ select.inline-input{cursor:pointer}
           </div>
         </div>
       </div>
+</div>
+
+      <!-- AI OS VIEW -->
+      
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
@@ -1550,6 +1552,14 @@ window.adminSignOut = async () => {
 
 // ── VIEWS ──
 window.showView = view => {
+  // Ensure view-aios is inside .content (structural fix)
+  if (view === 'aios') {
+    const aiosEl = document.getElementById('view-aios');
+    const contentEl = document.querySelector('.content');
+    if (aiosEl && contentEl && !contentEl.contains(aiosEl)) {
+      contentEl.appendChild(aiosEl);
+    }
+  }
   const viewEl = document.getElementById('view-'+view);
   if(!viewEl) return;
   closeSidebarOnNav();
