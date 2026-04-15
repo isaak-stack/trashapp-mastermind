@@ -1543,7 +1543,7 @@ onAuthStateChanged(auth, async user => {
         else if(st==='denied'||st==='deleted') showScreen('rejected');
         else if(st==='approved'||currentRep.role==='admin'||currentRep.role==='owner') {
           await loadGasPrice();
-          showScreen('app'); initApp();
+          showScreen('app'); initApp(); setTimeout(()=>{if(typeof window.initMap==='function')window.initMap();},800);
         } else showScreen('rejected');
       }
     } catch(e) {
@@ -2382,7 +2382,7 @@ const DARK_MAP_STYLE=[
 let infoWindow=null; // single shared InfoWindow
 
 // ── MAP ──
-function initMap() {
+window.initMap=function initMap() {
   if(map){google.maps.event.trigger(map,'resize');return;}
   if(!window.google||!google.maps){
     mapInitRetries++;
@@ -2393,7 +2393,7 @@ function initMap() {
     setTimeout(initMap,500);
     return;
   }
-  const mapEl=document.getElementById('gmap');
+  const mapEl=document.getElementById('home-map-canvas')||document.getElementById('gmap');
   if(!mapEl)return;
   map=new google.maps.Map(mapEl,{
     center:{lat:36.7378,lng:-119.7871},
@@ -2408,6 +2408,8 @@ function initMap() {
     clickableIcons:false
   });
   infoWindow=new google.maps.InfoWindow();
+  window.map=map;
+  google.maps.event.trigger(map,"resize");
 
   // Click on map to log door — zoom in if too far out for accurate taps
   map.addListener('click',async e=>{

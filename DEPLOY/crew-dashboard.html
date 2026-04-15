@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<title>TrashApp — Crew Dashboard v1.1</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%231a1a1a'/%3E%3Crect x='28' y='36' width='44' height='46' rx='6' fill='%23F5A623'/%3E%3Crect x='20' y='27' width='60' height='11' rx='5' fill='%23F5A623'/%3E%3Crect x='40' y='16' width='20' height='13' rx='4' fill='%23F5A623'/%3E%3C/svg%3E">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#F5A623">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="TrashApp Crew">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --black:#0A0A0B;--dark:#111113;--card:#1A1A1F;--card2:#222228;--gold:#F5A623;--gold2:#ffb84d;
+  --white:#F0F0EA;--gray:#888896;--gray-dim:#555560;--border:rgba(255,255,255,0.08);--border-strong:rgba(255,255,255,0.16);
+  --green:#22c55e;--red:#ef4444;--blue:#3b82f6;--yellow:#EAB308;
+  --green-dim:rgba(34,197,94,0.14);--red-dim:rgba(239,68,68,0.14);--gold-dim:rgba(245,166,35,0.14);
+  --radius-sm:8px;--radius-md:12px;--radius-lg:16px;--radius-xl:20px;
+  --shadow-md:0 4px 16px rgba(0,0,0,0.5);--shadow-lg:0 12px 40px rgba(0,0,0,0.6);
+  --safe-top:env(safe-area-inset-top,0px);--safe-bot:env(safe-area-inset-bottom,0px);
+}
+html,body{height:100%;width:100%;font-family:'Inter',sans-serif;background:var(--black);color:var(--white);overflow:hidden;-webkit-font-smoothing:antialiased;font-size:17px}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,textarea{font-family:inherit;font-size:17px}
+
+/* App shell */
+.app{position:fixed;inset:0;display:flex;flex-direction:column;padding-top:var(--safe-top)}
+.top-bar{flex-shrink:0;padding:14px 18px;background:var(--dark);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px}
+.logo-wrap{display:flex;align-items:center;gap:10px}
+.logo-icon{width:36px;height:36px;background:var(--gold);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.logo-text{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px}
+.logo-text span{color:var(--gold)}
+.top-meta{font-size:13px;color:var(--gray);text-align:right;line-height:1.3}
+.top-meta strong{display:block;color:var(--white);font-size:15px;font-weight:700}
+
+/* Content */
+.content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 16px calc(90px + var(--safe-bot)) 16px;position:relative}
+.view{display:none}
+.view.active{display:block}
+
+/* Headings */
+.h1{font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:1px;margin-bottom:4px}
+.h2{font-size:19px;font-weight:700;margin-bottom:12px}
+.sub{font-size:14px;color:var(--gray);margin-bottom:18px}
+
+/* Cards */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px;margin-bottom:14px}
+.card-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+
+/* Buttons — 56px min touch target */
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:56px;padding:14px 18px;border-radius:var(--radius-md);font-size:17px;font-weight:700;letter-spacing:0.2px;transition:transform 0.1s ease,background 0.15s ease;touch-action:manipulation;border:1px solid transparent}
+.btn:active{transform:scale(0.98)}
+.btn-primary{background:var(--gold);color:var(--black)}
+.btn-primary:disabled{background:var(--card2);color:var(--gray-dim);cursor:not-allowed}
+.btn-outline{background:transparent;color:var(--white);border-color:var(--border-strong)}
+.btn-outline:active{background:var(--card2)}
+.btn-danger{background:var(--red);color:#fff}
+.btn-success{background:var(--green);color:#fff}
+
+/* Empty state */
+.empty{text-align:center;padding:40px 20px;color:var(--gray)}
+.empty-icon{font-size:44px;margin-bottom:12px;opacity:0.7}
+
+/* Login */
+.auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--black)}
+.auth-card{width:100%;max-width:420px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xl);padding:28px}
+.auth-title{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:1px;margin-bottom:6px;text-align:center}
+.auth-sub{font-size:14px;color:var(--gray);text-align:center;margin-bottom:22px}
+.input{width:100%;min-height:56px;padding:14px 16px;border-radius:var(--radius-md);border:1px solid var(--border-strong);background:var(--black);color:var(--white);font-size:17px;margin-bottom:12px}
+.input:focus{outline:none;border-color:var(--gold)}
+.auth-err{color:var(--red);font-size:14px;min-height:20px;margin-bottom:8px;text-align:center}
+
+/* Stop card (route stops) */
+.stop{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:12px;overflow:hidden}
+.stop.dump{border-color:rgba(59,130,246,0.35);background:rgba(59,130,246,0.05)}
+.stop.done{opacity:0.55}
+.stop.done .stop-head::after{content:'✓';position:absolute;right:16px;top:16px;color:var(--green);font-weight:800;font-size:22px}
+.stop-head{padding:16px 18px;display:flex;align-items:flex-start;gap:12px;position:relative;cursor:pointer}
+.stop-num{flex-shrink:0;width:36px;height:36px;border-radius:10px;background:var(--gold);color:var(--black);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px}
+.stop.dump .stop-num{background:var(--blue);color:#fff}
+.stop-main{flex:1;min-width:0}
+.stop-name{font-weight:700;font-size:17px;line-height:1.3;margin-bottom:3px}
+.stop-addr{font-size:14px;color:var(--gray);line-height:1.3;word-break:break-word}
+.stop-tag{display:inline-block;margin-top:6px;padding:3px 9px;border-radius:5px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;background:var(--gold-dim);color:var(--gold)}
+.stop-body{display:none;border-top:1px solid var(--border);padding:16px 18px}
+.stop.open .stop-body{display:block}
+
+/* Status pipeline */
+.pipeline{display:grid;grid-template-columns:1fr;gap:10px;margin-top:8px}
+.pipe-btn{min-height:56px;padding:12px;border-radius:var(--radius-md);background:var(--card2);border:1px solid var(--border);color:var(--white);font-weight:700;font-size:16px;display:flex;align-items:center;justify-content:center;gap:8px}
+.pipe-btn.active{background:var(--gold);color:var(--black);border-color:var(--gold)}
+.pipe-btn.done{background:var(--green-dim);color:var(--green);border-color:rgba(34,197,94,0.35)}
+.pipe-btn:disabled{opacity:0.55;cursor:not-allowed}
+
+/* Timer */
+.timer{background:var(--gold-dim);border:1px solid rgba(245,166,35,0.35);border-radius:var(--radius-md);padding:12px;text-align:center;margin:12px 0}
+.timer-val{font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--gold);letter-spacing:2px;line-height:1}
+.timer-label{font-size:11px;color:var(--gray);text-transform:uppercase;letter-spacing:1px;margin-top:4px}
+
+/* Photo zones */
+.zone-label{font-size:13px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:1px;margin:14px 0 8px}
+.zone-label.req::after{content:' *';color:var(--red)}
+.upload-zone{border:2px dashed var(--border-strong);border-radius:var(--radius-md);padding:20px;text-align:center;min-height:120px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:0.15s}
+.upload-zone:active{background:var(--card2);border-color:var(--gold)}
+.upload-zone-icon{font-size:30px;margin-bottom:6px}
+.upload-zone-text{font-size:14px;color:var(--gray);font-weight:600}
+.photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.photo-thumb{position:relative;aspect-ratio:1;border-radius:var(--radius-sm);overflow:hidden;background:var(--card2)}
+.photo-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.photo-remove{position:absolute;top:4px;right:4px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,0.75);color:#fff;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center}
+
+/* Signature canvas */
+.sig-wrap{background:#fff;border-radius:var(--radius-md);overflow:hidden;margin-top:8px}
+.sig-canvas{width:100%;height:180px;display:block;touch-action:none;background:#fff}
+.sig-actions{display:flex;gap:8px;margin-top:8px}
+.sig-actions .btn{flex:1}
+.sig-status{font-size:13px;color:var(--gray);margin-top:6px}
+.sig-status.ok{color:var(--green)}
+
+/* Success screen */
+.success-screen{position:fixed;inset:0;background:var(--black);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:500;padding:32px;text-align:center}
+.success-screen.show{display:flex}
+.success-icon{font-size:80px;margin-bottom:20px;animation:pop 0.5s ease}
+@keyframes pop{0%{transform:scale(0)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+.success-title{font-family:'Bebas Neue',sans-serif;font-size:40px;letter-spacing:1px;margin-bottom:6px}
+.success-sub{font-size:16px;color:var(--gray)}
+
+/* Bottom nav */
+.bottom-nav{position:fixed;left:0;right:0;bottom:0;height:calc(84px + var(--safe-bot));padding-bottom:var(--safe-bot);background:var(--dark);border-top:1px solid var(--border);display:flex;z-index:100}
+.nav-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--gray);font-size:11px;font-weight:600;min-height:56px;touch-action:manipulation}
+.nav-tab .ni{font-size:26px;line-height:1}
+.nav-tab.active{color:var(--gold)}
+.nav-tab:active{background:var(--card2)}
+
+/* Toast */
+.toast{position:fixed;left:50%;top:calc(20px + var(--safe-top));transform:translateX(-50%) translateY(-10px);background:var(--card);border:1px solid var(--border-strong);border-left:3px solid var(--gold);padding:12px 18px;border-radius:var(--radius-md);font-size:14px;z-index:9999;opacity:0;transition:0.25s;box-shadow:var(--shadow-lg);max-width:90vw}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.err{border-left-color:var(--red)}
+.toast.ok{border-left-color:var(--green)}
+
+/* Summary */
+.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0}
+.sg-cell{background:var(--card2);border-radius:var(--radius-md);padding:14px;text-align:center}
+.sg-val{font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--gold);line-height:1}
+.sg-lab{font-size:11px;color:var(--gray);text-transform:uppercase;letter-spacing:1px;margin-top:4px}
+
+/* Job list in Jobs tab */
+.job-item{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px;margin-bottom:10px}
+.job-item .ji-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.job-item .ji-name{font-weight:700;font-size:16px}
+.job-item .ji-status{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;padding:3px 8px;border-radius:5px}
+.st-SCHEDULED{background:var(--gold-dim);color:var(--gold)}
+.st-EN_ROUTE,.st-ENROUTE{background:var(--blue);color:#fff}
+.st-ARRIVED{background:var(--yellow);color:var(--black)}
+.st-IN_PROGRESS{background:var(--gold);color:var(--black)}
+.st-COMPLETED{background:var(--green);color:#fff}
+.job-item .ji-addr{font-size:13px;color:var(--gray)}
+
+.hidden{display:none !important}
+@media (max-width:380px){ .h1{font-size:30px} .logo-text{font-size:17px} }
+</style>
+</head>
+<body>
+
+<!-- Login -->
+<div id="auth" class="auth-wrap">
+  <div class="auth-card">
+    <div class="auth-title">TRASH<span style="color:var(--gold)">APP</span> CREW</div>
+    <div class="auth-sub">Sign in to start your shift</div>
+
+    <div id="auth-step1">
+      <input id="auth-phone" class="input" type="tel" inputmode="tel" placeholder="Phone number" autocomplete="tel">
+      <div id="auth-err" class="auth-err"></div>
+      <button id="auth-otp-btn" class="btn btn-primary" onclick="sendOTP()">Send Code</button>
+    </div>
+
+    <div id="auth-step2" class="hidden">
+      <div id="auth-sent-to" style="text-align:center;color:var(--gray);font-size:13px;margin-bottom:10px"></div>
+      <input id="auth-code" class="input" type="text" inputmode="numeric" placeholder="6-digit code" maxlength="6" autocomplete="one-time-code">
+      <div id="auth-err2" class="auth-err"></div>
+      <button class="btn btn-primary" onclick="verifyOTP()">Verify & Sign In</button>
+      <button class="btn btn-outline" style="margin-top:8px" onclick="backToStep1()">← Change Number</button>
+    </div>
+    <div id="recaptcha-container" style="margin-top:10px"></div>
+  </div>
+</div>
+
+<!-- App -->
+<div id="app" class="app hidden">
+  <div class="top-bar">
+    <div class="logo-wrap">
+      <div class="logo-icon">🗑</div>
+      <div class="logo-text">TRASH<span>APP</span></div>
+    </div>
+    <div class="top-meta">
+      <strong id="crew-name">—</strong>
+      <span id="crew-shift">Shift: —</span>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- Route view -->
+    <div id="view-route" class="view active">
+      <div class="h1">TODAY'S ROUTE</div>
+      <div class="sub" id="route-sub">Loading jobs…</div>
+      <div id="route-list"></div>
+      <div id="summary-wrap" class="hidden">
+        <div class="card" style="text-align:center">
+          <div style="font-size:44px;margin-bottom:6px">🎉</div>
+          <div class="h1" style="margin-bottom:2px">DAY COMPLETE!</div>
+          <div class="sub" id="summary-hours">0h 0m on shift</div>
+          <div class="summary-grid">
+            <div class="sg-cell"><div class="sg-val" id="sg-jobs">0</div><div class="sg-lab">Jobs</div></div>
+            <div class="sg-cell"><div class="sg-val" id="sg-time">0h 0m</div><div class="sg-lab">Total Time</div></div>
+            <div class="sg-cell"><div class="sg-val" id="sg-photos">0</div><div class="sg-lab">Photos</div></div>
+            <div class="sg-cell"><div class="sg-val" id="sg-sigs">0</div><div class="sg-lab">Signatures</div></div>
+          </div>
+          <button class="btn btn-danger" onclick="endShift()">End Shift</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Jobs view -->
+    <div id="view-jobs" class="view">
+      <div class="h1">ALL JOBS</div>
+      <div class="sub">Today's scheduled stops</div>
+      <div id="jobs-list"></div>
+    </div>
+
+    <!-- Photos view -->
+    <div id="view-photos" class="view">
+      <div class="h1">PHOTOS</div>
+      <div class="sub" id="photos-sub">All photos taken today</div>
+      <div id="photos-grid" class="photo-grid" style="grid-template-columns:repeat(2,1fr)"></div>
+      <div id="photos-empty" class="empty hidden"><div class="empty-icon">📸</div>No photos yet today</div>
+    </div>
+
+    <!-- Profile view -->
+    <div id="view-profile" class="view">
+      <div class="h1">PROFILE</div>
+      <div class="card">
+        <div class="card-row"><span style="color:var(--gray)">Name</span><strong id="prof-name">—</strong></div>
+      </div>
+      <div class="card">
+        <div class="card-row"><span style="color:var(--gray)">Phone</span><strong id="prof-phone">—</strong></div>
+      </div>
+      <div class="card">
+        <div class="card-row"><span style="color:var(--gray)">Shift Time</span><strong id="prof-shift">0h 0m</strong></div>
+      </div>
+      <button class="btn btn-danger" onclick="endShift()">End Shift</button>
+      <button class="btn btn-outline" style="margin-top:8px" onclick="doSignOut()">Sign Out</button>
+    </div>
+  </div>
+
+  <div class="bottom-nav">
+    <button class="nav-tab active" data-view="route" onclick="switchView('route')"><span class="ni">🏠</span><span>Route</span></button>
+    <button class="nav-tab" data-view="jobs" onclick="switchView('jobs')"><span class="ni">📋</span><span>Jobs</span></button>
+    <button class="nav-tab" data-view="photos" onclick="switchView('photos')"><span class="ni">📸</span><span>Photos</span></button>
+    <button class="nav-tab" data-view="profile" onclick="switchView('profile')"><span class="ni">👤</span><span>Profile</span></button>
+  </div>
+</div>
+
+<!-- Success overlay -->
+<div id="success-screen" class="success-screen">
+  <div class="success-icon">🎉</div>
+  <div class="success-title">JOB COMPLETE!</div>
+  <div class="success-sub">Great work.</div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { getAuth, RecaptchaVerifier, signInWithPhoneNumber, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, addDoc, onSnapshot, query, where, serverTimestamp, getDocs, orderBy, arrayUnion, Timestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { getStorage, ref as sRef, uploadString, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
+
+const FB = {apiKey:"AIzaSyCtl7TaehqrgDCHhgNhOe5URh7YXfCzY8E",authDomain:"trashapp-reps.firebaseapp.com",projectId:"trashapp-reps",storageBucket:"trashapp-reps.firebasestorage.app",messagingSenderId:"146963908159",appId:"1:146963908159:web:d09090c0169186a45ada8a"};
+const app = initializeApp(FB);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const storage = getStorage(app);
+
+if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+  auth.settings.appVerificationDisabledForTesting = true;
+}
+
+// ── State ──
+let currentUser = null;
+let currentCrewId = null;
+let currentCrew = { name: 'Crew Member', phone: '' };
+let jobs = []; // route list (includes dump yard pseudo-stops)
+let liveJobs = {}; // jobId -> job data (real jobs only)
+let jobTimers = {}; // jobId -> { startMs, intervalId }
+let shiftStart = Date.now();
+let shiftInterval = null;
+let gpsInterval = null;
+let jobPhotoState = {}; // jobId -> { before:[], after:[], signature:null }
+let photosAll = []; // flat list for Photos tab
+let confirmResult = null, rcv = null, rcvReady = false;
+
+// ── Toast ──
+function toast(msg, type='info') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + (type === 'error' ? 'err' : type === 'success' ? 'ok' : '');
+  setTimeout(() => { t.classList.remove('show'); }, 2800);
+}
+
+// ── Auth ──
+function initRecaptcha() {
+  if (rcv) return;
+  try {
+    rcv = new RecaptchaVerifier(auth, 'recaptcha-container', { size: 'invisible' });
+    rcv.render().then(() => { rcvReady = true; }).catch(()=>{});
+  } catch(e) {}
+}
+document.addEventListener('DOMContentLoaded', initRecaptcha);
+
+window.sendOTP = async () => {
+  const raw = document.getElementById('auth-phone').value.trim();
+  const phone = raw.startsWith('+') ? raw : '+1' + raw.replace(/\D/g,'');
+  if (phone.length < 12) { document.getElementById('auth-err').textContent = 'Enter a valid US phone number'; return; }
+  const btn = document.getElementById('auth-otp-btn');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try {
+    if (!rcv || !rcvReady) { initRecaptcha(); await new Promise(r=>setTimeout(r,500)); }
+    confirmResult = await signInWithPhoneNumber(auth, phone, rcv);
+    document.getElementById('auth-step1').classList.add('hidden');
+    document.getElementById('auth-step2').classList.remove('hidden');
+    document.getElementById('auth-sent-to').textContent = 'Code sent to ' + phone;
+    document.getElementById('auth-code').focus();
+  } catch(e) {
+    document.getElementById('auth-err').textContent = e.message || 'Failed to send code';
+    try { rcv.clear(); } catch(_){} rcv = null; rcvReady = false; setTimeout(initRecaptcha, 300);
+  } finally { btn.disabled = false; btn.textContent = 'Send Code'; }
+};
+
+window.verifyOTP = async () => {
+  const code = document.getElementById('auth-code').value.trim();
+  if (!code || code.length < 6) { document.getElementById('auth-err2').textContent = 'Enter the 6-digit code'; return; }
+  try {
+    if (!confirmResult) throw new Error('Request a new code');
+    await confirmResult.confirm(code);
+    // onAuthStateChanged handles the rest
+  } catch(e) {
+    document.getElementById('auth-err2').textContent = e.message || 'Wrong code';
+  }
+};
+
+window.backToStep1 = () => {
+  document.getElementById('auth-step2').classList.add('hidden');
+  document.getElementById('auth-step1').classList.remove('hidden');
+  document.getElementById('auth-err').textContent = '';
+  document.getElementById('auth-err2').textContent = '';
+};
+
+window.doSignOut = async () => {
+  stopGPS();
+  try { await signOut(auth); } catch(_){}
+  location.reload();
+};
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) {
+    document.getElementById('auth').classList.remove('hidden');
+    document.getElementById('app').classList.add('hidden');
+    return;
+  }
+  currentUser = user;
+  currentCrewId = user.uid;
+  // Load or create crew profile
+  try {
+    const cRef = doc(db, 'crew_members', user.uid);
+    const snap = await getDoc(cRef);
+    if (snap.exists()) {
+      currentCrew = snap.data();
+    } else {
+      currentCrew = { name: 'Crew Member', phone: user.phoneNumber || '', createdAt: serverTimestamp() };
+      await setDoc(cRef, currentCrew);
+    }
+  } catch(e) { console.warn('crew profile load failed', e); }
+
+  document.getElementById('auth').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  document.getElementById('crew-name').textContent = currentCrew.name || 'Crew Member';
+  document.getElementById('prof-name').textContent = currentCrew.name || 'Crew Member';
+  document.getElementById('prof-phone').textContent = currentCrew.phone || user.phoneNumber || '—';
+
+  shiftStart = Date.now();
+  startShiftTimer();
+  startGPSTracking();
+  subscribeJobs();
+});
+
+// ── Shift timer ──
+function startShiftTimer() {
+  if (shiftInterval) clearInterval(shiftInterval);
+  const render = () => {
+    const s = Math.floor((Date.now() - shiftStart) / 1000);
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+    const txt = `${h}h ${m}m`;
+    const el1 = document.getElementById('crew-shift'); if (el1) el1.textContent = 'Shift: ' + txt;
+    const el2 = document.getElementById('prof-shift'); if (el2) el2.textContent = txt;
+    const el3 = document.getElementById('summary-hours'); if (el3) el3.textContent = txt + ' on shift';
+    const el4 = document.getElementById('sg-time'); if (el4) el4.textContent = txt;
+  };
+  render();
+  shiftInterval = setInterval(render, 15000);
+}
+
+// ── GPS tracking ──
+function startGPSTracking() {
+  if (!navigator.geolocation) return;
+  const push = () => {
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      try {
+        await setDoc(doc(db, 'crew_locations', currentCrewId), {
+          crewId: currentCrewId,
+          name: currentCrew.name || 'Crew Member',
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          accuracy: pos.coords.accuracy,
+          active: true,
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+      } catch(_){}
+    }, ()=>{}, { enableHighAccuracy: true, maximumAge: 20000, timeout: 10000 });
+  };
+  push();
+  gpsInterval = setInterval(push, 30000);
+}
+
+function stopGPS() {
+  if (gpsInterval) clearInterval(gpsInterval);
+  gpsInterval = null;
+  if (currentCrewId) {
+    const payload = JSON.stringify({ crewId: currentCrewId });
+    try {
+      if (navigator.sendBeacon) {
+        const blob = new Blob([payload], { type: 'application/json' });
+        navigator.sendBeacon('/api/crew-inactive', blob);
+      }
+    } catch(_){}
+  }
+}
+
+window.addEventListener('beforeunload', stopGPS);
+
+// ── Jobs subscription ──
+const DUMP_YARD = {
+  id: '__dump__',
+  isDump: true,
+  customerName: 'Dump Yard',
+  address: 'Fresno Recycling & Transfer Station, 4343 E Jensen Ave, Fresno CA 93725',
+  jobType: 'DUMP',
+  status: 'DUMP'
+};
+
+function subscribeJobs() {
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const todayTs = Timestamp.fromDate(today);
+  try {
+    const q = query(
+      collection(db, 'jobs'),
+      where('status', 'in', ['SCHEDULED','EN_ROUTE','ARRIVED','IN_PROGRESS'])
+    );
+    onSnapshot(q, (snap) => {
+      const list = [];
+      snap.forEach(d => {
+        const data = d.data();
+        // Only include jobs scheduled for today or currently in-flight for this crew
+        const sched = data.scheduledAt?.toDate ? data.scheduledAt.toDate() : null;
+        const isToday = sched ? (sched.toDateString() === new Date().toDateString()) : true;
+        if (!isToday && data.status === 'SCHEDULED') return;
+        list.push({ id: d.id, ...data });
+        liveJobs[d.id] = { id: d.id, ...data };
+      });
+      list.sort((a,b) => {
+        const ta = a.scheduledAt?.toDate?.()?.getTime?.() || 0;
+        const tb = b.scheduledAt?.toDate?.()?.getTime?.() || 0;
+        return ta - tb;
+      });
+      buildRoute(list);
+      renderRoute();
+      renderJobs();
+    }, (err) => { console.warn('jobs snapshot error', err); });
+  } catch(e) { console.warn('subscribeJobs failed', e); }
+}
+
+function buildRoute(realJobs) {
+  // Insert dump yard after every 2 real jobs
+  const out = [];
+  realJobs.forEach((j, i) => {
+    out.push(j);
+    if ((i + 1) % 2 === 0 && i < realJobs.length - 1) {
+      out.push({ ...DUMP_YARD, id: DUMP_YARD.id + '_' + i });
+    }
+  });
+  jobs = out;
+}
+
+// ── Render route ──
+function renderRoute() {
+  const list = document.getElementById('route-list');
+  const sub = document.getElementById('route-sub');
+  const realJobs = jobs.filter(j => !j.isDump);
+  const completed = realJobs.filter(j => j.status === 'COMPLETED').length;
+
+  if (realJobs.length === 0) {
+    list.innerHTML = `<div class="empty"><div class="empty-icon">📅</div>No jobs scheduled today.<br>Check back soon.</div>`;
+    sub.textContent = 'No jobs scheduled';
+    document.getElementById('summary-wrap').classList.add('hidden');
+    return;
+  }
+  sub.textContent = `${realJobs.length} stops • ${completed} completed`;
+
+  list.innerHTML = jobs.map((j, i) => renderStop(j, i)).join('');
+
+  // Attach click handlers
+  jobs.forEach((j, i) => {
+    const head = document.getElementById('stop-head-' + i);
+    if (head) head.onclick = () => toggleStop(i);
+  });
+
+  // If all real jobs complete, show session summary
+  const allDone = realJobs.length > 0 && realJobs.every(j => j.status === 'COMPLETED');
+  if (allDone) showSummary(realJobs);
+  else document.getElementById('summary-wrap').classList.add('hidden');
+}
+
+function renderStop(j, i) {
+  if (j.isDump) {
+    return `<div class="stop dump">
+      <div class="stop-head" id="stop-head-${i}">
+        <div class="stop-num">🚛</div>
+        <div class="stop-main">
+          <div class="stop-name">Dump Run</div>
+          <div class="stop-addr">${escapeHtml(j.address)}</div>
+          <span class="stop-tag" style="background:rgba(59,130,246,0.2);color:var(--blue)">Dump Yard</span>
+        </div>
+      </div>
+      <div class="stop-body" id="stop-body-${i}">
+        <button class="btn btn-primary" onclick="navigateTo('${escapeAttr(j.address)}')">Navigate →</button>
+      </div>
+    </div>`;
+  }
+  const done = j.status === 'COMPLETED';
+  const name = j.customerName || j.name || 'Customer';
+  const addr = j.address || 'No address';
+  const typ = j.jobType || j.type || 'Junk Removal';
+  return `<div class="stop ${done ? 'done' : ''}" data-jid="${j.id}">
+    <div class="stop-head" id="stop-head-${i}">
+      <div class="stop-num">${i + 1}</div>
+      <div class="stop-main">
+        <div class="stop-name">${escapeHtml(name)}</div>
+        <div class="stop-addr">${escapeHtml(addr)}</div>
+        <span class="stop-tag">${escapeHtml(typ)}</span>
+      </div>
+    </div>
+    <div class="stop-body" id="stop-body-${i}">
+      <button class="btn btn-outline" onclick="navigateTo('${escapeAttr(addr)}')">Navigate →</button>
+      ${renderPipeline(j)}
+      ${renderTimer(j)}
+      ${renderPhotoAndSig(j)}
+      ${renderComplete(j)}
+    </div>
+  </div>`;
+}
+
+const STAGES = ['EN_ROUTE','ARRIVED','IN_PROGRESS','COMPLETED'];
+const STAGE_LABELS = { EN_ROUTE: 'En Route', ARRIVED: 'Arrived', IN_PROGRESS: 'In Progress', COMPLETED: 'Complete' };
+
+function renderPipeline(j) {
+  const cur = j.status || 'SCHEDULED';
+  const curIdx = STAGES.indexOf(cur);
+  return `<div class="pipeline">
+    ${STAGES.slice(0, 3).map((st, idx) => {
+      const state = curIdx === idx ? 'active' : curIdx > idx ? 'done' : '';
+      return `<button class="pipe-btn ${state}" onclick="advanceStatus('${j.id}','${st}')">${state === 'done' ? '✓ ' : ''}${STAGE_LABELS[st]}</button>`;
+    }).join('')}
+  </div>`;
+}
+
+function renderTimer(j) {
+  if (j.status !== 'IN_PROGRESS') return '';
+  return `<div class="timer" id="timer-${j.id}">
+    <div class="timer-val" id="timer-val-${j.id}">00:00</div>
+    <div class="timer-label">Job Timer</div>
+  </div>`;
+}
+
+function renderPhotoAndSig(j) {
+  if (j.status !== 'IN_PROGRESS' && j.status !== 'ARRIVED' && j.status !== 'COMPLETED') return '';
+  const ps = jobPhotoState[j.id] = jobPhotoState[j.id] || { before: [], after: [], signature: null };
+  const afterCount = ps.after.length;
+  return `
+    <div class="zone-label">Before Photos</div>
+    <label class="upload-zone" for="file-before-${j.id}">
+      <div class="upload-zone-icon">📸</div>
+      <div class="upload-zone-text">Tap to add before photos</div>
+    </label>
+    <input type="file" id="file-before-${j.id}" accept="image/*" capture="environment" multiple style="display:none" onchange="handleUpload('${j.id}','before',this)">
+    <div class="photo-grid" id="grid-before-${j.id}">${ps.before.map((p,i)=>photoThumb(j.id,'before',i,p.url)).join('')}</div>
+
+    <div class="zone-label req">After Photos</div>
+    <label class="upload-zone" for="file-after-${j.id}">
+      <div class="upload-zone-icon">📸</div>
+      <div class="upload-zone-text">Tap to add after photos (required)</div>
+    </label>
+    <input type="file" id="file-after-${j.id}" accept="image/*" capture="environment" multiple style="display:none" onchange="handleUpload('${j.id}','after',this)">
+    <div class="photo-grid" id="grid-after-${j.id}">${ps.after.map((p,i)=>photoThumb(j.id,'after',i,p.url)).join('')}</div>
+
+    ${afterCount > 0 ? `
+    <div class="zone-label req">Customer Signature</div>
+    <div class="sig-wrap">
+      <canvas id="sig-${j.id}" class="sig-canvas"></canvas>
+    </div>
+    <div class="sig-actions">
+      <button class="btn btn-outline" onclick="clearSig('${j.id}')">Clear</button>
+      <button class="btn btn-primary" onclick="confirmSig('${j.id}')">Confirm</button>
+    </div>
+    <div class="sig-status ${ps.signature?'ok':''}" id="sig-status-${j.id}">${ps.signature?'✓ Signature captured':'Sign above, then tap Confirm'}</div>
+    ` : ''}
+  `;
+}
+
+function renderComplete(j) {
+  if (j.status !== 'IN_PROGRESS') return '';
+  const ps = jobPhotoState[j.id] || { after: [], signature: null };
+  const canComplete = ps.after.length > 0 && !!ps.signature;
+  return `<button class="btn btn-success" style="margin-top:14px" ${canComplete?'':'disabled'} onclick="completeJob('${j.id}')">Mark Complete</button>
+    ${!canComplete ? `<div class="sub" style="text-align:center;margin-top:8px">Requires after photos & signature</div>` : ''}`;
+}
+
+function photoThumb(jid, kind, idx, url) {
+  return `<div class="photo-thumb"><img src="${url}" alt=""><button class="photo-remove" onclick="removePhoto('${jid}','${kind}',${idx})">✕</button></div>`;
+}
+
+function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeAttr(s){ return String(s||'').replace(/'/g,"\\'").replace(/"/g,'&quot;'); }
+
+// ── Stop expand/collapse ──
+window.toggleStop = (i) => {
+  const el = document.querySelectorAll('.stop')[i];
+  if (!el) return;
+  el.classList.toggle('open');
+  // Initialize signature canvas if present
+  const j = jobs[i];
+  if (j && !j.isDump) setTimeout(() => setupSigCanvas(j.id), 50);
+};
+
+// ── Navigate ──
+window.navigateTo = (address) => {
+  const encoded = encodeURIComponent(address);
+  window.open(`https://maps.google.com/?q=${encoded}&dirflg=d`, '_blank');
+};
+
+// ── Advance status ──
+window.advanceStatus = async (jobId, newStatus) => {
+  const j = liveJobs[jobId];
+  if (!j) return;
+  const stopRef = document.querySelector(`[data-job-id="${jobId}"]`);
+  const btns = stopRef?.querySelectorAll('.pipe-btn') || [];
+  const prevDisabled = Array.from(btns).map(b => b.disabled);
+  btns.forEach(b => b.disabled = true);
+  try {
+    const jref = doc(db, 'jobs', jobId);
+    await updateDoc(jref, { status: newStatus, updatedAt: serverTimestamp() });
+    // Log to statusHistory subcollection
+    await addDoc(collection(db, 'jobs', jobId, 'statusHistory'), {
+      status: newStatus,
+      timestamp: serverTimestamp(),
+      crewId: currentCrewId
+    });
+
+    if (newStatus === 'ARRIVED' && j.customerPhone) {
+      sendSMS(j.customerPhone, "Your TrashApp crew has arrived! We'll get started shortly.");
+    }
+    if (newStatus === 'IN_PROGRESS') {
+      startJobTimer(jobId);
+    }
+    toast(STAGE_LABELS[newStatus] || newStatus, 'success');
+  } catch(e) {
+    toast('Status update failed', 'error');
+    console.error(e);
+    btns.forEach((b, i) => b.disabled = prevDisabled[i]);
+  }
+};
+
+// ── Job timer ──
+function startJobTimer(jobId) {
+  if (jobTimers[jobId]) return;
+  const startMs = Date.now();
+  jobTimers[jobId] = { startMs, intervalId: null };
+  const tick = () => {
+    const el = document.getElementById('timer-val-' + jobId);
+    if (!el) return;
+    const s = Math.floor((Date.now() - startMs) / 1000);
+    const m = Math.floor(s / 60), sec = s % 60;
+    el.textContent = String(m).padStart(2,'0') + ':' + String(sec).padStart(2,'0');
+  };
+  tick();
+  jobTimers[jobId].intervalId = setInterval(tick, 1000);
+}
+function stopJobTimer(jobId) {
+  if (jobTimers[jobId] && jobTimers[jobId].intervalId) clearInterval(jobTimers[jobId].intervalId);
+  delete jobTimers[jobId];
+}
+
+// ── Photo upload ──
+window.handleUpload = async (jobId, kind, inputEl) => {
+  const files = Array.from(inputEl.files || []);
+  if (!files.length) return;
+  const ps = jobPhotoState[jobId] = jobPhotoState[jobId] || { before: [], after: [], signature: null };
+  const zoneEl = inputEl.closest('.upload-zone');
+  const origText = zoneEl?.textContent || '';
+  let uploadCount = 0;
+  for (const f of files) {
+    try {
+      if (zoneEl) zoneEl.style.opacity = '0.6';
+      const ts = Date.now() + '_' + Math.random().toString(36).slice(2,7);
+      const path = `jobs/${jobId}/photos/${kind}/${ts}.jpg`;
+      const r = sRef(storage, path);
+      await uploadBytes(r, f, { contentType: f.type || 'image/jpeg' });
+      const url = await getDownloadURL(r);
+      ps[kind].push({ path, url, ts });
+      photosAll.push({ jobId, kind, url, ts });
+      uploadCount++;
+    } catch(e) {
+      console.error('upload failed', e);
+      toast('Upload failed: ' + (e.message || 'Unknown error'), 'error');
+    } finally {
+      if (zoneEl) zoneEl.style.opacity = '1';
+    }
+  }
+  if (uploadCount > 0) toast(`${uploadCount} photo${uploadCount===1?'':'s'} uploaded`, 'success');
+  inputEl.value = '';
+  renderRoute(); renderPhotos();
+};
+
+window.removePhoto = (jobId, kind, idx) => {
+  const ps = jobPhotoState[jobId];
+  if (!ps) return;
+  ps[kind].splice(idx, 1);
+  // Also remove from photosAll
+  photosAll = photosAll.filter(p => !(p.jobId === jobId && p.kind === kind && !ps[kind].find(q => q.ts === p.ts)));
+  renderRoute(); renderPhotos();
+};
+
+// ── Signature canvas ──
+function setupSigCanvas(jobId) {
+  const canvas = document.getElementById('sig-' + jobId);
+  if (!canvas || canvas.__wired) return;
+  canvas.__wired = true;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * (window.devicePixelRatio || 1);
+  canvas.height = rect.height * (window.devicePixelRatio || 1);
+  const ctx = canvas.getContext('2d');
+  ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+  ctx.strokeStyle = '#000'; ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  let drawing = false, last = null, dirty = false;
+  const pos = (e) => {
+    const r = canvas.getBoundingClientRect();
+    const t = e.touches ? e.touches[0] : e;
+    return { x: t.clientX - r.left, y: t.clientY - r.top };
+  };
+  const start = (e) => { e.preventDefault(); drawing = true; last = pos(e); };
+  const move = (e) => {
+    if (!drawing) return;
+    e.preventDefault();
+    const p = pos(e);
+    ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+    last = p; dirty = true;
+  };
+  const end = () => { drawing = false; canvas.__dirty = dirty; };
+  canvas.addEventListener('mousedown', start);
+  canvas.addEventListener('mousemove', move);
+  canvas.addEventListener('mouseup', end);
+  canvas.addEventListener('touchstart', start, { passive: false });
+  canvas.addEventListener('touchmove', move, { passive: false });
+  canvas.addEventListener('touchend', end);
+}
+
+window.clearSig = (jobId) => {
+  const canvas = document.getElementById('sig-' + jobId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  canvas.__dirty = false;
+  const ps = jobPhotoState[jobId]; if (ps) ps.signature = null;
+  const st = document.getElementById('sig-status-' + jobId); if (st) { st.textContent = 'Sign above, then tap Confirm'; st.classList.remove('ok'); }
+  renderRoute();
+};
+
+window.confirmSig = async (jobId) => {
+  const canvas = document.getElementById('sig-' + jobId);
+  if (!canvas) return;
+  if (!canvas.__dirty) { toast('Please sign first', 'error'); return; }
+  const btn = document.querySelector(`button[onclick*="confirmSig('${jobId}')"]`);
+  if (btn) btn.disabled = true;
+  const dataUrl = canvas.toDataURL('image/png');
+  const ps = jobPhotoState[jobId] = jobPhotoState[jobId] || { before: [], after: [], signature: null };
+  ps.signature = dataUrl;
+  try {
+    await updateDoc(doc(db, 'jobs', jobId), { signature: dataUrl, signedAt: serverTimestamp() });
+    const st = document.getElementById('sig-status-' + jobId); if (st) { st.textContent = '✓ Signature captured'; st.classList.add('ok'); }
+    toast('Signature captured', 'success');
+  } catch(e) {
+    console.warn('sig save failed', e);
+    toast('Failed to save signature', 'error');
+    ps.signature = null;
+  } finally {
+    if (btn) btn.disabled = false;
+    renderRoute();
+  }
+};
+
+// ── Complete job ──
+window.completeJob = async (jobId) => {
+  const j = liveJobs[jobId];
+  const ps = jobPhotoState[jobId] || { after: [], signature: null };
+  if (ps.after.length === 0 || !ps.signature) { toast('Need after photos + signature', 'error'); return; }
+  try {
+    await updateDoc(doc(db, 'jobs', jobId), { status: 'COMPLETED', completedAt: serverTimestamp() });
+    await addDoc(collection(db, 'jobs', jobId, 'statusHistory'), { status: 'COMPLETED', timestamp: serverTimestamp(), crewId: currentCrewId });
+  } catch(e) { console.warn('complete failed', e); }
+
+  stopJobTimer(jobId);
+  showSuccess();
+
+  // Queue review SMS 2 hours out
+  if (j && j.customerPhone) {
+    const fname = (j.customerName || '').split(' ')[0] || 'there';
+    setTimeout(() => {
+      sendSMS(j.customerPhone, `Hi ${fname}! Thanks for choosing TrashApp. Mind leaving us a quick Google review? It helps a ton: https://g.page/r/trashapp-review`);
+    }, 7200000);
+  }
+
+  setTimeout(() => {
+    document.getElementById('success-screen').classList.remove('show');
+    // Close expanded stop
+    document.querySelectorAll('.stop.open').forEach(el => el.classList.remove('open'));
+    renderRoute();
+  }, 2000);
+};
+
+function showSuccess() {
+  document.getElementById('success-screen').classList.add('show');
+}
+
+function showSummary(realJobs) {
+  const totalSec = Math.floor((Date.now() - shiftStart) / 1000);
+  const h = Math.floor(totalSec / 3600), m = Math.floor((totalSec % 3600) / 60);
+  document.getElementById('sg-jobs').textContent = realJobs.length;
+  document.getElementById('sg-time').textContent = `${h}h ${m}m`;
+  document.getElementById('sg-photos').textContent = photosAll.length;
+  const sigs = realJobs.filter(j => (jobPhotoState[j.id] || {}).signature).length;
+  document.getElementById('sg-sigs').textContent = sigs;
+  document.getElementById('summary-wrap').classList.remove('hidden');
+}
+
+window.endShift = async () => {
+  if (!confirm('End your shift now?')) return;
+  stopGPS();
+  try { await signOut(auth); } catch(_){}
+  location.reload();
+};
+
+// ── Jobs tab ──
+function renderJobs() {
+  const el = document.getElementById('jobs-list');
+  const real = jobs.filter(j => !j.isDump);
+  if (!real.length) { el.innerHTML = `<div class="empty"><div class="empty-icon">📋</div>No jobs today</div>`; return; }
+  el.innerHTML = real.map(j => `
+    <div class="job-item">
+      <div class="ji-top">
+        <div class="ji-name">${escapeHtml(j.customerName || 'Customer')}</div>
+        <div class="ji-status st-${j.status}">${j.status.replace('_',' ')}</div>
+      </div>
+      <div class="ji-addr">${escapeHtml(j.address || '—')}</div>
+    </div>`).join('');
+}
+
+// ── Photos tab ──
+function renderPhotos() {
+  const grid = document.getElementById('photos-grid');
+  const empty = document.getElementById('photos-empty');
+  if (!photosAll.length) { grid.innerHTML = ''; empty.classList.remove('hidden'); return; }
+  empty.classList.add('hidden');
+  grid.innerHTML = photosAll.map(p => `<div class="photo-thumb"><img src="${p.url}" alt=""></div>`).join('');
+  document.getElementById('photos-sub').textContent = `${photosAll.length} photo${photosAll.length===1?'':'s'} today`;
+}
+
+// ── View switching ──
+window.switchView = (name) => {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  const v = document.getElementById('view-' + name); if (v) v.classList.add('active');
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.toggle('active', t.dataset.view === name));
+  if (name === 'photos') renderPhotos();
+  if (name === 'jobs') renderJobs();
+};
+
+// ── SMS helper ──
+async function sendSMS(to, message) {
+  try {
+    const res = await fetch('/api/crew-sms', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to, message })
+    });
+    if (!res.ok) console.warn('sendSMS non-200:', res.status);
+  } catch(e) { console.warn('sendSMS failed', e); }
+}
+
+// expose for inline handlers not using window
+window.sendSMSToCustomer = sendSMS;
+</script>
+
+</body>
+</html>

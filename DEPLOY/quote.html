@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TrashApp — Free Junk Removal Quote v1.6</title>
+<title>TrashApp — Free Junk Removal Quote v1.6.1</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗑️</text></svg>">
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#F5A623">
@@ -1297,8 +1297,11 @@ async function bookJob() {
     ? 'Quote: '+(adjPrice?.headline||quoteData.priceRange)+' | Base: '+quoteData.priceRange+' | Travel: $'+travelCost+' ('+travelMiles+' mi) | Load: '+quoteData.truckLoad+' | Items: '+(quoteData.itemsSeen||[]).join(', ')+' | Slot: '+(window_selectedSlotLabel||'Not selected')
     : 'Quote tool submission';
 
+  let hsOk = false;
   try {
-    await fetch(HS_URL, {
+    const ctrl = new AbortController();
+    const timeout = setTimeout(() => ctrl.abort(), 15000);
+    const resp = await fetch(HS_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1311,13 +1314,17 @@ async function bookJob() {
           { name: 'message', value: quoteNote }
         ],
         context: { pageUri: 'quote.trashappjunkremoval.com', pageName: 'TrashApp Quote Tool' }
-      })
+      }),
+      signal: ctrl.signal
     });
+    clearTimeout(timeout);
+    hsOk = resp.ok;
   } catch(e) {
     console.error('HubSpot error:', e);
   }
 
   // Create job in Firestore
+  let fbOk = false;
   try {
     if (window._fbDb && window._fbAddDoc && window._fbCollection && window._fbServerTimestamp) {
       const jobData = {
@@ -1342,24 +1349,36 @@ async function bookJob() {
           status: 'booked', bookedAt: window._fbServerTimestamp()
         });
       }
+      fbOk = true;
     }
   } catch(e) {
     console.error('Firestore error:', e);
+    fbOk = false;
   }
 
   btn.disabled = false;
   btn.textContent = 'Book this job — it\'s free to schedule!';
 
-  // Update success message with slot info if available
-  if (window_selectedSlotLabel) {
+  // Show success message (works even if one backend failed)
+  if (hsOk || fbOk) {
+    if (window_selectedSlotLabel) {
+      document.getElementById('booked-msg').innerHTML = `
+        <div class="booked-title">You're booked! 🎉</div>
+        <div class="booked-sub">Pickup: ${window_selectedSlotLabel}. We'll text you 30 min before arrival. Questions? Call (559) 774-4249</div>
+      `;
+    }
+    document.getElementById('booked-msg').style.display = 'block';
+    document.getElementById('booked-msg').scrollIntoView({ behavior: 'smooth' });
+  } else {
+    // Fallback: show confirmation even if both backends failed
+    showToast('We got your info! Expect a call within 2 hours.', 'success');
     document.getElementById('booked-msg').innerHTML = `
-      <div class="booked-title">You're booked! 🎉</div>
-      <div class="booked-sub">Pickup: ${window_selectedSlotLabel}. We'll text you 30 min before arrival. Questions? Call (559) 774-4249</div>
+      <div class="booked-title">Thanks for booking! 👋</div>
+      <div class="booked-sub">We'll call you shortly to confirm. Questions? Call (559) 774-4249</div>
     `;
+    document.getElementById('booked-msg').style.display = 'block';
+    document.getElementById('booked-msg').scrollIntoView({ behavior: 'smooth' });
   }
-
-  document.getElementById('booked-msg').style.display = 'block';
-  document.getElementById('booked-msg').scrollIntoView({ behavior: 'smooth' });
 }
 
 async function bookJobMulti() {
@@ -1382,8 +1401,11 @@ async function bookJobMulti() {
     ? 'Multi-location quote: '+(quoteData.totalMin ? '$'+quoteData.totalMin+' - $'+quoteData.totalMax : '—')+' | Locations: '+locationsSummary+' | Travel: $'+travelCost+' ('+travelMiles+' mi, charged once) | Slot: '+(window_selectedSlotLabel||'Not selected')
     : 'Multi-location quote submission';
 
+  let hsOk = false;
   try {
-    await fetch(HS_URL, {
+    const ctrl = new AbortController();
+    const timeout = setTimeout(() => ctrl.abort(), 15000);
+    const resp = await fetch(HS_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1396,13 +1418,17 @@ async function bookJobMulti() {
           { name: 'message', value: quoteNote }
         ],
         context: { pageUri: 'quote.trashappjunkremoval.com', pageName: 'TrashApp Quote Tool - Multi' }
-      })
+      }),
+      signal: ctrl.signal
     });
+    clearTimeout(timeout);
+    hsOk = resp.ok;
   } catch(e) {
     console.error('HubSpot error:', e);
   }
 
   // Create job in Firestore
+  let fbOk = false;
   try {
     if (window._fbDb && window._fbAddDoc && window._fbCollection && window._fbServerTimestamp) {
       const jobData = {
@@ -1427,24 +1453,36 @@ async function bookJobMulti() {
           status: 'booked', bookedAt: window._fbServerTimestamp()
         });
       }
+      fbOk = true;
     }
   } catch(e) {
     console.error('Firestore error:', e);
+    fbOk = false;
   }
 
   btn.disabled = false;
   btn.textContent = 'Book this job — it\'s free to schedule!';
 
-  // Update success message with slot info if available
-  if (window_selectedSlotLabel) {
+  // Show success message (works even if one backend failed)
+  if (hsOk || fbOk) {
+    if (window_selectedSlotLabel) {
+      document.getElementById('booked-msg-multi').innerHTML = `
+        <div class="booked-title">You're booked! 🎉</div>
+        <div class="booked-sub">Pickup: ${window_selectedSlotLabel}. We'll text you 30 min before arrival. Questions? Call (559) 774-4249</div>
+      `;
+    }
+    document.getElementById('booked-msg-multi').style.display = 'block';
+    document.getElementById('booked-msg-multi').scrollIntoView({ behavior: 'smooth' });
+  } else {
+    // Fallback: show confirmation even if both backends failed
+    showToast('We got your info! Expect a call within 2 hours.', 'success');
     document.getElementById('booked-msg-multi').innerHTML = `
-      <div class="booked-title">You're booked! 🎉</div>
-      <div class="booked-sub">Pickup: ${window_selectedSlotLabel}. We'll text you 30 min before arrival. Questions? Call (559) 774-4249</div>
+      <div class="booked-title">Thanks for booking! 👋</div>
+      <div class="booked-sub">We'll call you shortly to confirm. Questions? Call (559) 774-4249</div>
     `;
+    document.getElementById('booked-msg-multi').style.display = 'block';
+    document.getElementById('booked-msg-multi').scrollIntoView({ behavior: 'smooth' });
   }
-
-  document.getElementById('booked-msg-multi').style.display = 'block';
-  document.getElementById('booked-msg-multi').scrollIntoView({ behavior: 'smooth' });
 }
 
 function resetApp() {
