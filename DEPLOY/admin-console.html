@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TrashApp — Admin Console v1.8.0</title>
+<title>TrashApp — Admin Console v1.8.1</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%231a1a1a'/%3E%3Crect x='28' y='36' width='44' height='46' rx='6' fill='%23F5A623'/%3E%3Crect x='20' y='27' width='60' height='11' rx='5' fill='%23F5A623'/%3E%3Crect x='40' y='16' width='20' height='13' rx='4' fill='%23F5A623'/%3E%3Crect x='40' y='49' width='6' height='22' rx='3' fill='%231a1a1a'/%3E%3Crect x='54' y='49' width='6' height='22' rx='3' fill='%231a1a1a'/%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDtkh_G25Kr6YaAeNJOd9D9YJuyZnKvu08&libraries=places,geocoding" async defer></script>
@@ -1587,12 +1587,18 @@ window.showView = view => {
 
 // ── LOAD ALL DATA ──
 async function loadAllData() {
+  if (!window.currentUser) return;
   await loadOverview();
   await loadReps();
+  try { loadJobsKanban(); } catch(_){}
+  try { await loadDoorLogs(); } catch(_){}
+  try { await loadBroadcasts(); } catch(_){}
+  try { await loadSocialPosts(); } catch(_){}
 }
 
 // ── OVERVIEW ──
 async function loadOverview() {
+  if (!window.currentUser) return;
   try {
     clearError('Overview');
     const reps = await getCachedReps();
@@ -1698,6 +1704,7 @@ window.approveAllPending = async () => {
 
 // ── REP MANAGEMENT ──
 window.loadReps = async () => {
+  if (!window.currentUser) return;
   try {
     clearError('Rep Management');
     document.getElementById('retry-reps')?.classList.remove('visible');
@@ -2004,6 +2011,7 @@ window.deleteScript = async id => {
 
 // ── DOOR LOGS ──
 window.loadDoorLogs = async () => {
+  if (!window.currentUser) return;
   try {
     clearError('Door Logs');
     document.getElementById('retry-doors')?.classList.remove('visible');
@@ -2220,6 +2228,7 @@ window.sendBroadcast = async () => {
 };
 
 window.loadBroadcasts = async () => {
+  if (!window.currentUser) return;
   try{
     clearError('Broadcasts');
     document.getElementById('retry-broadcasts')?.classList.remove('visible');
@@ -2297,6 +2306,7 @@ function _renderJobsKanban() {
 }
 
 window.loadJobsKanban = () => {
+  if (!window.currentUser) return;
   try {
     clearError('Jobs');
     document.getElementById('retry-jobs')?.classList.remove('visible');
@@ -3051,6 +3061,7 @@ window.saveSocialPost=async(status)=>{
   }
 };
 async function loadSocialPosts(){
+  if (!window.currentUser) return;
   const tbody=document.getElementById('social-queue-body');
   const upcoming=document.getElementById('social-upcoming-list');
   if(!tbody||!upcoming) return;
