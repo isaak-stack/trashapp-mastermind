@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TrashApp — Admin Console v1.9.0</title>
+<title>TrashApp — Admin Console v1.9.1</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%231a1a1a'/%3E%3Crect x='28' y='36' width='44' height='46' rx='6' fill='%23F5A623'/%3E%3Crect x='20' y='27' width='60' height='11' rx='5' fill='%23F5A623'/%3E%3Crect x='40' y='16' width='20' height='13' rx='4' fill='%23F5A623'/%3E%3Crect x='40' y='49' width='6' height='22' rx='3' fill='%231a1a1a'/%3E%3Crect x='54' y='49' width='6' height='22' rx='3' fill='%231a1a1a'/%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDtkh_G25Kr6YaAeNJOd9D9YJuyZnKvu08&libraries=places,geocoding" async defer></script>
@@ -3773,28 +3773,32 @@ function loadBoardroomFeed() {
   // Clean up previous subscription
   if (window._boardroomUnsub) { window._boardroomUnsub(); window._boardroomUnsub = null; }
 
-  const q = query(collection(db, 'agent_messages'),
-    where('type', 'in', ['boardroom', 'owner_input']),
-    orderBy('timestamp', 'desc'),
-    limit(50)
-  );
+  // Simple query — no compound index needed. Filter boardroom/owner types client-side.
+  const q = query(collection(db, 'agent_messages'), orderBy('timestamp', 'desc'), limit(100));
 
-  let isFirstLoad = true;
   window._boardroomUnsub = onSnapshot(q, snap => {
-    if (snap.empty) {
+    // Filter to boardroom + owner messages client-side
+    const allDocs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const messages = allDocs
+      .filter(m => m.type === 'boardroom' || m.type === 'owner_input')
+      .slice(0, 50)
+      .reverse(); // chronological
+
+    if (messages.length === 0) {
       feed.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--gray)">No boardroom messages yet. Agents will start posting when the Mastermind server is running.</div>';
       return;
     }
-    const messages = snap.docs.map(d => ({ id: d.id, ...d.data() })).reverse();
-    feed.innerHTML = messages.map(renderBoardroomMessage).join('');
 
+    feed.innerHTML = messages.map(renderBoardroomMessage).join('');
     // Auto-scroll to bottom
     requestAnimationFrame(() => { feed.scrollTop = feed.scrollHeight; });
-    isFirstLoad = false;
   }, err => {
-    if (err.code === 'permission-denied') return;
+    if (err.code === 'permission-denied') {
+      feed.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--gray)">Sign in as admin to view the boardroom.</div>';
+      return;
+    }
     console.error('Boardroom feed error:', err);
-    feed.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--red)">Failed to connect to boardroom</div>';
+    feed.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--red)">Failed to connect to boardroom: ' + escapeHtml(err.message || '') + '</div>';
   });
   aiosUnsubs.push(window._boardroomUnsub);
 }
