@@ -55,6 +55,13 @@ class BaseAgent {
     throw new Error(`${this.agentId}: runCycle() not implemented`);
   }
 
+  // ── BOARDROOM THINK ──────────────────────────────────────────────
+  // Override in each agent. Receives last 20 boardroom messages.
+  // Returns a concise 1-3 sentence string or null if nothing to add.
+  async boardroomThink(recentMessages) {
+    return null; // subclasses override
+  }
+
   // ── CLAUDE CONSULTATION ───────────────────────────────────────────
   async think(userPrompt, options = {}) {
     try {

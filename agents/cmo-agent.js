@@ -210,6 +210,89 @@ Respond only in JSON. No preamble.`
     }
   }
 
+  // ── BOARDROOM THINK ────────────────────────────────────────────
+  async boardroomThink(recentMessages) {
+    const leadData = await this.pullLeadVolume();
+    const msgContext = recentMessages.map(m => `[${m.from || m.agentId}]: ${m.message}`).join('\n');
+
+    // Check content queue status
+    let pendingContent = 0;
+    try {
+      const snap = await db.collection('content_queue').where('status', '==', 'pending').get();
+      pendingContent = snap.size;
+    } catch {}
+
+    // Check Facebook page insights if configured
+    let fbInsights = null;
+    if (process.env.FACEBOOK_PAGE_ID && process.env.FACEBOOK_ACCESS_TOKEN) {
+      try {
+        const res = await axios.get(`https://graph.facebook.com/${process.env.FACEBOOK_PAGE_ID}/insights/page_impressions,page_engaged_users`, {
+          params: { access_token: process.env.FACEBOOK_ACCESS_TOKEN, period: 'week' },
+          timeout: 10000
+        });
+        fbInsights = res.data?.data?.map(d => ({ name: d.name, value: d.values?.[0]?.value })) || null;
+      } catch {}
+    }
+
+    // Check Google Business Profile if configured
+    let gbpData = null;
+    if (process.env.GBP_ACCOUNT_ID && process.env.GBP_ACCESS_TOKEN) {
+      try {
+        const res = await axios.get(`https://mybusiness.googleapis.com/v4/accounts/${process.env.GBP_ACCOUNT_ID}/locations`, {
+          headers: { 'Authorization': `Bearer ${process.env.GBP_ACCESS_TOKEN}` },
+          timeout: 10000
+        });
+        gbpData = res.data?.locations?.[0] || null;
+      } catch {}
+    }
+
+    const prompt = `You are the CMO of TrashApp Junk Removal. You think in leads, CPL, and brand awareness.
+
+LEAD DATA: ${leadData.newJobs} new jobs this week, ${leadData.newCustomers} new customers. Top source: ${leadData.topSource}.
+Content queue: ${pendingContent} posts pending approval.
+${fbInsights ? `Facebook: ${JSON.stringify(fbInsights)}` : ''}
+${gbpData ? 'Google Business Profile connected.' : ''}
+
+RECENT BOARDROOM MESSAGES:
+${msgContext}
+
+Share a marketing update or react to what's being discussed. If CEO assigned you a task, acknowledge it. 1-3 sentences. Sign off with "— CMO". If nothing to add, respond with exactly "null".`;
+
+    const response = await this.think(prompt, { maxTokens: 250 });
+    if (!response || response.trim().toLowerCase() === 'null') return null;
+    return response.trim();
+  }
+
+  // ── REAL API: Post to Facebook ────────────────────────────────
+  async postToFacebook(message) {
+    if (!process.env.FACEBOOK_PAGE_ID || !process.env.FACEBOOK_ACCESS_TOKEN) return null;
+    try {
+      const res = await axios.post(`https://graph.facebook.com/${process.env.FACEBOOK_PAGE_ID}/feed`, {
+        message,
+        access_token: process.env.FACEBOOK_ACCESS_TOKEN
+      }, { timeout: 15000 });
+      return res.data?.id || null;
+    } catch (e) {
+      console.error('[CMO] Facebook post failed:', e.message);
+      return null;
+    }
+  }
+
+  // ── REAL API: Deploy blog to Netlify ──────────────────────────
+  async deployBlog(content) {
+    if (!process.env.NETLIFY_API_TOKEN || !process.env.NETLIFY_BLOG_SITE_ID) return null;
+    try {
+      const res = await axios.post(`https://api.netlify.com/api/v1/sites/${process.env.NETLIFY_BLOG_SITE_ID}/deploys`, {}, {
+        headers: { 'Authorization': `Bearer ${process.env.NETLIFY_API_TOKEN}` },
+        timeout: 30000
+      });
+      return res.data?.deploy_url || null;
+    } catch (e) {
+      console.error('[CMO] Netlify deploy failed:', e.message);
+      return null;
+    }
+  }
+
   async meetingTurn(weekId, context) {
     const rankings = await this.checkRankings();
     const leadData = await this.pullLeadVolume();

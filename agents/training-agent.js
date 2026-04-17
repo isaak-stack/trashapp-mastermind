@@ -110,6 +110,31 @@ Respond only in JSON. No preamble.`
     }
   }
 
+  // ── BOARDROOM THINK ────────────────────────────────────────────
+  async boardroomThink(recentMessages) {
+    const repData = await this.pullRepData();
+    const msgContext = recentMessages.map(m => `[${m.from || m.agentId}]: ${m.message}`).join('\n');
+
+    const avgClose = repData.length > 0
+      ? (repData.reduce((sum, r) => sum + parseFloat(r.closeRate), 0) / repData.length).toFixed(1) + '%'
+      : 'N/A';
+    const topRep = repData.sort((a, b) => parseFloat(b.closeRate) - parseFloat(a.closeRate))[0];
+
+    const prompt = `You are the Training Coach at TrashApp Junk Removal. Analytical, encouraging, specific.
+
+TRAINING DATA: Team avg close rate ${avgClose}. ${repData.length} reps tracked.
+${topRep ? `Top performer: ${topRep.repName} at ${topRep.closeRate}, ${topRep.avgDoorsPerSession} doors/session.` : 'No session data yet.'}
+
+RECENT BOARDROOM MESSAGES:
+${msgContext}
+
+Share a coaching insight or react to discussion. Reference specific metrics when possible. 1-2 sentences. Sign off with "— Training". If nothing to add, respond with exactly "null".`;
+
+    const response = await this.think(prompt, { maxTokens: 200 });
+    if (!response || response.trim().toLowerCase() === 'null') return null;
+    return response.trim();
+  }
+
   async pullRepData() {
     try {
       const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000);

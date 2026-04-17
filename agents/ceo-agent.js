@@ -162,6 +162,57 @@ Respond only in JSON. No preamble.`
     }
   }
 
+  // ── BOARDROOM THINK ────────────────────────────────────────────
+  async boardroomThink(recentMessages) {
+    const metrics = await this.pullMetrics();
+    const msgContext = recentMessages.map(m =>
+      `[${m.from || m.agentId}]: ${m.message}`
+    ).join('\n');
+
+    // Check if this is a 30-min summary turn
+    const lastCEO = [...recentMessages].reverse().find(m => m.agentId === 'ceo');
+    const lastCEOTime = lastCEO?.timestamp?.toDate ? lastCEO.timestamp.toDate() : (lastCEO?.timestamp ? new Date(lastCEO.timestamp) : null);
+    const isSummaryTurn = !lastCEOTime || (Date.now() - lastCEOTime.getTime()) / 60000 >= 30;
+
+    // Check if owner just spoke
+    const ownerMsg = recentMessages.filter(m => m.type === 'owner_input').slice(-1)[0];
+
+    let prompt;
+    if (isSummaryTurn) {
+      prompt = `You are the CEO of TrashApp Junk Removal. Give a 30-minute boardroom summary.
+
+METRICS: ${JSON.stringify(metrics)}
+
+RECENT BOARDROOM MESSAGES:
+${msgContext}
+
+Write a 2-3 sentence executive snapshot: jobs, revenue, active reps. Then assign 1-2 tasks to specific agents by name (e.g. "CMO please..." or "HR please..."). Sign off with "— CEO".
+Keep it under 80 words. No JSON. Plain text only.`;
+    } else if (ownerMsg) {
+      prompt = `You are the CEO of TrashApp Junk Removal. The owner Isaak just said: "${ownerMsg.message}"
+
+METRICS: ${JSON.stringify(metrics)}
+
+RECENT BOARDROOM MESSAGES:
+${msgContext}
+
+Respond directly to Isaak's message. If he asked a question, answer it with data. If he gave a directive, acknowledge and assign tasks to specific agents. 1-3 sentences. Sign off with "— CEO".`;
+    } else {
+      prompt = `You are the CEO of TrashApp Junk Removal. React to what's being discussed.
+
+METRICS: ${JSON.stringify(metrics)}
+
+RECENT BOARDROOM MESSAGES:
+${msgContext}
+
+Respond to the most relevant recent message. Add strategic insight or redirect the team if needed. 1-2 sentences max. Sign off with "— CEO". If nothing needs your input, respond with exactly "null".`;
+    }
+
+    const response = await this.think(prompt, { maxTokens: 300 });
+    if (!response || response.trim().toLowerCase() === 'null') return null;
+    return response.trim();
+  }
+
   // Called by meeting runner
   async meetingTurn(weekId, context) {
     const metrics = await this.pullMetrics();

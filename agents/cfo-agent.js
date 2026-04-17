@@ -205,6 +205,48 @@ Respond only in JSON. No preamble.`
     return results;
   }
 
+  // ── BOARDROOM THINK ────────────────────────────────────────────
+  async boardroomThink(recentMessages) {
+    const financials = await this.pullFinancials();
+    const gasDoc = await db.collection('system_config').doc('gas_price').get();
+    const gasPrice = gasDoc.exists ? gasDoc.data().value : 4.60;
+    const msgContext = recentMessages.map(m => `[${m.from || m.agentId}]: ${m.message}`).join('\n');
+
+    // Check if owner or CEO directed something at CFO
+    const directedAt = recentMessages.slice(-5).some(m =>
+      m.message && (m.message.toLowerCase().includes('cfo') || m.message.toLowerCase().includes('financial'))
+    );
+
+    // Read QuickBooks data if configured
+    let qbData = null;
+    if (process.env.QB_ACCESS_TOKEN && process.env.QB_REALM_ID) {
+      try {
+        const axios = require('axios');
+        const res = await axios.get(`https://quickbooks.api.intuit.com/v3/company/${process.env.QB_REALM_ID}/reports/ProfitAndLoss?minorversion=65`, {
+          headers: { 'Authorization': `Bearer ${process.env.QB_ACCESS_TOKEN}`, 'Accept': 'application/json' },
+          timeout: 10000
+        });
+        qbData = res.data?.QueryResponse || res.data;
+      } catch (e) { /* QuickBooks not available */ }
+    }
+
+    const prompt = `You are the CFO of TrashApp Junk Removal. Speak in dollars and percentages.
+
+FINANCIALS (7 days): Revenue ${this.formatCurrency(financials.totalRevenue)}, Labor ${this.formatCurrency(financials.totalLabor)}, Dump ${this.formatCurrency(financials.totalDump)}, Net ${this.formatCurrency(financials.netProfit)}. ${financials.jobCount} jobs, avg ticket ${this.formatCurrency(financials.avgJobRevenue)}.
+Gas: $${gasPrice}/gal. Low margin jobs: ${financials.lowMarginJobs?.length || 0}.
+${qbData ? 'QuickBooks data available.' : ''}
+
+RECENT BOARDROOM MESSAGES:
+${msgContext}
+
+${directedAt ? 'Someone asked about financials — respond directly.' : 'Share a quick financial update if relevant, or react to discussion.'}
+1-3 sentences. Sign off with "— CFO". If nothing financial to add, respond with exactly "null".`;
+
+    const response = await this.think(prompt, { maxTokens: 250 });
+    if (!response || response.trim().toLowerCase() === 'null') return null;
+    return response.trim();
+  }
+
   async meetingTurn(weekId, context) {
     const financials = await this.pullFinancials();
     const margin = financials.totalRevenue > 0

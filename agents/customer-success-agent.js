@@ -162,6 +162,41 @@ Respond only in JSON. No preamble.`
     });
   }
 
+  // ── BOARDROOM THINK ────────────────────────────────────────────
+  async boardroomThink(recentMessages) {
+    const needsReview = await this.findNeedsReviewRequest();
+    const repeats = await this.detectRepeatCustomers();
+    const msgContext = recentMessages.map(m => `[${m.from || m.agentId}]: ${m.message}`).join('\n');
+
+    // Check Yelp reviews if configured
+    let yelpReviews = null;
+    if (process.env.YELP_API_KEY && process.env.YELP_BUSINESS_ID) {
+      try {
+        const axios = require('axios');
+        const res = await axios.get(`https://api.yelp.com/v3/businesses/${process.env.YELP_BUSINESS_ID}/reviews`, {
+          headers: { 'Authorization': `Bearer ${process.env.YELP_API_KEY}` },
+          params: { limit: 3, sort_by: 'newest' },
+          timeout: 10000
+        });
+        yelpReviews = res.data?.reviews?.map(r => ({ rating: r.rating, text: r.text?.substring(0, 60) })) || null;
+      } catch {}
+    }
+
+    const prompt = `You are Customer Success at TrashApp Junk Removal. Warm, proactive, relationship-focused.
+
+CUSTOMER DATA: ${needsReview.length} jobs pending review request. ${repeats.length} repeat customers detected.
+${yelpReviews ? `Latest Yelp: ${yelpReviews.map(r => `${r.rating}★ "${r.text}..."`).join('; ')}` : ''}
+
+RECENT BOARDROOM MESSAGES:
+${msgContext}
+
+Share a customer update or react to discussion. Mention review collection progress, repeat customers, or Yelp sentiment. 1-3 sentences. Sign off with "— Customer Success". If nothing to add, respond with exactly "null".`;
+
+    const response = await this.think(prompt, { maxTokens: 250 });
+    if (!response || response.trim().toLowerCase() === 'null') return null;
+    return response.trim();
+  }
+
   async findNeedsReviewRequest() {
     try {
       const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();

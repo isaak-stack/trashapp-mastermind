@@ -177,6 +177,34 @@ Respond only in JSON. No preamble.`
     } catch { return []; }
   }
 
+  // ── BOARDROOM THINK ────────────────────────────────────────────
+  async boardroomThink(recentMessages) {
+    const msgContext = recentMessages.map(m => `[${m.from || m.agentId}]: ${m.message}`).join('\n');
+
+    // Get latest pricing intel
+    const today = new Date().toISOString().split('T')[0];
+    let latestIntel;
+    try {
+      const doc = await db.collection('pricing_intel').doc(today).get();
+      latestIntel = doc.exists ? doc.data() : null;
+    } catch { latestIntel = null; }
+
+    const prompt = `You are the Pricing analyst at TrashApp Junk Removal. Analytical, competitive.
+
+PRICING: ${latestIntel
+  ? `Market range $${latestIntel.marketLow}-$${latestIntel.marketHigh}, midpoint $${latestIntel.marketMid}. Our base at $175. ${latestIntel.recommendation || 'No adjustment needed.'}`
+  : 'Market data collection pending.'}
+
+RECENT BOARDROOM MESSAGES:
+${msgContext}
+
+Share a pricing insight or react to discussion. 1-2 sentences. Sign off with "— Pricing". If nothing to add, respond with exactly "null".`;
+
+    const response = await this.think(prompt, { maxTokens: 200 });
+    if (!response || response.trim().toLowerCase() === 'null') return null;
+    return response.trim();
+  }
+
   async meetingTurn(weekId, context) {
     const today = new Date().toISOString().split('T')[0];
     let latestIntel;

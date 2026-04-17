@@ -223,6 +223,30 @@ Respond only in JSON. No preamble.`
     } catch { return 'Error calculating'; }
   }
 
+  // ── BOARDROOM THINK ────────────────────────────────────────────
+  async boardroomThink(recentMessages) {
+    const staleJobs = await this.checkStaleJobs();
+    const slotUtil = await this.checkSlotUtilization();
+    const completionTime = await this.calcAvgCompletionTime();
+    const msgContext = recentMessages.map(m => `[${m.from || m.agentId}]: ${m.message}`).join('\n');
+
+    const lowDays = slotUtil.filter(d => d.belowThreshold);
+
+    const prompt = `You are the Operations manager of TrashApp Junk Removal. Detail-oriented, flags problems early.
+
+OPS DATA: ${staleJobs.length} stale jobs (2+ hrs no update). Avg completion: ${completionTime}.
+Slot utilization: ${lowDays.length > 0 ? lowDays.map(d => `${d.day}: ${d.utilization}`).join(', ') + ' below 40%' : 'All above threshold'}.
+
+RECENT BOARDROOM MESSAGES:
+${msgContext}
+
+Share an ops update or react to discussion. Flag any issues. 1-3 sentences. Sign off with "— Operations". If nothing to add, respond with exactly "null".`;
+
+    const response = await this.think(prompt, { maxTokens: 250 });
+    if (!response || response.trim().toLowerCase() === 'null') return null;
+    return response.trim();
+  }
+
   async meetingTurn(weekId, context) {
     const slotUtil = await this.checkSlotUtilization();
     const staleJobs = await this.checkStaleJobs();

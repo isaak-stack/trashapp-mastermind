@@ -23,7 +23,7 @@ require('dotenv').config();
 const logger = require('./core/logger');
 
 // 3. Connect Firebase
-const { db, isConfigured: fbConfigured, getCredentialMode: fbMode } = require('./core/firestore');
+const { db, admin: fbAdmin, isConfigured: fbConfigured, getCredentialMode: fbMode } = require('./core/firestore');
 
 // 4. Connect Twilio
 const twilio = require('./core/twilio');
@@ -128,7 +128,7 @@ logger.success('startup', `TrashApp Mastermind started — Dashboard: localhost:
   }
 })();
 
-// ── 13. AGENT OS ──────────────────────────────────────────────────────────
+// ── 13. AI BOARDROOM ──────────────────────────────────────────────────────
 const CEOAgent = require('./agents/ceo-agent');
 const CFOAgent = require('./agents/cfo-agent');
 const CMOAgent = require('./agents/cmo-agent');
@@ -153,23 +153,153 @@ const agents = {
   legal: new LegalAgent(),
   pricing: new PricingAgent()
 };
-agents.customersuccess = agents.customer_success; // alias for meeting runner lookup
+agents.customersuccess = agents.customer_success;
 
-// Start all agents as concurrent async processes
-// They run independently — one crashing doesn't stop the others
-logger.log('startup', 'INFO', 'Starting TrashApp AI Operating System...');
+// Agent list for boardroom iteration (no aliases)
+const agentList = [
+  agents.ceo, agents.cfo, agents.cmo, agents.operations,
+  agents.hr, agents.training, agents.customer_success,
+  agents.legal, agents.pricing
+];
 
-Object.entries(agents).forEach(([name, agent]) => {
-  if (!agent || name === 'customersuccess') return; // skip alias
-  agent.start().catch(err => {
-    logger.log('startup', 'ERROR', `${name} agent crashed: ${err.message}`);
-    // Restart after 60 seconds
-    setTimeout(() => agent.start().catch(() => {}), 60000);
-  });
-  logger.log('startup', 'SUCCESS', `${agent.emoji} ${agent.agentName} Agent started`);
-});
+const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-// Weekly staff meeting — every Monday 9am Pacific
+// ── BOARDROOM HELPERS ─────────────────────────────────────────────────────
+
+/**
+ * Read last N messages from agent_messages ordered by timestamp desc.
+ */
+async function getRecentMessages(n = 20) {
+  try {
+    const snap = await db.collection('agent_messages')
+      .orderBy('timestamp', 'desc')
+      .limit(n)
+      .get();
+    return snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .reverse(); // chronological order
+  } catch (e) {
+    logger.log('boardroom', 'WARN', 'getRecentMessages failed: ' + e.message);
+    return [];
+  }
+}
+
+/**
+ * Determine if an agent should speak right now.
+ * Returns true if:
+ *  - Owner posted (type: owner_input) in last 5 messages
+ *  - Another agent mentioned this agent by name in last 5 messages
+ *  - CEO assigned this agent a task in last 5 messages
+ *  - Agent hasn't spoken in 30+ minutes (keep conversation alive)
+ *  - It's the CEO and 30 minutes have passed since last CEO summary
+ */
+function agentShouldRespond(agent, messages) {
+  const last5 = messages.slice(-5);
+  const agentId = agent.agentId;
+  const agentName = agent.agentName.toLowerCase();
+
+  // 1. Owner posted recently
+  const ownerPosted = last5.some(m => m.type === 'owner_input');
+  if (ownerPosted) return true;
+
+  // 2. Another agent mentioned this agent by name
+  const mentioned = last5.some(m =>
+    m.agentId !== agentId &&
+    m.message &&
+    (m.message.toLowerCase().includes(agentName) || m.message.toLowerCase().includes(agentId))
+  );
+  if (mentioned) return true;
+
+  // 3. CEO assigned this agent a task
+  const ceoDirective = last5.some(m =>
+    m.agentId === 'ceo' && m.message &&
+    (m.message.toLowerCase().includes(agentName + ' please') ||
+     m.message.toLowerCase().includes(agentId + ' please') ||
+     m.message.toLowerCase().includes(`[${agentName}]`) ||
+     m.message.toLowerCase().includes(`[${agentId}]`))
+  );
+  if (ceoDirective) return true;
+
+  // 4. Agent hasn't spoken in 30+ minutes
+  const lastSpoke = [...messages].reverse().find(m => m.agentId === agentId);
+  if (lastSpoke && lastSpoke.timestamp) {
+    const spokeAt = lastSpoke.timestamp.toDate ? lastSpoke.timestamp.toDate() : new Date(lastSpoke.timestamp);
+    const minutesAgo = (Date.now() - spokeAt.getTime()) / 60000;
+    if (minutesAgo >= 30) return true;
+  } else {
+    // Never spoken — should speak
+    return true;
+  }
+
+  // 5. CEO's 30-minute summary turn
+  if (agentId === 'ceo') {
+    const lastCEO = [...messages].reverse().find(m => m.agentId === 'ceo');
+    if (!lastCEO) return true;
+    const ceoAt = lastCEO.timestamp?.toDate ? lastCEO.timestamp.toDate() : new Date(lastCEO.timestamp);
+    if ((Date.now() - ceoAt.getTime()) / 60000 >= 30) return true;
+  }
+
+  return false;
+}
+
+/**
+ * Post a boardroom message to agent_messages.
+ */
+async function postMessage(agentId, name, emoji, text) {
+  try {
+    await db.collection('agent_messages').add({
+      from: name,
+      agentId,
+      emoji,
+      message: text,
+      timestamp: fbAdmin.firestore ? fbAdmin.firestore.FieldValue.serverTimestamp() : new Date(),
+      type: 'boardroom'
+    });
+    logger.log('boardroom', 'INFO', `${emoji} ${name}: ${text.substring(0, 80)}...`);
+  } catch (e) {
+    logger.log('boardroom', 'ERROR', `postMessage failed for ${name}: ${e.message}`);
+  }
+}
+
+/**
+ * The continuous AI Boardroom loop.
+ * Replaces scheduled agent cycles with a live, conversational flow.
+ */
+async function runBoardroom() {
+  logger.log('boardroom', 'INFO', '🏛️ AI Boardroom starting — continuous mode');
+
+  // Initial CEO opening message
+  try {
+    const metrics = await agents.ceo.pullMetrics();
+    const openingMsg = `Good ${new Date().getHours() < 12 ? 'morning' : 'afternoon'} team. Boardroom is live. ` +
+      `Current state: ${metrics.weeklyJobs || 0} jobs this week, ${agents.ceo.formatCurrency(metrics.weeklyRevenue || 0)} revenue, ` +
+      `${metrics.activeReps || 0} active reps. Let's stay sharp. — CEO`;
+    await postMessage('ceo', 'CEO', '🤖', openingMsg);
+  } catch (e) {
+    logger.log('boardroom', 'WARN', 'CEO opening failed: ' + e.message);
+  }
+
+  while (true) {
+    for (const agent of agentList) {
+      try {
+        const recent = await getRecentMessages(20);
+        const shouldRespond = agentShouldRespond(agent, recent);
+        if (shouldRespond) {
+          const response = await agent.boardroomThink(recent);
+          if (response) {
+            await postMessage(agent.agentId, agent.agentName, agent.emoji, response);
+          }
+        }
+      } catch (e) {
+        logger.log('boardroom', 'ERROR', `${agent.agentName} error: ${e.message}`);
+      }
+      await sleep(3000); // 3s between agents
+    }
+    await sleep(10000); // 10s between full cycles
+  }
+}
+
+// Weekly staff meeting — every Monday 9am Pacific (still runs as formal meeting)
 const agentCron = require('node-cron');
 agentCron.schedule('0 9 * * 1', async () => {
   try {
@@ -179,7 +309,15 @@ agentCron.schedule('0 9 * * 1', async () => {
   }
 }, { timezone: 'America/Los_Angeles' });
 
-logger.log('startup', 'SUCCESS', '🚀 TrashApp AI OS fully operational — 9 agents running');
+// Start the boardroom
+logger.log('startup', 'INFO', 'Starting TrashApp AI Boardroom...');
+runBoardroom().catch(err => {
+  logger.log('boardroom', 'FATAL', `Boardroom loop crashed: ${err.message}`);
+  // Restart after 30 seconds
+  setTimeout(() => runBoardroom().catch(() => {}), 30000);
+});
+
+logger.log('startup', 'SUCCESS', '🏛️ TrashApp AI Boardroom operational — 9 agents in continuous loop');
 
 // Graceful shutdown
 process.on('SIGINT', () => {

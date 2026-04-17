@@ -127,6 +127,37 @@ Respond only in JSON. No preamble.`
     }
   }
 
+  // ── BOARDROOM THINK ────────────────────────────────────────────
+  async boardroomThink(recentMessages) {
+    const repActivity = await this.checkRepActivity();
+    const msgContext = recentMessages.map(m => `[${m.from || m.agentId}]: ${m.message}`).join('\n');
+
+    const inactive = repActivity.details?.filter(r => r.inactive) || [];
+
+    // Check Indeed applicants if configured
+    let indeedCount = null;
+    // Indeed doesn't have a public API but we can check our job_applications collection
+    try {
+      const snap = await db.collection('job_applications').where('status', '==', 'new').get();
+      indeedCount = snap.size;
+    } catch {}
+
+    const prompt = `You are the HR manager of TrashApp Junk Removal. People-focused, systematic.
+
+TEAM: ${repActivity.activeReps} active reps, ${repActivity.inactiveReps} inactive.
+${inactive.length > 0 ? 'Inactive: ' + inactive.map(r => `${r.name} (${r.daysSinceLastSession}d)`).join(', ') : 'All reps active.'}
+New applicants: ${indeedCount !== null ? indeedCount : 'unknown'}.
+
+RECENT BOARDROOM MESSAGES:
+${msgContext}
+
+Share a people update or react to discussion. If headcount is critical (<2), say so urgently. 1-3 sentences. Sign off with "— HR". If nothing to add, respond with exactly "null".`;
+
+    const response = await this.think(prompt, { maxTokens: 250 });
+    if (!response || response.trim().toLowerCase() === 'null') return null;
+    return response.trim();
+  }
+
   async checkRepActivity() {
     try {
       const repsSnap = await db.collection('reps').get();

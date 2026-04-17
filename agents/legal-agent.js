@@ -95,6 +95,35 @@ Respond only in JSON. No preamble.`
     }
   }
 
+  // ── BOARDROOM THINK ────────────────────────────────────────────
+  async boardroomThink(recentMessages) {
+    const legalConfig = await this.getLegalConfig();
+    const msgContext = recentMessages.map(m => `[${m.from || m.agentId}]: ${m.message}`).join('\n');
+
+    const upcoming = (legalConfig.filings || []).filter(f => {
+      if (!f.renewalDate && !f.dueDate) return false;
+      const due = new Date(f.renewalDate || f.dueDate);
+      const daysLeft = Math.floor((due.getTime() - Date.now()) / 86400000);
+      return daysLeft <= 60;
+    });
+
+    const prompt = `You are the Legal agent at TrashApp Junk Removal. Cautious, precise, protective.
+
+LEGAL STATUS: ${upcoming.length > 0
+  ? `${upcoming.length} upcoming deadline(s): ${upcoming.map(f => f.type).join(', ')}.`
+  : 'No upcoming deadlines. Compliance looks clean.'}
+Entity: ${legalConfig.legalEntity || 'Unknown'}. Insurance: ${legalConfig.insurance?.type || 'Not recorded'}.
+
+RECENT BOARDROOM MESSAGES:
+${msgContext}
+
+Only speak if there's a legal concern, compliance deadline, or someone discussed something with legal implications. 1-2 sentences. Sign off with "— Legal". If nothing to add, respond with exactly "null".`;
+
+    const response = await this.think(prompt, { maxTokens: 200 });
+    if (!response || response.trim().toLowerCase() === 'null') return null;
+    return response.trim();
+  }
+
   async getLegalConfig() {
     try {
       const doc = await db.collection('system_config').doc('legal').get();
