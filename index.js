@@ -243,19 +243,39 @@ function agentShouldRespond(agent, messages) {
 }
 
 /**
+ * Extract plain-text message from Claude response.
+ * Claude sometimes wraps replies in JSON or markdown code fences.
+ */
+function extractMessageText(raw) {
+  if (!raw || typeof raw !== 'string') return raw;
+  let text = raw;
+  try {
+    const cleaned = raw.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(cleaned);
+    text = parsed.response || parsed.message || parsed.content || parsed.text || parsed.body || raw;
+  } catch (_) {
+    // Not JSON — use as-is
+    text = raw;
+  }
+  return String(text).trim();
+}
+
+/**
  * Post a boardroom message to agent_messages.
  */
 async function postMessage(agentId, name, emoji, text) {
   try {
+    const cleanText = extractMessageText(text);
+    if (!cleanText) return;
     await db.collection('agent_messages').add({
       from: name,
       agentId,
       emoji,
-      message: text,
+      message: cleanText,
       timestamp: fbAdmin.firestore ? fbAdmin.firestore.FieldValue.serverTimestamp() : new Date(),
       type: 'boardroom'
     });
-    logger.log('boardroom', 'INFO', `${emoji} ${name}: ${text.substring(0, 80)}...`);
+    logger.log('boardroom', 'INFO', `${emoji} ${name}: ${cleanText.substring(0, 80)}...`);
   } catch (e) {
     logger.log('boardroom', 'ERROR', `postMessage failed for ${name}: ${e.message}`);
   }
