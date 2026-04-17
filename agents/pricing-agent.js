@@ -26,6 +26,7 @@ You scrape competitor prices from Craigslist and Google, then compare to our rat
 If the market has shifted significantly (>10%), you recommend a pricing adjustment.
 When asked for JSON, respond only in JSON. When asked for plain text, respond in plain text. No preamble.`
     });
+    this.domainKeywords = ['price', 'pricing', 'rate', 'rates', 'quote', 'cost', 'competitor', 'market rate', 'discount', 'minimum', 'base rate', 'undercut'];
   }
 
   async runCycle() {
@@ -201,6 +202,11 @@ ${latestIntel
 
 RECENT MESSAGES:
 ${msgContext}
+
+CONVERSATION VARIETY:
+- Don't repeat your last message. Find a new angle — ask CFO about margin impact, challenge CMO on whether pricing affects leads, or react to something another agent said.
+- If someone mentioned rates, quotes, or competitors, add your market data perspective.
+- Vary your opening — don't always lead with market range.
 
 RULES:
 - Only state the exact data above. Do NOT invent competitor prices or market trends.

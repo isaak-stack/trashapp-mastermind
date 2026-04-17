@@ -24,6 +24,7 @@ You track satisfaction, reviews, repeat customers, and follow-up timing.
 You draft review requests that feel personal, not automated.
 When asked for JSON, respond only in JSON. When asked for plain text, respond in plain text. No preamble.`
     });
+    this.domainKeywords = ['review', 'reviews', 'customer', 'customers', 'yelp', 'satisfaction', 'repeat', 'feedback', 'complaint', 'nps', 'follow up', 'follow-up'];
   }
 
   async runCycle() {
@@ -181,6 +182,11 @@ ${needsReview.length === 0 && repeats.length === 0 ? '- NOTE: No customer data t
 
 RECENT MESSAGES:
 ${msgContext}
+
+CONVERSATION VARIETY:
+- Don't repeat your last message. Find a new angle — ask CMO about review marketing, suggest a loyalty idea to CEO, or react to something another agent said.
+- If someone mentioned customers, reviews, or satisfaction, add your relationship perspective.
+- Vary your opening — don't always lead with review request count.
 
 RULES:
 - Only state the exact data above. Do NOT invent Yelp reviews, NPS scores, or customer feedback.

@@ -186,60 +186,125 @@ async function getRecentMessages(n = 20) {
 
 /**
  * Determine if an agent should speak right now.
- * Returns true if:
- *  - Owner posted (type: owner_input) in last 5 messages
- *  - Another agent mentioned this agent by name in last 5 messages
- *  - CEO assigned this agent a task in last 5 messages
- *  - Agent hasn't spoken in 30+ minutes (keep conversation alive)
- *  - It's the CEO and 30 minutes have passed since last CEO summary
+ * Domain-based filtering — agents only respond when their expertise is relevant.
+ *
+ * Priority order:
+ *  1. Stand-down check (global silence)
+ *  2. 10-minute per-agent cooldown
+ *  3. Direct name-addressing (always respond)
+ *  4. CEO special logic (owner response, 30-min summary, 10-min silence)
+ *  5. Domain keyword match against recent messages
+ *  6. Pile-on prevention (max 2 agents per topic)
+ *  7. Owner message recency (only respond if owner spoke within 15 min)
  */
-function agentShouldRespond(agent, messages) {
-  const last5 = messages.slice(-5);
+function agentShouldRespond(agent, messages, lastPosted) {
+  const BaseAgent = require('./base-agent');
   const agentId = agent.agentId;
   const agentName = agent.agentName.toLowerCase();
 
-  // 1. Owner posted recently
-  const ownerPosted = last5.some(m => m.type === 'owner_input');
-  if (ownerPosted) return true;
+  // 1. Stand-down check
+  const standDown = BaseAgent.checkOwnerStandDown(messages);
+  if (standDown === 'stand_down' || standDown === 'quiet') return false;
 
-  // 2. Another agent mentioned this agent by name
-  const mentioned = last5.some(m =>
-    m.agentId !== agentId &&
-    m.message &&
-    (m.message.toLowerCase().includes(agentName) || m.message.toLowerCase().includes(agentId))
+  // 2. 10-minute per-agent cooldown
+  const lastTime = lastPosted.get(agentId) || 0;
+  if (Date.now() - lastTime < 10 * 60 * 1000) return false;
+
+  const last5 = messages.slice(-5);
+  const last10 = messages.slice(-10);
+
+  // 3. Direct name-addressing — always respond if someone called you out
+  const directlyAddressed = last5.some(m =>
+    m.agentId !== agentId && m.message && (
+      m.message.toLowerCase().includes(agentName) ||
+      m.message.toLowerCase().includes(agentId) ||
+      m.message.toLowerCase().includes(`@${agentName}`) ||
+      m.message.toLowerCase().includes(`@${agentId}`)
+    )
   );
-  if (mentioned) return true;
+  if (directlyAddressed) return true;
 
-  // 3. CEO assigned this agent a task
-  const ceoDirective = last5.some(m =>
-    m.agentId === 'ceo' && m.message &&
-    (m.message.toLowerCase().includes(agentName + ' please') ||
-     m.message.toLowerCase().includes(agentId + ' please') ||
-     m.message.toLowerCase().includes(`[${agentName}]`) ||
-     m.message.toLowerCase().includes(`[${agentId}]`))
-  );
-  if (ceoDirective) return true;
-
-  // 4. Agent hasn't spoken in 30+ minutes
-  const lastSpoke = [...messages].reverse().find(m => m.agentId === agentId);
-  if (lastSpoke && lastSpoke.timestamp) {
-    const spokeAt = lastSpoke.timestamp.toDate ? lastSpoke.timestamp.toDate() : new Date(lastSpoke.timestamp);
-    const minutesAgo = (Date.now() - spokeAt.getTime()) / 60000;
-    if (minutesAgo >= 30) return true;
-  } else {
-    // Never spoken — should speak
-    return true;
-  }
-
-  // 5. CEO's 30-minute summary turn
+  // 4. CEO special logic
   if (agentId === 'ceo') {
+    // Owner just posted — CEO always responds to owner
+    const ownerPosted = last5.some(m => m.type === 'owner_input');
+    if (ownerPosted) return true;
+
+    // 30-minute summary turn
     const lastCEO = [...messages].reverse().find(m => m.agentId === 'ceo');
     if (!lastCEO) return true;
     const ceoAt = lastCEO.timestamp?.toDate ? lastCEO.timestamp.toDate() : new Date(lastCEO.timestamp);
     if ((Date.now() - ceoAt.getTime()) / 60000 >= 30) return true;
+
+    // 10-minute silence — CEO breaks it
+    const lastAnyAgent = messages[messages.length - 1];
+    if (lastAnyAgent?.timestamp) {
+      const lastAt = lastAnyAgent.timestamp.toDate ? lastAnyAgent.timestamp.toDate() : new Date(lastAnyAgent.timestamp);
+      if ((Date.now() - lastAt.getTime()) / 60000 >= 10) return true;
+    }
+
+    return false;
   }
 
-  return false;
+  // ── Non-CEO agents below ──
+
+  // 5. Check if owner posted within last 15 minutes
+  const ownerMsgs = messages.filter(m => m.type === 'owner_input');
+  const lastOwner = ownerMsgs[ownerMsgs.length - 1];
+  let ownerRecent = false;
+  if (lastOwner?.timestamp) {
+    const ownerAt = lastOwner.timestamp.toDate ? lastOwner.timestamp.toDate() : new Date(lastOwner.timestamp);
+    ownerRecent = (Date.now() - ownerAt.getTime()) / 60000 <= 15;
+  }
+
+  // 6. Domain keyword matching against recent messages
+  const keywords = agent.domainKeywords || [];
+  if (keywords.length === 0) return false; // No domain = don't respond unprompted
+
+  // Build text corpus from last 5 messages
+  const recentText = last5.map(m => (m.message || '').toLowerCase()).join(' ');
+
+  const domainMatch = keywords.some(kw => recentText.includes(kw.toLowerCase()));
+
+  if (!domainMatch) {
+    // No domain match — check if agent hasn't spoken in 60 min (keep alive, but rare)
+    const lastSpoke = [...messages].reverse().find(m => m.agentId === agentId);
+    if (!lastSpoke) return false; // Never spoken — wait for relevance, don't pile on at startup
+    if (lastSpoke.timestamp) {
+      const spokeAt = lastSpoke.timestamp.toDate ? lastSpoke.timestamp.toDate() : new Date(lastSpoke.timestamp);
+      if ((Date.now() - spokeAt.getTime()) / 60000 >= 60) return true; // 60-min keep-alive
+    }
+    return false;
+  }
+
+  // 7. Pile-on prevention — max 2 agents respond to same topic cluster
+  // Count how many agents already responded AFTER the triggering message
+  const triggerIdx = messages.length - 5; // approximate start of trigger window
+  const responsesAfterTrigger = messages.slice(Math.max(0, triggerIdx))
+    .filter(m => m.type === 'boardroom' && m.agentId !== 'ceo' && m.agentId !== agentId);
+
+  // Check if those responses share our domain keywords (same topic)
+  let sameTopicResponders = 0;
+  for (const resp of responsesAfterTrigger) {
+    const respText = (resp.message || '').toLowerCase();
+    const sharesKeyword = keywords.some(kw => respText.includes(kw.toLowerCase()));
+    if (sharesKeyword) sameTopicResponders++;
+  }
+
+  if (sameTopicResponders >= 2) return false; // Already 2 agents on this topic
+
+  // 8. Topic repetition guard — don't repeat same topic within 30 min
+  const myRecentMsgs = messages.filter(m => m.agentId === agentId);
+  const myLast = myRecentMsgs[myRecentMsgs.length - 1];
+  if (myLast?.timestamp) {
+    const myLastAt = myLast.timestamp.toDate ? myLast.timestamp.toDate() : new Date(myLast.timestamp);
+    if ((Date.now() - myLastAt.getTime()) / 60000 < 30) {
+      // Already spoke within 30 min — only respond if owner specifically triggered
+      if (!ownerRecent) return false;
+    }
+  }
+
+  return true;
 }
 
 /**
@@ -284,6 +349,12 @@ async function postMessage(agentId, name, emoji, text) {
 /**
  * The continuous AI Boardroom loop.
  * Replaces scheduled agent cycles with a live, conversational flow.
+ *
+ * Key design:
+ * - Non-CEO agents run first, CEO runs last (synthesizer role)
+ * - Domain-based filtering prevents pile-posting
+ * - Broadcast messages ("what does everyone see") stagger across cycles
+ * - 10-min per-agent cooldown enforced in agentShouldRespond
  */
 async function runBoardroom() {
   logger.log('boardroom', 'INFO', '🏛️ AI Boardroom starting — continuous mode');
@@ -301,17 +372,69 @@ async function runBoardroom() {
 
   const lastPosted = new Map(); // agentId -> timestamp ms
 
-  while (true) {
-    for (const agent of agentList) {
-      try {
-        // Skip if this agent posted within the last 5 minutes
-        const lastTime = lastPosted.get(agent.agentId) || 0;
-        if (Date.now() - lastTime < 5 * 60 * 1000) continue;
+  // Agent order: non-CEO first, CEO last (CEO synthesizes what others said)
+  const nonCEO = agentList.filter(a => a.agentId !== 'ceo');
+  const ceo = agentList.find(a => a.agentId === 'ceo');
+  const orderedAgents = [...nonCEO, ceo];
 
-        const recent = await getRecentMessages(20);
-        const shouldRespond = agentShouldRespond(agent, recent);
+  // Broadcast handling: track staggered responses
+  let broadcastQueue = []; // agents still needing to respond to a broadcast
+  let broadcastCycleCount = 0;
+
+  while (true) {
+    const recent = await getRecentMessages(20);
+
+    // Detect broadcast messages ("what does everyone see", "team update", etc.)
+    const last3 = recent.slice(-3);
+    const broadcastTrigger = last3.find(m =>
+      m.type === 'owner_input' && m.message && (
+        m.message.toLowerCase().includes('everyone') ||
+        m.message.toLowerCase().includes('all agents') ||
+        m.message.toLowerCase().includes('team update') ||
+        m.message.toLowerCase().includes('team report') ||
+        m.message.toLowerCase().includes('go around') ||
+        m.message.toLowerCase().includes('what does everyone')
+      )
+    );
+
+    if (broadcastTrigger && broadcastQueue.length === 0) {
+      // New broadcast — queue all non-CEO agents, CEO goes last
+      broadcastQueue = [...nonCEO, ceo];
+      broadcastCycleCount = 0;
+      logger.log('boardroom', 'INFO', '📢 Broadcast detected — staggering all agent responses');
+    }
+
+    // If broadcast is active, process 2-3 agents per cycle (staggered)
+    if (broadcastQueue.length > 0) {
+      const batchSize = Math.min(3, broadcastQueue.length);
+      const batch = broadcastQueue.splice(0, batchSize);
+
+      for (const agent of batch) {
+        try {
+          const freshRecent = await getRecentMessages(20);
+          const response = await agent.boardroomThink(freshRecent);
+          if (response) {
+            await postMessage(agent.agentId, agent.agentName, agent.emoji, response);
+            lastPosted.set(agent.agentId, Date.now());
+          }
+        } catch (e) {
+          logger.log('boardroom', 'ERROR', `${agent.agentName} broadcast error: ${e.message}`);
+        }
+        await sleep(5000);
+      }
+
+      broadcastCycleCount++;
+      await sleep(8000); // Pause between broadcast batches
+      continue; // Skip normal cycle during broadcast
+    }
+
+    // Normal cycle: check each agent in order (non-CEO first, CEO last)
+    for (const agent of orderedAgents) {
+      try {
+        const freshRecent = await getRecentMessages(20);
+        const shouldRespond = agentShouldRespond(agent, freshRecent, lastPosted);
         if (shouldRespond) {
-          const response = await agent.boardroomThink(recent);
+          const response = await agent.boardroomThink(freshRecent);
           if (response) {
             await postMessage(agent.agentId, agent.agentName, agent.emoji, response);
             lastPosted.set(agent.agentId, Date.now());
@@ -322,7 +445,7 @@ async function runBoardroom() {
       }
       await sleep(5000); // 5s between agents
     }
-    await sleep(10000); // 10s between full cycles
+    await sleep(15000); // 15s between full cycles (slower = more natural)
   }
 }
 

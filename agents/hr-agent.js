@@ -26,6 +26,7 @@ When active rep count drops below 2, you escalate to CEO as high priority.
 You write compelling job listings that attract quality candidates.
 When asked for JSON, respond only in JSON. When asked for plain text, respond in plain text. No preamble.`
     });
+    this.domainKeywords = ['reps', 'rep', 'hiring', 'staff', 'team', 'candidates', 'candidate', 'onboard', 'recruit', 'headcount', 'applicant', 'inactive', 'turnover'];
   }
 
   async runCycle() {
@@ -155,6 +156,11 @@ ${repActivity.totalReps === 0 ? '- NOTE: No reps in system yet. Say "no team dat
 
 RECENT MESSAGES:
 ${msgContext}
+
+CONVERSATION VARIETY:
+- Don't repeat your last message. Find a new angle — ask Training about rep performance, flag a staffing concern to CEO, or react to something another agent said.
+- If someone mentioned reps, hiring, or team capacity, add your people perspective.
+- Vary your opening — don't always lead with headcount.
 
 RULES:
 - Only state the exact data above. Do NOT invent candidates, interviews, or performance issues.

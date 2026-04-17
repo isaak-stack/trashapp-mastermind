@@ -25,6 +25,7 @@ You always consider cash flow — TrashApp is an early-stage operation.
 When you make recommendations, quantify the impact in dollars.
 When asked for JSON, respond only in JSON. When asked for plain text, respond in plain text. No preamble.`
     });
+    this.domainKeywords = []; // CEO uses special logic, not keyword matching
   }
 
   async runCycle() {
@@ -204,11 +205,21 @@ ${metrics.error ? '- Data error: ' + metrics.error : ''}`;
 - No JSON. Plain text only. Sign off with "— CEO".
 - If nothing meaningful to say, respond with exactly "null".`;
 
+    const VARIETY = `CONVERSATION VARIETY:
+- Don't repeat what you said last time. Find a new angle or insight.
+- You can ask another agent a direct question (e.g. "CFO, what's our margin looking like?").
+- You can respond to what another agent just said — agree, push back, or build on it.
+- You can offer a proactive insight the team hasn't discussed yet.
+- Vary your opening — don't always start with "Team" or "Current state."
+- Keep it human. Real CEOs don't give the same speech every 30 minutes.`;
+
     let prompt;
     if (isSummaryTurn) {
       prompt = `You are the CEO of TrashApp Junk Removal. Give a brief status update.
 
 ${dataSummary}
+
+${VARIETY}
 
 ${RULES}`;
     } else if (ownerMsg) {
@@ -219,7 +230,9 @@ ${dataSummary}
 RECENT MESSAGES:
 ${msgContext}
 
-Respond to Isaak directly using only the real data above. ${RULES}`;
+Respond to Isaak directly using only the real data above. ${VARIETY}
+
+${RULES}`;
     } else {
       prompt = `You are the CEO of TrashApp Junk Removal.
 
@@ -228,7 +241,9 @@ ${dataSummary}
 RECENT MESSAGES:
 ${msgContext}
 
-React briefly if relevant. ${RULES}`;
+React briefly to what others are saying, or raise something new. ${VARIETY}
+
+${RULES}`;
     }
 
     const response = await this.think(prompt, { maxTokens: 200 });

@@ -27,6 +27,7 @@ If margin drops below 50%, you sound the alarm.
 TrashApp is early-stage — cash flow is king.
 When asked for JSON, respond only in JSON. When asked for plain text, respond in plain text. No preamble.`
     });
+    this.domainKeywords = ['money', 'revenue', 'cost', 'costs', 'pricing', 'cash', 'financial', 'budget', 'pay', 'commission', 'margin', 'profit', 'expense', 'dump fee', 'labor cost', 'gas price', 'quickbooks'];
   }
 
   async runCycle() {
@@ -233,6 +234,12 @@ ${financials.error ? '- Error: ' + financials.error : ''}
 
 RECENT MESSAGES:
 ${msgContext}
+
+CONVERSATION VARIETY:
+- Don't repeat your last message. Find a new angle — a different metric, a question for another agent, or a reaction to what someone else said.
+- You can ask Operations about job margins, or challenge Pricing on rate assumptions.
+- If someone mentioned costs or revenue, build on their point with your financial perspective.
+- Vary your opening — don't always lead with revenue.
 
 RULES:
 - Only state the exact numbers above. If data is "N/A" or 0, say "no financial data yet."

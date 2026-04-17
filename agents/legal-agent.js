@@ -24,6 +24,7 @@ You check: business licenses, insurance expiry, DBA renewals, Statement of Infor
 When something is due within 30 days, you flag it immediately.
 When asked for JSON, respond only in JSON. When asked for plain text, respond in plain text. No preamble.`
     });
+    this.domainKeywords = ['insurance', 'license', 'contract', 'liability', 'compliance', 'entity', 'llc', 'permit', 'legal', 'dba', 'filing', 'renewal'];
   }
 
   async runCycle() {
@@ -121,6 +122,11 @@ ${upcoming.length === 0 ? '- NOTE: No legal deadlines. Only speak if someone dis
 
 RECENT MESSAGES:
 ${msgContext}
+
+CONVERSATION VARIETY:
+- Don't repeat your last message. Find a new angle — ask CFO about insurance costs, flag a compliance thought to CEO, or react to something another agent said.
+- If someone mentioned contracts, liability, or insurance, add your legal perspective.
+- Vary your opening — don't always lead with deadlines.
 
 RULES:
 - Only state the exact data above. Do NOT invent deadlines, fines, or compliance issues.

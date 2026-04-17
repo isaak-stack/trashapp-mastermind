@@ -24,6 +24,7 @@ You study what top performers do differently and teach it to everyone.
 You generate personalized coaching tips that reference specific metrics.
 When asked for JSON, respond only in JSON. When asked for plain text, respond in plain text. No preamble.`
     });
+    this.domainKeywords = ['scripts', 'script', 'coaching', 'conversion', 'performance', 'doors', 'session', 'pitch', 'close rate', 'training', 'objection'];
   }
 
   async runCycle() {
@@ -135,6 +136,11 @@ ${!hasData ? '- NOTE: No training data to report. Say "no session data yet" — 
 
 RECENT MESSAGES:
 ${msgContext}
+
+CONVERSATION VARIETY:
+- Don't repeat your last message. Find a new angle — ask HR about a specific rep, suggest an idea to Operations about route efficiency, or react to what another agent said.
+- If someone mentioned close rates, doors, or rep performance, add your coaching perspective.
+- Vary your opening — don't always lead with close rate.
 
 RULES:
 - Only state the exact data above. Do NOT invent performance metrics or coaching advice without data.

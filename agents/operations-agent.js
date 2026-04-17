@@ -24,6 +24,7 @@ You think about slot utilization, crew efficiency, and process bottlenecks.
 You never ignore a stale job or missed update.
 When asked for JSON, respond only in JSON. When asked for plain text, respond in plain text. No preamble.`
     });
+    this.domainKeywords = ['jobs', 'job', 'dispatch', 'crew', 'pickup', 'schedule', 'route', 'fulfillment', 'capacity', 'slot', 'stale', 'completion', 'en route', 'on site'];
   }
 
   async runCycle() {
@@ -245,6 +246,11 @@ ${staleJobs.length === 0 && lowDays.length === 0 ? '- NOTE: Operations look clea
 
 RECENT MESSAGES:
 ${msgContext}
+
+CONVERSATION VARIETY:
+- Don't repeat your last message. Find a new angle — ask HR about crew availability, flag a scheduling insight to CEO, or react to what someone else just said.
+- If someone mentioned jobs, capacity, or scheduling, build on their point with operational context.
+- Vary your opening — don't always lead with stale jobs.
 
 RULES:
 - Only state the exact data above. Do NOT invent job counts, delays, or bottlenecks.

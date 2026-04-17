@@ -26,6 +26,7 @@ You know that local SEO and Craigslist are the highest-ROI channels for a junk r
 You generate compelling ad copy that sounds human, not corporate.
 When asked for JSON, respond only in JSON. When asked for plain text, respond in plain text. No preamble.`
     });
+    this.domainKeywords = ['marketing', 'ads', 'ad', 'leads', 'lead', 'facebook', 'google', 'craigslist', 'social', 'content', 'brand', 'post', 'seo', 'ranking', 'nextdoor', 'campaign', 'cpl'];
   }
 
   async runCycle() {
@@ -235,6 +236,11 @@ ${leadData.newJobs === 0 && leadData.newCustomers === 0 ? '- NOTE: No lead data 
 
 RECENT MESSAGES:
 ${msgContext}
+
+CONVERSATION VARIETY:
+- Don't repeat your last message. Find a new angle — a question for HR about rep referrals, a note to CEO about brand positioning, or a reaction to what someone else said.
+- If someone mentioned customer feedback or reviews, connect it to marketing.
+- Vary your opening — don't always lead with lead count.
 
 RULES:
 - Only state the exact numbers above. Do NOT invent leads, rankings, CPL, or conversion rates that aren't listed.
