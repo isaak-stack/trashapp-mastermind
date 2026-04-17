@@ -10,6 +10,8 @@ const Anthropic = require('@anthropic-ai/sdk');
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+const STAND_DOWN_WORDS = ['stop', 'pause', 'calm', 'stand down', 'enough', 'quiet', 'shut up', 'silence', 'hold', 'wait'];
+
 class BaseAgent {
   constructor(config) {
     this.agentId = config.agentId;           // 'ceo', 'cfo', 'cmo', etc.
@@ -20,6 +22,37 @@ class BaseAgent {
     this.systemPrompt = config.systemPrompt; // Claude persona
     this.cycleCount = 0;
     this.isRunning = false;
+  }
+
+  /**
+   * Check if owner issued a stand-down command in recent messages.
+   * Returns 'stand_down' if owner just told agents to stop.
+   * Returns 'resumed' if owner posted a new non-stand-down message after standing down.
+   * Returns 'quiet' if standing down and no new owner activity.
+   * Returns 'active' if not standing down.
+   */
+  static checkOwnerStandDown(messages) {
+    const ownerMsgs = messages.filter(m => m.type === 'owner_input');
+    if (ownerMsgs.length === 0) {
+      return BaseAgent._standingDown ? 'quiet' : 'active';
+    }
+
+    const lastOwnerMsg = ownerMsgs[ownerMsgs.length - 1];
+    const text = (lastOwnerMsg.message || '').toLowerCase();
+    const isStandDown = STAND_DOWN_WORDS.some(w => text.includes(w));
+
+    if (isStandDown) {
+      BaseAgent._standingDown = true;
+      return 'stand_down';
+    }
+
+    // Owner posted something new that's not a stand-down — resume
+    if (BaseAgent._standingDown) {
+      BaseAgent._standingDown = false;
+      return 'resumed';
+    }
+
+    return 'active';
   }
 
   // ── MAIN RUN LOOP ──────────────────────────────────────────────────
@@ -226,5 +259,8 @@ class BaseAgent {
 
   formatCurrency(n) { return `$${Number(n).toLocaleString('en-US', {minimumFractionDigits:0,maximumFractionDigits:0})}`; }
 }
+
+// Shared stand-down state — set after class is defined
+BaseAgent._standingDown = false;
 
 module.exports = BaseAgent;

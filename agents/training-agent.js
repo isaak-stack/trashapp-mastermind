@@ -22,7 +22,7 @@ You are a coach — analytical, encouraging, and specific.
 You never give vague advice. Every tip is backed by real numbers from their sessions.
 You study what top performers do differently and teach it to everyone.
 You generate personalized coaching tips that reference specific metrics.
-Respond only in JSON. No preamble.`
+When asked for JSON, respond only in JSON. When asked for plain text, respond in plain text. No preamble.`
     });
   }
 
@@ -112,25 +112,37 @@ Respond only in JSON. No preamble.`
 
   // ── BOARDROOM THINK ────────────────────────────────────────────
   async boardroomThink(recentMessages) {
+    const BaseAgent = require('./base-agent');
+    const standDown = BaseAgent.checkOwnerStandDown(recentMessages);
+    if (standDown === 'stand_down' || standDown === 'quiet') return null;
+
     const repData = await this.pullRepData();
-    const msgContext = recentMessages.map(m => `[${m.from || m.agentId}]: ${m.message}`).join('\n');
+    const msgContext = recentMessages.slice(-10).map(m => `[${m.from || m.agentId}]: ${m.message}`).join('\n');
 
-    const avgClose = repData.length > 0
+    const hasData = repData.length > 0;
+    const avgClose = hasData
       ? (repData.reduce((sum, r) => sum + parseFloat(r.closeRate), 0) / repData.length).toFixed(1) + '%'
-      : 'N/A';
-    const topRep = repData.sort((a, b) => parseFloat(b.closeRate) - parseFloat(a.closeRate))[0];
+      : null;
+    const topRep = hasData ? repData.sort((a, b) => parseFloat(b.closeRate) - parseFloat(a.closeRate))[0] : null;
 
-    const prompt = `You are the Training Coach at TrashApp Junk Removal. Analytical, encouraging, specific.
+    const prompt = `You are the Training Coach at TrashApp Junk Removal.
 
-TRAINING DATA: Team avg close rate ${avgClose}. ${repData.length} reps tracked.
-${topRep ? `Top performer: ${topRep.repName} at ${topRep.closeRate}, ${topRep.avgDoorsPerSession} doors/session.` : 'No session data yet.'}
+REAL DATA (from Firestore — report ONLY these, do NOT invent any):
+- Reps tracked: ${repData.length}
+${hasData ? `- Team avg close rate: ${avgClose}` : '- No session data yet.'}
+${topRep ? `- Top performer: ${topRep.repName} at ${topRep.closeRate} close rate, ${topRep.avgDoorsPerSession} doors/session` : ''}
+${!hasData ? '- NOTE: No training data to report. Say "no session data yet" — do NOT invent close rates or coaching tips.' : ''}
 
-RECENT BOARDROOM MESSAGES:
+RECENT MESSAGES:
 ${msgContext}
 
-Share a coaching insight or react to discussion. Reference specific metrics when possible. 1-2 sentences. Sign off with "— Training". If nothing to add, respond with exactly "null".`;
+RULES:
+- Only state the exact data above. Do NOT invent performance metrics or coaching advice without data.
+- 1-2 sentences max. Encouraging but factual. No ALL CAPS.
+- No JSON. Plain text. Sign off with "— Training".
+- If nothing to report, respond with exactly "null".`;
 
-    const response = await this.think(prompt, { maxTokens: 200 });
+    const response = await this.think(prompt, { maxTokens: 150 });
     if (!response || response.trim().toLowerCase() === 'null') return null;
     return response.trim();
   }

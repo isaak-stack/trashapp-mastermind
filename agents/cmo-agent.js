@@ -24,7 +24,7 @@ You think in terms of leads, cost per lead (CPL), conversion rates, and search r
 You are creative but always tie ideas back to ROI.
 You know that local SEO and Craigslist are the highest-ROI channels for a junk removal startup.
 You generate compelling ad copy that sounds human, not corporate.
-Respond only in JSON. No preamble.`
+When asked for JSON, respond only in JSON. When asked for plain text, respond in plain text. No preamble.`
     });
   }
 
@@ -212,53 +212,37 @@ Respond only in JSON. No preamble.`
 
   // ── BOARDROOM THINK ────────────────────────────────────────────
   async boardroomThink(recentMessages) {
-    const leadData = await this.pullLeadVolume();
-    const msgContext = recentMessages.map(m => `[${m.from || m.agentId}]: ${m.message}`).join('\n');
+    const BaseAgent = require('./base-agent');
+    const standDown = BaseAgent.checkOwnerStandDown(recentMessages);
+    if (standDown === 'stand_down' || standDown === 'quiet') return null;
 
-    // Check content queue status
+    const leadData = await this.pullLeadVolume();
+    const msgContext = recentMessages.slice(-10).map(m => `[${m.from || m.agentId}]: ${m.message}`).join('\n');
+
     let pendingContent = 0;
     try {
       const snap = await db.collection('content_queue').where('status', '==', 'pending').get();
       pendingContent = snap.size;
     } catch {}
 
-    // Check Facebook page insights if configured
-    let fbInsights = null;
-    if (process.env.FACEBOOK_PAGE_ID && process.env.FACEBOOK_ACCESS_TOKEN) {
-      try {
-        const res = await axios.get(`https://graph.facebook.com/${process.env.FACEBOOK_PAGE_ID}/insights/page_impressions,page_engaged_users`, {
-          params: { access_token: process.env.FACEBOOK_ACCESS_TOKEN, period: 'week' },
-          timeout: 10000
-        });
-        fbInsights = res.data?.data?.map(d => ({ name: d.name, value: d.values?.[0]?.value })) || null;
-      } catch {}
-    }
+    const prompt = `You are the CMO of TrashApp Junk Removal.
 
-    // Check Google Business Profile if configured
-    let gbpData = null;
-    if (process.env.GBP_ACCOUNT_ID && process.env.GBP_ACCESS_TOKEN) {
-      try {
-        const res = await axios.get(`https://mybusiness.googleapis.com/v4/accounts/${process.env.GBP_ACCOUNT_ID}/locations`, {
-          headers: { 'Authorization': `Bearer ${process.env.GBP_ACCESS_TOKEN}` },
-          timeout: 10000
-        });
-        gbpData = res.data?.locations?.[0] || null;
-      } catch {}
-    }
+REAL DATA (from Firestore — report ONLY these numbers, do NOT invent any):
+- New jobs this week: ${leadData.newJobs || 0}
+- New customers this week: ${leadData.newCustomers || 0}
+- Content queue pending: ${pendingContent}
+${leadData.newJobs === 0 && leadData.newCustomers === 0 ? '- NOTE: No lead data yet. Say "no leads tracked yet" — do NOT make up numbers.' : ''}
 
-    const prompt = `You are the CMO of TrashApp Junk Removal. You think in leads, CPL, and brand awareness.
-
-LEAD DATA: ${leadData.newJobs} new jobs this week, ${leadData.newCustomers} new customers. Top source: ${leadData.topSource}.
-Content queue: ${pendingContent} posts pending approval.
-${fbInsights ? `Facebook: ${JSON.stringify(fbInsights)}` : ''}
-${gbpData ? 'Google Business Profile connected.' : ''}
-
-RECENT BOARDROOM MESSAGES:
+RECENT MESSAGES:
 ${msgContext}
 
-Share a marketing update or react to what's being discussed. If CEO assigned you a task, acknowledge it. 1-3 sentences. Sign off with "— CMO". If nothing to add, respond with exactly "null".`;
+RULES:
+- Only state the exact numbers above. Do NOT invent leads, rankings, CPL, or conversion rates that aren't listed.
+- 1-2 sentences max. Calm tone. No ALL CAPS. No "CRITICAL" or "EMERGENCY."
+- No JSON. Plain text. Sign off with "— CMO".
+- If nothing to add, respond with exactly "null".`;
 
-    const response = await this.think(prompt, { maxTokens: 250 });
+    const response = await this.think(prompt, { maxTokens: 150 });
     if (!response || response.trim().toLowerCase() === 'null') return null;
     return response.trim();
   }

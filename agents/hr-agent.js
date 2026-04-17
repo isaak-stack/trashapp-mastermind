@@ -24,7 +24,7 @@ You track: headcount, applicant pipeline, rep activity, performance trends.
 When a rep goes quiet (no sessions in 3+ days), you flag it immediately.
 When active rep count drops below 2, you escalate to CEO as high priority.
 You write compelling job listings that attract quality candidates.
-Respond only in JSON. No preamble.`
+When asked for JSON, respond only in JSON. When asked for plain text, respond in plain text. No preamble.`
     });
   }
 
@@ -129,31 +129,40 @@ Respond only in JSON. No preamble.`
 
   // ── BOARDROOM THINK ────────────────────────────────────────────
   async boardroomThink(recentMessages) {
-    const repActivity = await this.checkRepActivity();
-    const msgContext = recentMessages.map(m => `[${m.from || m.agentId}]: ${m.message}`).join('\n');
+    const BaseAgent = require('./base-agent');
+    const standDown = BaseAgent.checkOwnerStandDown(recentMessages);
+    if (standDown === 'stand_down' || standDown === 'quiet') return null;
 
+    const repActivity = await this.checkRepActivity();
+    const msgContext = recentMessages.slice(-10).map(m => `[${m.from || m.agentId}]: ${m.message}`).join('\n');
     const inactive = repActivity.details?.filter(r => r.inactive) || [];
 
-    // Check Indeed applicants if configured
-    let indeedCount = null;
-    // Indeed doesn't have a public API but we can check our job_applications collection
+    let newApplicants = 0;
     try {
       const snap = await db.collection('job_applications').where('status', '==', 'new').get();
-      indeedCount = snap.size;
+      newApplicants = snap.size;
     } catch {}
 
-    const prompt = `You are the HR manager of TrashApp Junk Removal. People-focused, systematic.
+    const prompt = `You are the HR manager of TrashApp Junk Removal.
 
-TEAM: ${repActivity.activeReps} active reps, ${repActivity.inactiveReps} inactive.
-${inactive.length > 0 ? 'Inactive: ' + inactive.map(r => `${r.name} (${r.daysSinceLastSession}d)`).join(', ') : 'All reps active.'}
-New applicants: ${indeedCount !== null ? indeedCount : 'unknown'}.
+REAL DATA (from Firestore — report ONLY these, do NOT invent any):
+- Total reps: ${repActivity.totalReps || 0}
+- Active reps: ${repActivity.activeReps || 0}
+- Inactive reps: ${repActivity.inactiveReps || 0}
+${inactive.length > 0 ? '- Inactive details: ' + inactive.map(r => `${r.name} (${r.daysSinceLastSession}d since last session)`).join(', ') : '- All reps active'}
+- New applicants: ${newApplicants}
+${repActivity.totalReps === 0 ? '- NOTE: No reps in system yet. Say "no team data yet" — do NOT invent headcount or candidates.' : ''}
 
-RECENT BOARDROOM MESSAGES:
+RECENT MESSAGES:
 ${msgContext}
 
-Share a people update or react to discussion. If headcount is critical (<2), say so urgently. 1-3 sentences. Sign off with "— HR". If nothing to add, respond with exactly "null".`;
+RULES:
+- Only state the exact data above. Do NOT invent candidates, interviews, or performance issues.
+- 1-2 sentences max. Calm tone. No ALL CAPS. No "CRITICAL" or "EMERGENCY."
+- No JSON. Plain text. Sign off with "— HR".
+- If nothing to report, respond with exactly "null".`;
 
-    const response = await this.think(prompt, { maxTokens: 250 });
+    const response = await this.think(prompt, { maxTokens: 150 });
     if (!response || response.trim().toLowerCase() === 'null') return null;
     return response.trim();
   }

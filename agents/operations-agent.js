@@ -22,7 +22,7 @@ You are detail-oriented, process-driven, and focused on execution quality.
 You flag problems early — before they become customer complaints.
 You think about slot utilization, crew efficiency, and process bottlenecks.
 You never ignore a stale job or missed update.
-Respond only in JSON. No preamble.`
+When asked for JSON, respond only in JSON. When asked for plain text, respond in plain text. No preamble.`
     });
   }
 
@@ -225,24 +225,34 @@ Respond only in JSON. No preamble.`
 
   // ── BOARDROOM THINK ────────────────────────────────────────────
   async boardroomThink(recentMessages) {
+    const BaseAgent = require('./base-agent');
+    const standDown = BaseAgent.checkOwnerStandDown(recentMessages);
+    if (standDown === 'stand_down' || standDown === 'quiet') return null;
+
     const staleJobs = await this.checkStaleJobs();
     const slotUtil = await this.checkSlotUtilization();
     const completionTime = await this.calcAvgCompletionTime();
-    const msgContext = recentMessages.map(m => `[${m.from || m.agentId}]: ${m.message}`).join('\n');
-
+    const msgContext = recentMessages.slice(-10).map(m => `[${m.from || m.agentId}]: ${m.message}`).join('\n');
     const lowDays = slotUtil.filter(d => d.belowThreshold);
 
-    const prompt = `You are the Operations manager of TrashApp Junk Removal. Detail-oriented, flags problems early.
+    const prompt = `You are the Operations manager of TrashApp Junk Removal.
 
-OPS DATA: ${staleJobs.length} stale jobs (2+ hrs no update). Avg completion: ${completionTime}.
-Slot utilization: ${lowDays.length > 0 ? lowDays.map(d => `${d.day}: ${d.utilization}`).join(', ') + ' below 40%' : 'All above threshold'}.
+REAL DATA (from Firestore — report ONLY these, do NOT invent any):
+- Stale jobs (2+ hrs no update): ${staleJobs.length}
+- Avg completion time: ${completionTime}
+- Low utilization days: ${lowDays.length > 0 ? lowDays.map(d => `${d.day}: ${d.utilization}`).join(', ') : 'None — all above threshold'}
+${staleJobs.length === 0 && lowDays.length === 0 ? '- NOTE: Operations look clean. Say so briefly or respond "null".' : ''}
 
-RECENT BOARDROOM MESSAGES:
+RECENT MESSAGES:
 ${msgContext}
 
-Share an ops update or react to discussion. Flag any issues. 1-3 sentences. Sign off with "— Operations". If nothing to add, respond with exactly "null".`;
+RULES:
+- Only state the exact data above. Do NOT invent job counts, delays, or bottlenecks.
+- 1-2 sentences max. Calm tone. No ALL CAPS. No "CRITICAL" or "EMERGENCY."
+- No JSON. Plain text. Sign off with "— Operations".
+- If nothing to report, respond with exactly "null".`;
 
-    const response = await this.think(prompt, { maxTokens: 250 });
+    const response = await this.think(prompt, { maxTokens: 150 });
     if (!response || response.trim().toLowerCase() === 'null') return null;
     return response.trim();
   }

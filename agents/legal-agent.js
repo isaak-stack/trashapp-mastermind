@@ -22,7 +22,7 @@ You are cautious, precise, and protective. Never alarmist but never dismissive.
 You always specify exact deadlines and days remaining.
 You check: business licenses, insurance expiry, DBA renewals, Statement of Information, permits.
 When something is due within 30 days, you flag it immediately.
-Respond only in JSON. No preamble.`
+When asked for JSON, respond only in JSON. When asked for plain text, respond in plain text. No preamble.`
     });
   }
 
@@ -97,8 +97,12 @@ Respond only in JSON. No preamble.`
 
   // ── BOARDROOM THINK ────────────────────────────────────────────
   async boardroomThink(recentMessages) {
+    const BaseAgent = require('./base-agent');
+    const standDown = BaseAgent.checkOwnerStandDown(recentMessages);
+    if (standDown === 'stand_down' || standDown === 'quiet') return null;
+
     const legalConfig = await this.getLegalConfig();
-    const msgContext = recentMessages.map(m => `[${m.from || m.agentId}]: ${m.message}`).join('\n');
+    const msgContext = recentMessages.slice(-10).map(m => `[${m.from || m.agentId}]: ${m.message}`).join('\n');
 
     const upcoming = (legalConfig.filings || []).filter(f => {
       if (!f.renewalDate && !f.dueDate) return false;
@@ -107,19 +111,24 @@ Respond only in JSON. No preamble.`
       return daysLeft <= 60;
     });
 
-    const prompt = `You are the Legal agent at TrashApp Junk Removal. Cautious, precise, protective.
+    const prompt = `You are the Legal agent at TrashApp Junk Removal.
 
-LEGAL STATUS: ${upcoming.length > 0
-  ? `${upcoming.length} upcoming deadline(s): ${upcoming.map(f => f.type).join(', ')}.`
-  : 'No upcoming deadlines. Compliance looks clean.'}
-Entity: ${legalConfig.legalEntity || 'Unknown'}. Insurance: ${legalConfig.insurance?.type || 'Not recorded'}.
+REAL DATA (from Firestore — report ONLY these, do NOT invent any):
+- Upcoming deadlines (within 60 days): ${upcoming.length > 0 ? upcoming.map(f => f.type).join(', ') : 'None'}
+- Entity: ${legalConfig.legalEntity || 'Not recorded'}
+- Insurance: ${legalConfig.insurance?.type || 'Not recorded'}
+${upcoming.length === 0 ? '- NOTE: No legal deadlines. Only speak if someone discussed something with legal implications. Otherwise respond "null".' : ''}
 
-RECENT BOARDROOM MESSAGES:
+RECENT MESSAGES:
 ${msgContext}
 
-Only speak if there's a legal concern, compliance deadline, or someone discussed something with legal implications. 1-2 sentences. Sign off with "— Legal". If nothing to add, respond with exactly "null".`;
+RULES:
+- Only state the exact data above. Do NOT invent deadlines, fines, or compliance issues.
+- 1-2 sentences max. Calm, precise tone. No ALL CAPS.
+- No JSON. Plain text. Sign off with "— Legal".
+- If nothing to report, respond with exactly "null".`;
 
-    const response = await this.think(prompt, { maxTokens: 200 });
+    const response = await this.think(prompt, { maxTokens: 150 });
     if (!response || response.trim().toLowerCase() === 'null') return null;
     return response.trim();
   }

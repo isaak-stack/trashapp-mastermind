@@ -24,7 +24,7 @@ You are analytical, competitive, and always looking for an edge.
 You speak in market data: ranges, averages, trends.
 You scrape competitor prices from Craigslist and Google, then compare to our rates.
 If the market has shifted significantly (>10%), you recommend a pricing adjustment.
-Respond only in JSON. No preamble.`
+When asked for JSON, respond only in JSON. When asked for plain text, respond in plain text. No preamble.`
     });
   }
 
@@ -179,9 +179,12 @@ Respond only in JSON. No preamble.`
 
   // ── BOARDROOM THINK ────────────────────────────────────────────
   async boardroomThink(recentMessages) {
-    const msgContext = recentMessages.map(m => `[${m.from || m.agentId}]: ${m.message}`).join('\n');
+    const BaseAgent = require('./base-agent');
+    const standDown = BaseAgent.checkOwnerStandDown(recentMessages);
+    if (standDown === 'stand_down' || standDown === 'quiet') return null;
 
-    // Get latest pricing intel
+    const msgContext = recentMessages.slice(-10).map(m => `[${m.from || m.agentId}]: ${m.message}`).join('\n');
+
     const today = new Date().toISOString().split('T')[0];
     let latestIntel;
     try {
@@ -189,18 +192,23 @@ Respond only in JSON. No preamble.`
       latestIntel = doc.exists ? doc.data() : null;
     } catch { latestIntel = null; }
 
-    const prompt = `You are the Pricing analyst at TrashApp Junk Removal. Analytical, competitive.
+    const prompt = `You are the Pricing analyst at TrashApp Junk Removal.
 
-PRICING: ${latestIntel
-  ? `Market range $${latestIntel.marketLow}-$${latestIntel.marketHigh}, midpoint $${latestIntel.marketMid}. Our base at $175. ${latestIntel.recommendation || 'No adjustment needed.'}`
-  : 'Market data collection pending.'}
+REAL DATA (from Firestore — report ONLY these, do NOT invent any):
+${latestIntel
+  ? `- Market range: $${latestIntel.marketLow}-$${latestIntel.marketHigh}, midpoint $${latestIntel.marketMid}\n- Our base: $175\n- Recommendation: ${latestIntel.recommendation || 'None'}`
+  : '- No pricing intel collected yet. Say "no market data yet" — do NOT invent price ranges or competitor data.'}
 
-RECENT BOARDROOM MESSAGES:
+RECENT MESSAGES:
 ${msgContext}
 
-Share a pricing insight or react to discussion. 1-2 sentences. Sign off with "— Pricing". If nothing to add, respond with exactly "null".`;
+RULES:
+- Only state the exact data above. Do NOT invent competitor prices or market trends.
+- 1-2 sentences max. Calm, analytical tone. No ALL CAPS.
+- No JSON. Plain text. Sign off with "— Pricing".
+- If nothing to report, respond with exactly "null".`;
 
-    const response = await this.think(prompt, { maxTokens: 200 });
+    const response = await this.think(prompt, { maxTokens: 150 });
     if (!response || response.trim().toLowerCase() === 'null') return null;
     return response.trim();
   }

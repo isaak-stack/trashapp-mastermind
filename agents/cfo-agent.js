@@ -25,7 +25,7 @@ You always calculate: revenue - labor - dump fees - travel = margin.
 When you find a way to save money, you quantify it immediately.
 If margin drops below 50%, you sound the alarm.
 TrashApp is early-stage — cash flow is king.
-Respond only in JSON. No preamble.`
+When asked for JSON, respond only in JSON. When asked for plain text, respond in plain text. No preamble.`
     });
   }
 
@@ -207,42 +207,40 @@ Respond only in JSON. No preamble.`
 
   // ── BOARDROOM THINK ────────────────────────────────────────────
   async boardroomThink(recentMessages) {
+    const BaseAgent = require('./base-agent');
+    const standDown = BaseAgent.checkOwnerStandDown(recentMessages);
+    if (standDown === 'stand_down' || standDown === 'quiet') return null;
+
     const financials = await this.pullFinancials();
     const gasDoc = await db.collection('system_config').doc('gas_price').get();
-    const gasPrice = gasDoc.exists ? gasDoc.data().value : 4.60;
-    const msgContext = recentMessages.map(m => `[${m.from || m.agentId}]: ${m.message}`).join('\n');
+    const gasPrice = gasDoc.exists ? gasDoc.data().value : null;
+    const msgContext = recentMessages.slice(-10).map(m => `[${m.from || m.agentId}]: ${m.message}`).join('\n');
 
-    // Check if owner or CEO directed something at CFO
-    const directedAt = recentMessages.slice(-5).some(m =>
-      m.message && (m.message.toLowerCase().includes('cfo') || m.message.toLowerCase().includes('financial'))
-    );
+    const hasData = financials.jobCount > 0 || financials.totalRevenue > 0;
 
-    // Read QuickBooks data if configured
-    let qbData = null;
-    if (process.env.QB_ACCESS_TOKEN && process.env.QB_REALM_ID) {
-      try {
-        const axios = require('axios');
-        const res = await axios.get(`https://quickbooks.api.intuit.com/v3/company/${process.env.QB_REALM_ID}/reports/ProfitAndLoss?minorversion=65`, {
-          headers: { 'Authorization': `Bearer ${process.env.QB_ACCESS_TOKEN}`, 'Accept': 'application/json' },
-          timeout: 10000
-        });
-        qbData = res.data?.QueryResponse || res.data;
-      } catch (e) { /* QuickBooks not available */ }
-    }
+    const prompt = `You are the CFO of TrashApp Junk Removal.
 
-    const prompt = `You are the CFO of TrashApp Junk Removal. Speak in dollars and percentages.
+REAL FINANCIAL DATA (from Firestore — report ONLY these numbers, do NOT invent any):
+- Revenue this week: ${hasData ? this.formatCurrency(financials.totalRevenue) : 'No completed jobs yet'}
+- Labor cost: ${hasData ? this.formatCurrency(financials.totalLabor) : 'N/A'}
+- Dump fees: ${hasData ? this.formatCurrency(financials.totalDump) : 'N/A'}
+- Net profit: ${hasData ? this.formatCurrency(financials.netProfit) : 'N/A'}
+- Jobs completed: ${financials.jobCount || 0}
+- Avg ticket: ${financials.jobCount > 0 ? this.formatCurrency(financials.avgJobRevenue) : 'N/A'}
+- Gas price: ${gasPrice ? '$' + gasPrice + '/gal' : 'Not fetched yet'}
+- Low margin jobs: ${financials.lowMarginJobs?.length || 0}
+${financials.error ? '- Error: ' + financials.error : ''}
 
-FINANCIALS (7 days): Revenue ${this.formatCurrency(financials.totalRevenue)}, Labor ${this.formatCurrency(financials.totalLabor)}, Dump ${this.formatCurrency(financials.totalDump)}, Net ${this.formatCurrency(financials.netProfit)}. ${financials.jobCount} jobs, avg ticket ${this.formatCurrency(financials.avgJobRevenue)}.
-Gas: $${gasPrice}/gal. Low margin jobs: ${financials.lowMarginJobs?.length || 0}.
-${qbData ? 'QuickBooks data available.' : ''}
-
-RECENT BOARDROOM MESSAGES:
+RECENT MESSAGES:
 ${msgContext}
 
-${directedAt ? 'Someone asked about financials — respond directly.' : 'Share a quick financial update if relevant, or react to discussion.'}
-1-3 sentences. Sign off with "— CFO". If nothing financial to add, respond with exactly "null".`;
+RULES:
+- Only state the exact numbers above. If data is "N/A" or 0, say "no financial data yet."
+- 1-2 sentences max. Calm, factual tone. No ALL CAPS. No "CRITICAL" or "EMERGENCY."
+- No JSON. Plain text. Sign off with "— CFO".
+- If nothing to add, respond with exactly "null".`;
 
-    const response = await this.think(prompt, { maxTokens: 250 });
+    const response = await this.think(prompt, { maxTokens: 150 });
     if (!response || response.trim().toLowerCase() === 'null') return null;
     return response.trim();
   }

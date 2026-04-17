@@ -23,7 +23,7 @@ You are decisive, data-driven, and focused on growth.
 You never make decisions without data to back them up.
 You always consider cash flow — TrashApp is an early-stage operation.
 When you make recommendations, quantify the impact in dollars.
-Respond only in JSON. No preamble.`
+When asked for JSON, respond only in JSON. When asked for plain text, respond in plain text. No preamble.`
     });
   }
 
@@ -164,8 +164,18 @@ Respond only in JSON. No preamble.`
 
   // ── BOARDROOM THINK ────────────────────────────────────────────
   async boardroomThink(recentMessages) {
+    const BaseAgent = require('./base-agent');
+    const standDown = BaseAgent.checkOwnerStandDown(recentMessages);
+
+    // CEO handles stand-down: acknowledge and silence all agents
+    if (standDown === 'stand_down') {
+      return 'Understood, Isaak. Team is standing down. We\'ll be here when you need us. — CEO';
+    }
+    // Still standing down, stay quiet
+    if (standDown === 'quiet') return null;
+
     const metrics = await this.pullMetrics();
-    const msgContext = recentMessages.map(m =>
+    const msgContext = recentMessages.slice(-10).map(m =>
       `[${m.from || m.agentId}]: ${m.message}`
     ).join('\n');
 
@@ -177,38 +187,51 @@ Respond only in JSON. No preamble.`
     // Check if owner just spoke
     const ownerMsg = recentMessages.filter(m => m.type === 'owner_input').slice(-1)[0];
 
+    // Build data summary from REAL metrics only
+    const dataSummary = `REAL DATA (from Firestore — report exactly these numbers, do NOT invent or extrapolate):
+- Jobs completed this week: ${metrics.weeklyJobs || 0}
+- Revenue this week: ${metrics.weeklyRevenue ? this.formatCurrency(metrics.weeklyRevenue) : '$0'}
+- Active reps: ${metrics.activeReps || 0}
+- Doors knocked this week: ${metrics.weeklyDoors || 0}
+- Close rate: ${metrics.weeklyCloseRate || '0%'}
+- Slot utilization: ${metrics.slotUtilization || '0%'}
+- Total jobs all-time: ${metrics.totalJobsAllTime || 0}
+${metrics.error ? '- Data error: ' + metrics.error : ''}`;
+
+    const RULES = `RULES:
+- Only state numbers shown above. If a number is 0, say "no data yet" — do NOT invent figures.
+- 1-2 sentences max. Keep it calm and factual. No ALL CAPS. No "CRITICAL" or "EMERGENCY" language.
+- No JSON. Plain text only. Sign off with "— CEO".
+- If nothing meaningful to say, respond with exactly "null".`;
+
     let prompt;
     if (isSummaryTurn) {
-      prompt = `You are the CEO of TrashApp Junk Removal. Give a 30-minute boardroom summary.
+      prompt = `You are the CEO of TrashApp Junk Removal. Give a brief status update.
 
-METRICS: ${JSON.stringify(metrics)}
+${dataSummary}
 
-RECENT BOARDROOM MESSAGES:
-${msgContext}
-
-Write a 2-3 sentence executive snapshot: jobs, revenue, active reps. Then assign 1-2 tasks to specific agents by name (e.g. "CMO please..." or "HR please..."). Sign off with "— CEO".
-Keep it under 80 words. No JSON. Plain text only.`;
+${RULES}`;
     } else if (ownerMsg) {
-      prompt = `You are the CEO of TrashApp Junk Removal. The owner Isaak just said: "${ownerMsg.message}"
+      prompt = `You are the CEO of TrashApp Junk Removal. Isaak just said: "${ownerMsg.message}"
 
-METRICS: ${JSON.stringify(metrics)}
+${dataSummary}
 
-RECENT BOARDROOM MESSAGES:
+RECENT MESSAGES:
 ${msgContext}
 
-Respond directly to Isaak's message. If he asked a question, answer it with data. If he gave a directive, acknowledge and assign tasks to specific agents. 1-3 sentences. Sign off with "— CEO".`;
+Respond to Isaak directly using only the real data above. ${RULES}`;
     } else {
-      prompt = `You are the CEO of TrashApp Junk Removal. React to what's being discussed.
+      prompt = `You are the CEO of TrashApp Junk Removal.
 
-METRICS: ${JSON.stringify(metrics)}
+${dataSummary}
 
-RECENT BOARDROOM MESSAGES:
+RECENT MESSAGES:
 ${msgContext}
 
-Respond to the most relevant recent message. Add strategic insight or redirect the team if needed. 1-2 sentences max. Sign off with "— CEO". If nothing needs your input, respond with exactly "null".`;
+React briefly if relevant. ${RULES}`;
     }
 
-    const response = await this.think(prompt, { maxTokens: 300 });
+    const response = await this.think(prompt, { maxTokens: 200 });
     if (!response || response.trim().toLowerCase() === 'null') return null;
     return response.trim();
   }

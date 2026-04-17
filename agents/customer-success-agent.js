@@ -22,7 +22,7 @@ You are warm, proactive, and relationship-focused.
 You think long-term about customer lifetime value, not just single transactions.
 You track satisfaction, reviews, repeat customers, and follow-up timing.
 You draft review requests that feel personal, not automated.
-Respond only in JSON. No preamble.`
+When asked for JSON, respond only in JSON. When asked for plain text, respond in plain text. No preamble.`
     });
   }
 
@@ -164,35 +164,31 @@ Respond only in JSON. No preamble.`
 
   // ── BOARDROOM THINK ────────────────────────────────────────────
   async boardroomThink(recentMessages) {
+    const BaseAgent = require('./base-agent');
+    const standDown = BaseAgent.checkOwnerStandDown(recentMessages);
+    if (standDown === 'stand_down' || standDown === 'quiet') return null;
+
     const needsReview = await this.findNeedsReviewRequest();
     const repeats = await this.detectRepeatCustomers();
-    const msgContext = recentMessages.map(m => `[${m.from || m.agentId}]: ${m.message}`).join('\n');
+    const msgContext = recentMessages.slice(-10).map(m => `[${m.from || m.agentId}]: ${m.message}`).join('\n');
 
-    // Check Yelp reviews if configured
-    let yelpReviews = null;
-    if (process.env.YELP_API_KEY && process.env.YELP_BUSINESS_ID) {
-      try {
-        const axios = require('axios');
-        const res = await axios.get(`https://api.yelp.com/v3/businesses/${process.env.YELP_BUSINESS_ID}/reviews`, {
-          headers: { 'Authorization': `Bearer ${process.env.YELP_API_KEY}` },
-          params: { limit: 3, sort_by: 'newest' },
-          timeout: 10000
-        });
-        yelpReviews = res.data?.reviews?.map(r => ({ rating: r.rating, text: r.text?.substring(0, 60) })) || null;
-      } catch {}
-    }
+    const prompt = `You are Customer Success at TrashApp Junk Removal.
 
-    const prompt = `You are Customer Success at TrashApp Junk Removal. Warm, proactive, relationship-focused.
+REAL DATA (from Firestore — report ONLY these, do NOT invent any):
+- Jobs pending review request: ${needsReview.length}
+- Repeat customers detected: ${repeats.length}
+${needsReview.length === 0 && repeats.length === 0 ? '- NOTE: No customer data to report. Say "no customer activity yet" — do NOT invent reviews, ratings, or satisfaction scores.' : ''}
 
-CUSTOMER DATA: ${needsReview.length} jobs pending review request. ${repeats.length} repeat customers detected.
-${yelpReviews ? `Latest Yelp: ${yelpReviews.map(r => `${r.rating}★ "${r.text}..."`).join('; ')}` : ''}
-
-RECENT BOARDROOM MESSAGES:
+RECENT MESSAGES:
 ${msgContext}
 
-Share a customer update or react to discussion. Mention review collection progress, repeat customers, or Yelp sentiment. 1-3 sentences. Sign off with "— Customer Success". If nothing to add, respond with exactly "null".`;
+RULES:
+- Only state the exact data above. Do NOT invent Yelp reviews, NPS scores, or customer feedback.
+- 1-2 sentences max. Warm but factual tone. No ALL CAPS.
+- No JSON. Plain text. Sign off with "— Customer Success".
+- If nothing to report, respond with exactly "null".`;
 
-    const response = await this.think(prompt, { maxTokens: 250 });
+    const response = await this.think(prompt, { maxTokens: 150 });
     if (!response || response.trim().toLowerCase() === 'null') return null;
     return response.trim();
   }
