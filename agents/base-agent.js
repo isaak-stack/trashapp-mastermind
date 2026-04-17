@@ -10,7 +10,7 @@ const Anthropic = require('@anthropic-ai/sdk');
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-const STAND_DOWN_WORDS = ['stop', 'pause', 'calm', 'stand down', 'enough', 'quiet', 'shut up', 'silence', 'hold', 'wait'];
+const STAND_DOWN_WORDS = ['stop', 'pause', 'calm', 'stand down', 'enough', 'quiet', 'shut up', 'silence', 'hold', 'wait', 'get back to you', 'no further', 'sorted out', 'let me', 'give me'];
 
 class BaseAgent {
   constructor(config) {
