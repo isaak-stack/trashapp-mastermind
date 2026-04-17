@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TrashApp — Admin Console v1.8.2</title>
+<title>TrashApp — Admin Console v1.9.0</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%231a1a1a'/%3E%3Crect x='28' y='36' width='44' height='46' rx='6' fill='%23F5A623'/%3E%3Crect x='20' y='27' width='60' height='11' rx='5' fill='%23F5A623'/%3E%3Crect x='40' y='16' width='20' height='13' rx='4' fill='%23F5A623'/%3E%3Crect x='40' y='49' width='6' height='22' rx='3' fill='%231a1a1a'/%3E%3Crect x='54' y='49' width='6' height='22' rx='3' fill='%231a1a1a'/%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDtkh_G25Kr6YaAeNJOd9D9YJuyZnKvu08&libraries=places,geocoding" async defer></script>
@@ -1234,6 +1234,7 @@ select.inline-input{cursor:pointer}
           <button class="aios-tab" onclick="showAIOSTab('approvals')" id="aios-tab-approvals">Pending Approvals <span id="aios-approval-count" class="aios-badge">0</span></button>
           <button class="aios-tab" onclick="showAIOSTab('meeting')" id="aios-tab-meeting">Staff Meeting</button>
           <button class="aios-tab" onclick="showAIOSTab('content')" id="aios-tab-content">Content Queue</button>
+          <button class="aios-tab" onclick="showAIOSTab('boardroom')" id="aios-tab-boardroom">🏛️ Boardroom</button>
         </div>
 
         <!-- 6A: Agent Status Grid -->
@@ -1278,6 +1279,24 @@ select.inline-input{cursor:pointer}
             </div>
           </div>
         </div>
+
+        <!-- 6E: AI Boardroom -->
+        <div id="aios-panel-boardroom" class="aios-panel" style="display:none">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-header-title">🏛️ AI Boardroom <span id="boardroom-live-dot" style="display:inline-block;width:8px;height:8px;background:var(--green);border-radius:50%;margin-left:8px;animation:pulse 2s infinite"></span></div>
+              <div style="font-size:11px;color:var(--gray)">Live agent conversation • Continuous mode</div>
+            </div>
+            <div id="boardroom-feed" style="height:500px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding:16px;background:var(--bg-card,#111113);border-radius:12px;margin-bottom:12px;scroll-behavior:smooth">
+              <div style="text-align:center;padding:2rem;color:var(--gray)">Connecting to boardroom...</div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <input id="boardroom-input" type="text" placeholder="Message your team..." style="flex:1;padding:12px 16px;background:var(--card2,#1A1A1F);border:1px solid var(--border);border-radius:8px;color:var(--white);font-family:'Inter','DM Sans',sans-serif;font-size:14px" onkeydown="if(event.key==='Enter')sendBoardroomMessage()">
+              <button onclick="sendBoardroomMessage()" class="btn-primary" style="padding:12px 20px;white-space:nowrap">Send</button>
+            </div>
+          </div>
+        </div>
+
       </div>
 </div>
 
@@ -3523,12 +3542,14 @@ window.loadAIOS = async () => {
   aiosUnsubs.forEach(u => u());
   aiosUnsubs = [];
   if (aiosMeetingUnsub) { aiosMeetingUnsub(); aiosMeetingUnsub = null; }
+  if (window._boardroomUnsub) { window._boardroomUnsub(); window._boardroomUnsub = null; }
 
   // Load all sub-sections
   loadAgentStatus();
   loadAgentApprovals();
   loadMeetingList();
   loadContentQueue();
+  loadBoardroomFeed();
 };
 
 function loadAgentStatus() {
@@ -3723,6 +3744,81 @@ window.copyContentText = (id) => {
     const text = (data.title ? data.title + '\n\n' : '') + (data.body || '');
     navigator.clipboard.writeText(text).then(() => showToast('Copied to clipboard'));
   }
+};
+
+// ── BOARDROOM ──────────────────────────────────────────────────────
+const AGENT_COLORS = {
+  'CEO':'#F5A623','CFO':'#2ECC71','CMO':'#3498DB','Operations':'#E67E22',
+  'HR':'#9B59B6','Training':'#1ABC9C','Customer Success':'#F39C12',
+  'Legal':'#7F8C8D','Pricing':'#E74C3C'
+};
+
+function renderBoardroomMessage(msg) {
+  const isOwner = msg.from === 'owner' || msg.type === 'owner_input';
+  const time = msg.timestamp?.toDate ? msg.timestamp.toDate() : (msg.timestamp ? new Date(msg.timestamp) : new Date());
+  const agentColor = AGENT_COLORS[msg.from] || 'var(--gold)';
+  return `<div style="display:flex;flex-direction:column;align-items:${isOwner ? 'flex-end' : 'flex-start'}">
+    <div style="max-width:80%;background:${isOwner ? 'rgba(245,166,35,0.15)' : 'var(--card2,#1A1A1F)'};border:1px solid ${isOwner ? 'rgba(245,166,35,0.3)' : 'var(--border)'};color:var(--white);padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.5">
+      <div style="font-weight:700;margin-bottom:4px;color:${isOwner ? 'var(--gold)' : agentColor}">${isOwner ? '👑 You' : (msg.emoji || '🤖') + ' ' + (msg.from || 'Agent')}</div>
+      <div>${escapeHtml(msg.message || '')}</div>
+    </div>
+    <div style="font-size:10px;color:var(--text-tertiary,#666);margin-top:4px">${time.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})} · ${time.toLocaleDateString()}</div>
+  </div>`;
+}
+
+function loadBoardroomFeed() {
+  const feed = document.getElementById('boardroom-feed');
+  if (!feed) return;
+
+  // Clean up previous subscription
+  if (window._boardroomUnsub) { window._boardroomUnsub(); window._boardroomUnsub = null; }
+
+  const q = query(collection(db, 'agent_messages'),
+    where('type', 'in', ['boardroom', 'owner_input']),
+    orderBy('timestamp', 'desc'),
+    limit(50)
+  );
+
+  let isFirstLoad = true;
+  window._boardroomUnsub = onSnapshot(q, snap => {
+    if (snap.empty) {
+      feed.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--gray)">No boardroom messages yet. Agents will start posting when the Mastermind server is running.</div>';
+      return;
+    }
+    const messages = snap.docs.map(d => ({ id: d.id, ...d.data() })).reverse();
+    feed.innerHTML = messages.map(renderBoardroomMessage).join('');
+
+    // Auto-scroll to bottom
+    requestAnimationFrame(() => { feed.scrollTop = feed.scrollHeight; });
+    isFirstLoad = false;
+  }, err => {
+    if (err.code === 'permission-denied') return;
+    console.error('Boardroom feed error:', err);
+    feed.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--red)">Failed to connect to boardroom</div>';
+  });
+  aiosUnsubs.push(window._boardroomUnsub);
+}
+
+window.sendBoardroomMessage = async () => {
+  const input = document.getElementById('boardroom-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  input.disabled = true;
+  try {
+    await addDoc(collection(db, 'agent_messages'), {
+      from: 'owner',
+      emoji: '👑',
+      message: text,
+      timestamp: serverTimestamp(),
+      type: 'owner_input'
+    });
+  } catch (e) {
+    showToast('Failed to send: ' + e.message, 'error');
+    input.value = text; // restore on failure
+  }
+  input.disabled = false;
+  input.focus();
 };
 
 function timeAgo(date) {
