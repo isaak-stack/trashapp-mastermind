@@ -299,21 +299,28 @@ async function runBoardroom() {
     logger.log('boardroom', 'WARN', 'CEO opening failed: ' + e.message);
   }
 
+  const lastPosted = new Map(); // agentId -> timestamp ms
+
   while (true) {
     for (const agent of agentList) {
       try {
+        // Skip if this agent posted within the last 5 minutes
+        const lastTime = lastPosted.get(agent.agentId) || 0;
+        if (Date.now() - lastTime < 5 * 60 * 1000) continue;
+
         const recent = await getRecentMessages(20);
         const shouldRespond = agentShouldRespond(agent, recent);
         if (shouldRespond) {
           const response = await agent.boardroomThink(recent);
           if (response) {
             await postMessage(agent.agentId, agent.agentName, agent.emoji, response);
+            lastPosted.set(agent.agentId, Date.now());
           }
         }
       } catch (e) {
         logger.log('boardroom', 'ERROR', `${agent.agentName} error: ${e.message}`);
       }
-      await sleep(3000); // 3s between agents
+      await sleep(5000); // 5s between agents
     }
     await sleep(10000); // 10s between full cycles
   }
