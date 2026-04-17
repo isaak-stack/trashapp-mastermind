@@ -198,7 +198,7 @@ async function getRecentMessages(n = 20) {
  *  7. Owner message recency (only respond if owner spoke within 15 min)
  */
 function agentShouldRespond(agent, messages, lastPosted) {
-  const BaseAgent = require('./base-agent');
+  const BaseAgent = require('./agents/base-agent');
   const agentId = agent.agentId;
   const agentName = agent.agentName.toLowerCase();
 
