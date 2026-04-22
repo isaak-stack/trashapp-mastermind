@@ -214,6 +214,51 @@ match /commissions/{commissionId} {
     match /daily_financials/{docId} {
       allow read, write: if isAdmin();
     }
+
+    // ── CREW MEMBERS ─────────────────────────────────────────
+    // Crew dashboard authorization check — any signed-in user can
+    // read (to check their own membership); only admin writes.
+    match /crew_members/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.token.phone_number in ['+15597744249', '+19096729370'];
+    }
+
+    // ── SANDBOX COLLECTIONS ──────────────────────────────────
+    // Admin sandbox/demo mode — writes go here instead of real
+    // collections. Any signed-in user can read/write; data is
+    // wiped automatically by the client on sign out.
+    // NOTE: Firestore rules don't support wildcards on collection
+    // names, so each sandbox_* collection needs an explicit rule.
+    match /sandbox_jobs/{docId} { allow read, write: if request.auth != null; }
+    match /sandbox_doors/{docId} { allow read, write: if request.auth != null; }
+    match /sandbox_rep_sessions/{docId} { allow read, write: if request.auth != null; }
+    match /sandbox_crew_sessions/{docId} { allow read, write: if request.auth != null; }
+    match /sandbox_leads/{docId} { allow read, write: if request.auth != null; }
+    match /sandbox_commissions/{docId} { allow read, write: if request.auth != null; }
+    match /sandbox_pending_notifications/{docId} { allow read, write: if request.auth != null; }
+    match /sandbox_reps/{docId} { allow read, write: if request.auth != null; }
+    match /sandbox_sessions/{docId} { allow read, write: if request.auth != null; }
+    match /sandbox_live_reps/{docId} { allow read, write: if request.auth != null; }
+    match /sandbox_crew_locations/{docId} { allow read, write: if request.auth != null; }
+    match /sandbox_scripts/{docId} { allow read, write: if request.auth != null; }
+    match /sandbox_customers/{docId} { allow read, write: if request.auth != null; }
+    match /sandbox_admin_notifications/{docId} { allow read, write: if request.auth != null; }
+    match /sandbox_daily_summary/{docId} { allow read, write: if request.auth != null; }
+    match /sandbox_client_errors/{docId} { allow read, write: if request.auth != null; }
+    match /sandbox_job_slots/{docId} { allow read, write: if request.auth != null; }
+    match /sandbox_broadcasts/{docId} { allow read, write: if request.auth != null; }
+    match /sandbox_crews/{docId} { allow read, write: if request.auth != null; }
+    match /sandbox_social_posts/{docId} { allow read, write: if request.auth != null; }
+    match /sandbox_system_logs/{docId} { allow read, write: if request.auth != null; }
+    match /sandbox_agent_messages/{docId} { allow read, write: if request.auth != null; }
+    match /sandbox_crew_members/{docId} { allow read, write: if request.auth != null; }
+    match /sandbox_system_config/{docId} { allow read, write: if request.auth != null; }
+    match /sandbox_territory_assignments/{docId} { allow read, write: if request.auth != null; }
+    match /sandbox_pending_approvals/{docId} { allow read, write: if request.auth != null; }
+    match /sandbox_content_queue/{docId} { allow read, write: if request.auth != null; }
+    match /sandbox_review_queue/{docId} { allow read, write: if request.auth != null; }
+    match /sandbox_daily_financials/{docId} { allow read, write: if request.auth != null; }
+
     // ── DENY ALL ELSE ────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TrashApp — Admin Console v1.9.5</title>
+<title>TrashApp — Admin Console v1.9.7</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%231a1a1a'/%3E%3Crect x='28' y='36' width='44' height='46' rx='6' fill='%23F5A623'/%3E%3Crect x='20' y='27' width='60' height='11' rx='5' fill='%23F5A623'/%3E%3Crect x='40' y='16' width='20' height='13' rx='4' fill='%23F5A623'/%3E%3Crect x='40' y='49' width='6' height='22' rx='3' fill='%231a1a1a'/%3E%3Crect x='54' y='49' width='6' height='22' rx='3' fill='%231a1a1a'/%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDtkh_G25Kr6YaAeNJOd9D9YJuyZnKvu08&libraries=places,geocoding" async defer></script>
@@ -533,6 +533,18 @@ select.inline-input{cursor:pointer}
       <button class="hamburger-btn" onclick="toggleSidebar()">☰</button>
       <div class="topbar-title" id="topbar-title">Overview</div>
       <div class="topbar-right">
+        <!-- Sandbox launcher — opens each platform in a new tab with ?sandbox=true -->
+        <div id="sandbox-launcher" style="position:relative">
+          <button id="sandbox-launcher-btn" type="button" onclick="toggleSandboxMenu(event)" style="background:rgba(245,166,35,0.12);border:1px solid rgba(245,166,35,0.4);color:var(--gold);font-size:12px;font-weight:700;padding:5px 10px;border-radius:6px;cursor:pointer;font-family:'Inter','DM Sans',sans-serif;letter-spacing:.2px">&#x1F9EA; Sandbox &#x25BE;</button>
+          <div id="sandbox-launcher-menu" style="display:none;position:absolute;right:0;top:calc(100% + 6px);background:var(--card2);border:1px solid var(--border-strong,rgba(255,255,255,0.12));border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,0.6);min-width:200px;z-index:1000;padding:6px 0">
+            <a href="https://quote.trashappjunkremoval.com/?sandbox=true" target="_blank" style="display:block;padding:8px 14px;color:var(--white);text-decoration:none;font-size:13px;font-weight:600">Test Quote &rarr;</a>
+            <a href="https://reps.trashappjunkremoval.com/?sandbox=true" target="_blank" style="display:block;padding:8px 14px;color:var(--white);text-decoration:none;font-size:13px;font-weight:600">Test Rep Platform &rarr;</a>
+            <a href="https://crew.trashappjunkremoval.com/?sandbox=true" target="_blank" style="display:block;padding:8px 14px;color:var(--white);text-decoration:none;font-size:13px;font-weight:600">Test Crew Dashboard &rarr;</a>
+            <div style="border-top:1px solid var(--border);margin:4px 0"></div>
+            <a href="?sandbox=true" target="_blank" style="display:block;padding:8px 14px;color:var(--gold);text-decoration:none;font-size:13px;font-weight:600">Test Admin Console &rarr;</a>
+          </div>
+        </div>
+        <span style="color:var(--border)">|</span>
         <a href="https://reps.trashappjunkremoval.com" target="_blank" style="color:var(--gold);text-decoration:none;font-size:12px;font-weight:600">View Rep Platform →</a>
         <span style="color:var(--border)">|</span>
         <a href="#" onclick="showView('crews');return false;" style="color:var(--blue);text-decoration:none;font-size:12px;font-weight:600">Crew Dashboard →</a>
@@ -1324,6 +1336,91 @@ window.deleteDoc = deleteDoc; window.orderBy = orderBy; window.limit = limit; wi
 window.onAuthStateChanged = onAuthStateChanged; window.signOut = signOut;
 window.RecaptchaVerifier = RecaptchaVerifier; window.signInWithPhoneNumber = signInWithPhoneNumber;
 
+// ── SANDBOX MODE (admin-console v1.9.6) ─────────────────────
+// Activated by adding ?sandbox=true. Redirects all Firestore
+// WRITES to sandbox_* collections. Stripe + Twilio disabled.
+// Tracked docs are deleted on admin sign out.
+window.SANDBOX_MODE = new URLSearchParams(window.location.search).get('sandbox') === 'true';
+window._sandboxRefs = [];
+window.sandboxCollection = function(name) {
+  return window.SANDBOX_MODE ? 'sandbox_' + name : name;
+};
+window.trackSandboxWrite = function(docRef) {
+  if (window.SANDBOX_MODE && docRef) window._sandboxRefs.push(docRef);
+};
+window.cleanupSandboxSession = async function() {
+  if (!window.SANDBOX_MODE || !window._sandboxRefs.length) return;
+  console.log('[Sandbox] Cleaning up', window._sandboxRefs.length, 'test records...');
+  const refs = window._sandboxRefs.slice();
+  window._sandboxRefs = [];
+  for (const ref of refs) {
+    try { await deleteDoc(ref); } catch (e) { /* ignore */ }
+  }
+  console.log('[Sandbox] Cleanup complete.');
+};
+window.showSandboxBanner = function() {
+  if (!window.SANDBOX_MODE) return;
+  if (document.getElementById('sandbox-banner')) return;
+  const banner = document.createElement('div');
+  banner.id = 'sandbox-banner';
+  banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#f59e0b;color:#000;text-align:center;padding:8px 16px;font-weight:700;font-size:13px;font-family:Inter,sans-serif;letter-spacing:.3px;';
+  banner.textContent = '\uD83E\uDDEA SANDBOX MODE \u2014 Test freely. All data deleted on sign out.';
+  document.body.prepend(banner);
+  document.body.style.paddingTop = '36px';
+};
+const sandboxCollection = window.sandboxCollection;
+const trackSandboxWrite = window.trackSandboxWrite;
+const cleanupSandboxSession = window.cleanupSandboxSession;
+
+// Tracked write helpers — redirect collection to sandbox_* in sandbox mode
+const _sbCol = (name) => collection(db, sandboxCollection(name));
+const _sbDoc = (name, id) => doc(db, sandboxCollection(name), id);
+const _sbAddDoc = async (name, data) => {
+  const ref = await addDoc(_sbCol(name), data);
+  if (window.SANDBOX_MODE) window._sandboxRefs.push(ref);
+  return ref;
+};
+const _sbAddSubDoc = async (parentName, parentId, subName, data) => {
+  const ref = await addDoc(collection(db, sandboxCollection(parentName), parentId, subName), data);
+  if (window.SANDBOX_MODE) window._sandboxRefs.push(ref);
+  return ref;
+};
+const _sbSetDoc = async (name, id, data, opts) => {
+  const ref = _sbDoc(name, id);
+  const r = opts !== undefined ? await setDoc(ref, data, opts) : await setDoc(ref, data);
+  if (window.SANDBOX_MODE) window._sandboxRefs.push(ref);
+  return r;
+};
+const _sbUpdateDoc = async (name, id, data) => {
+  const ref = _sbDoc(name, id);
+  const r = await updateDoc(ref, data);
+  if (window.SANDBOX_MODE) window._sandboxRefs.push(ref);
+  return r;
+};
+const _sbDeleteDoc = async (name, id) => {
+  return deleteDoc(_sbDoc(name, id));
+};
+
+// Topbar sandbox launcher — toggles dropdown
+window.toggleSandboxMenu = function(evt) {
+  if (evt) { evt.preventDefault(); evt.stopPropagation(); }
+  const menu = document.getElementById('sandbox-launcher-menu');
+  if (!menu) return;
+  const isOpen = menu.style.display === 'block';
+  menu.style.display = isOpen ? 'none' : 'block';
+};
+document.addEventListener('click', (e) => {
+  const launcher = document.getElementById('sandbox-launcher');
+  const menu = document.getElementById('sandbox-launcher-menu');
+  if (menu && launcher && !launcher.contains(e.target)) menu.style.display = 'none';
+});
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', window.showSandboxBanner);
+} else {
+  window.showSandboxBanner();
+}
+
 // ── PHONE AUTH TEST MODE ──
 // Test phone numbers (must also be configured in Firebase Console → Authentication → Phone → Test numbers):
 // +15597744249 → 123456, +19096729370 → 000000
@@ -1405,10 +1502,10 @@ const SOCIAL_CONNECTION_FALLBACK = [
 
 // ── ERROR HANDLING ──
 window.onerror=(msg,src,line,col,err)=>{
-  try{addDoc(collection(db,'client_errors'),{message:String(msg),source:src||'',line:line||0,col:col||0,stack:err?.stack||'',page:'admin-console',userAgent:navigator.userAgent,timestamp:serverTimestamp()});}catch(e){}
+  try{_sbAddDoc('client_errors',{message:String(msg),source:src||'',line:line||0,col:col||0,stack:err?.stack||'',page:'admin-console',userAgent:navigator.userAgent,timestamp:serverTimestamp()});}catch(e){}
 };
 window.addEventListener('unhandledrejection',e=>{
-  try{addDoc(collection(db,'client_errors'),{message:String(e.reason),source:'promise',line:0,col:0,stack:e.reason?.stack||'',page:'admin-console',userAgent:navigator.userAgent,timestamp:serverTimestamp()});}catch(ex){}
+  try{_sbAddDoc('client_errors',{message:String(e.reason),source:'promise',line:0,col:0,stack:e.reason?.stack||'',page:'admin-console',userAgent:navigator.userAgent,timestamp:serverTimestamp()});}catch(ex){}
 });
 
 function _errorBannerId(section) {
@@ -1465,13 +1562,13 @@ onAuthStateChanged(auth, async user => {
     window.currentAdmin = user;
     const snap = await getDoc(doc(db,'reps',user.uid));
     if(!snap.exists()) {
-      await setDoc(doc(db,'reps',user.uid),{
+      await _sbSetDoc('reps',user.uid,{
         name:'Admin',phone:user.phoneNumber,status:'approved',role:'owner',
         commission:0,zipCode:null,doorsKnocked:0,dealsClosedTotal:0,commissionEarned:0,
         createdAt:serverTimestamp()
       });
     } else if(snap.data().role!=='owner'&&snap.data().role!=='admin') {
-      await updateDoc(doc(db,'reps',user.uid),{role:'owner',status:'approved'});
+      await _sbUpdateDoc('reps',user.uid,{role:'owner',status:'approved'});
     }
     const repData = snap.exists() ? snap.data() : {name:'Admin'};
     document.getElementById('admin-user-name').textContent = repData.name||'Admin';
@@ -1565,6 +1662,7 @@ window.resetAdminAuth = () => {
 
 window.adminSignOut = async () => {
   if(!confirm('Sign out?'))return;
+  try { await cleanupSandboxSession(); } catch(_){}
   unsubs.forEach(u=>u()); unsubs=[];
   await signOut(auth);
 };
@@ -1712,12 +1810,12 @@ async function loadOverview() {
 }
 
 window.quickApprove = async id => {
-  await updateDoc(doc(db,'reps',id),{status:'approved'});
+  await _sbUpdateDoc('reps',id,{status:'approved'});
   loadOverview(); loadReps();
 };
 window.quickDeny = async id => {
   if(!confirm('Deny and remove this rep?'))return;
-  await updateDoc(doc(db,'reps',id),{status:'denied'});
+  await _sbUpdateDoc('reps',id,{status:'denied'});
   loadOverview(); loadReps();
 };
 
@@ -1726,7 +1824,7 @@ window.approveAllPending = async () => {
   try {
     const pendingSnap = await getDocs(query(collection(db,'reps'),where('status','==','pending')));
     for(const d of pendingSnap.docs) {
-      await updateDoc(doc(db,'reps',d.id),{status:'approved'});
+      await _sbUpdateDoc('reps',d.id,{status:'approved'});
     }
     loadOverview(); loadReps();
   }catch(e){
@@ -1793,7 +1891,7 @@ window.saveRepChanges = async id => {
   const comm = parseFloat(document.getElementById('comm-'+id).value)||15;
   const role = document.getElementById('role-'+id).value;
   try{
-    await updateDoc(doc(db,'reps',id),{zipCode:zip,commission:comm,role:role});
+    await _sbUpdateDoc('reps',id,{zipCode:zip,commission:comm,role:role});
     loadReps();
   }catch(e){showToast('Error: '+e.message, 'error');}
 };
@@ -1801,7 +1899,7 @@ window.saveRepChanges = async id => {
 window.removeRep = async id => {
   if(!confirm('Remove this rep? They will be soft-deleted and can be restored later.'))return;
   try{
-    await updateDoc(doc(db,'reps',id),{status:'deleted',deletedAt:serverTimestamp(),deletedBy:currentUser.uid});
+    await _sbUpdateDoc('reps',id,{status:'deleted',deletedAt:serverTimestamp(),deletedBy:currentUser.uid});
     loadReps();
   }catch(e){showToast('Error: '+e.message, 'error');}
 };
@@ -1809,7 +1907,7 @@ window.removeRep = async id => {
 window.restoreRep = async id => {
   if(!confirm('Restore this rep to pending status?'))return;
   try{
-    await updateDoc(doc(db,'reps',id),{status:'pending',deletedAt:null,deletedBy:null});
+    await _sbUpdateDoc('reps',id,{status:'pending',deletedAt:null,deletedBy:null});
     loadReps();
   }catch(e){showToast('Error: '+e.message, 'error');}
 };
@@ -2002,7 +2100,7 @@ window.publishScript = async () => {
   const body = document.getElementById('script-body').value.trim();
   if(!title||!body){showToast('Enter title and body', 'warning');return;}
   try{
-    await addDoc(collection(db,'scripts'),{title,body,publishedAt:serverTimestamp(),author:'Admin'});
+    await _sbAddDoc('scripts',{title,body,publishedAt:serverTimestamp(),author:'Admin'});
     document.getElementById('script-title').value='';
     document.getElementById('script-body').value='';
     loadAdminScripts();
@@ -2036,7 +2134,7 @@ window.loadAdminScripts = async () => {
 window.deleteScript = async id => {
   if(!confirm('Delete script?'))return;
   try{
-    await deleteDoc(doc(db,'scripts',id));
+    await _sbDeleteDoc('scripts',id);
     loadAdminScripts();
   }catch(e){showToast('Error: '+e.message, 'error');}
 };
@@ -2241,7 +2339,7 @@ window.loadTerritories = async () => {
 window.saveTerritoryZips = async id => {
   const zips = document.getElementById('terr-zip-'+id).value.split(',').map(z=>z.trim()).filter(z=>z);
   try{
-    await updateDoc(doc(db,'territories',id),{zipCodes:zips});
+    await _sbUpdateDoc('territories',id,{zipCodes:zips});
     loadTerritories();
   }catch(e){showToast('Error: '+e.message, 'error');}
 };
@@ -2252,7 +2350,7 @@ window.sendBroadcast = async () => {
   const msg = document.getElementById('broadcast-msg').value.trim();
   if(!title||!msg){showToast('Enter title and message', 'warning');return;}
   try{
-    await addDoc(collection(db,'broadcasts'),{title,message:msg,sentAt:serverTimestamp(),sentBy:'Admin'});
+    await _sbAddDoc('broadcasts',{title,message:msg,sentAt:serverTimestamp(),sentBy:'Admin'});
     document.getElementById('broadcast-title').value='';
     document.getElementById('broadcast-msg').value='';
     loadBroadcasts();
@@ -2417,13 +2515,13 @@ window.jobDetailAction = async (action) => {
   if(!_currentJobDetailId) return;
   try{
     if(action==='paid'){
-      await updateDoc(doc(db,'jobs',_currentJobDetailId),{status:'PAID',paidAt:serverTimestamp()});
+      await _sbUpdateDoc('jobs',_currentJobDetailId,{status:'PAID',paidAt:serverTimestamp()});
     }else if(action==='reassign'){
       const crew = prompt('Enter new crew name/ID:');
-      if(crew) await updateDoc(doc(db,'jobs',_currentJobDetailId),{crewAssigned:crew});
+      if(crew) await _sbUpdateDoc('jobs',_currentJobDetailId,{crewAssigned:crew});
     }else if(action==='cancel'){
       if(!confirm('Cancel this job?')) return;
-      await updateDoc(doc(db,'jobs',_currentJobDetailId),{status:'CANCELLED',cancelledAt:serverTimestamp()});
+      await _sbUpdateDoc('jobs',_currentJobDetailId,{status:'CANCELLED',cancelledAt:serverTimestamp()});
     }
     closeJobDetail();
     loadJobsKanban();
@@ -2462,7 +2560,7 @@ window.sendJobReply = async () => {
   const message = input?.value?.trim();
   if(!message || !_currentJobDetailId) return;
   try {
-    await addDoc(collection(db,'jobs',_currentJobDetailId,'messages'),{
+    await _sbAddSubDoc('jobs',_currentJobDetailId,'messages',{
       from:'admin',
       body:message,
       receivedAt:serverTimestamp()
@@ -2508,7 +2606,7 @@ window.loadPayouts = async () => {
 
 window.updateCommissionStatus = async (id,status) => {
   try{
-    await updateDoc(doc(db,'commissions',id),{status});
+    await _sbUpdateDoc('commissions',id,{status});
     loadPayouts();
   }catch(e){showToast('Error: '+e.message, 'error');}
 };
@@ -2589,7 +2687,7 @@ window.loadFinancials = async () => {
 
 window.approveFinancialDay = async id => {
   try{
-    await updateDoc(doc(db,'daily_financials',id),{status:'approved'});
+    await _sbUpdateDoc('daily_financials',id,{status:'approved'});
     loadFinancials();
   }catch(e){showToast('Error: '+e.message, 'error');}
 };
@@ -2622,7 +2720,7 @@ window.addCrew = async () => {
   const zones = document.getElementById('crew-zones').value.split(',').map(z=>z.trim()).filter(z=>z);
   if(!name||!phone){showToast('Enter name and phone', 'warning');return;}
   try{
-    await addDoc(collection(db,'crews'),{name,phone,hourlyRate:rate,zones,status:'active',createdAt:serverTimestamp()});
+    await _sbAddDoc('crews',{name,phone,hourlyRate:rate,zones,status:'active',createdAt:serverTimestamp()});
     document.getElementById('crew-name').value='';
     document.getElementById('crew-phone').value='';
     document.getElementById('crew-rate').value='';
@@ -2634,7 +2732,7 @@ window.addCrew = async () => {
 window.removeCrew = async id => {
   if(!confirm('Remove crew?'))return;
   try{
-    await deleteDoc(doc(db,'crews',id));
+    await _sbDeleteDoc('crews',id);
     loadCrews();
   }catch(e){showToast('Error: '+e.message, 'error');}
 };
@@ -2701,7 +2799,7 @@ window.bulkSendReviewed = async () => {
 
   try{
     for(const id of _selectedReviewIds){
-      await updateDoc(doc(db,'review_queue',id),{confirmedPrice,status:'QUOTE_SENT',sentAt:serverTimestamp()});
+      await _sbUpdateDoc('review_queue',id,{confirmedPrice,status:'QUOTE_SENT',sentAt:serverTimestamp()});
     }
     _selectedReviewIds = [];
     loadReviewQueue();
@@ -2764,21 +2862,29 @@ async function checkApiHealth(){
   } catch(e) {
     results.push({ name: 'Firebase', status: 'error', error: e.message });
   }
-  // 3. Dashboard server
+  // 3. Mastermind API (via Railway HTTPS proxy — avoids mixed-content blocking
+  //    that kills a direct localhost:3000 ping from admin.trashappjunkremoval.com)
   try {
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), 5000);
-    const r = await fetch('/health', { signal: ctrl.signal });
+    const r = await fetch('https://junk-quote-api-production.up.railway.app/mastermind/health', { signal: ctrl.signal });
     clearTimeout(t);
     const data = await r.json();
-    results.push({ name: 'Dashboard', status: data.status === 'ok' ? 'online' : 'degraded' });
+    results.push({
+      name: 'Mastermind API',
+      status: data.status === 'ok'
+        ? (data.uptime_human ? `online — uptime ${data.uptime_human}` : 'online')
+        : 'degraded'
+    });
   } catch(e) {
-    results.push({ name: 'Dashboard', status: 'offline', error: e.message });
+    results.push({ name: 'Mastermind API', status: 'offline', error: e.message });
   }
 
   const html = results.map(r => {
-    const icon = r.status === 'online' || r.status === 'connected' ? '\u2705' : r.status === 'degraded' ? '\u26a0\ufe0f' : '\u274c';
-    return `<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">${icon} <strong>${r.name}</strong> — ${r.status}${r.error ? ' <span style="color:var(--red)">(' + r.error + ')</span>' : ''}</div>`;
+    const s = String(r.status || '');
+    const isOk = s === 'online' || s === 'connected' || s.startsWith('online');
+    const icon = isOk ? '\u2705' : s === 'degraded' ? '\u26a0\ufe0f' : '\u274c';
+    return `<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">${icon} <strong>${r.name}</strong> — ${s}${r.error ? ' <span style="color:var(--red)">(' + r.error + ')</span>' : ''}</div>`;
   }).join('');
 
   showToast('Health check complete', 'success');
@@ -3181,11 +3287,11 @@ window.saveSocialPost=async(status)=>{
   };
   try{
     if(socialEditingId){
-      await updateDoc(doc(db,'social_posts',socialEditingId),docData);
+      await _sbUpdateDoc('social_posts',socialEditingId,docData);
     }else{
-      await addDoc(collection(db,'social_posts'),{...docData,created_at:serverTimestamp(),posted_at:null});
+      await _sbAddDoc('social_posts',{...docData,created_at:serverTimestamp(),posted_at:null});
     }
-    await addDoc(collection(db,'system_logs'),{
+    await _sbAddDoc('system_logs',{
       workflow_name:'social_admin',
       status:'SUCCESS',
       message:`Social post ${socialEditingId?'updated':'created'}: ${payload.title||'Untitled post'} (${status})`,
@@ -3319,14 +3425,14 @@ window.editSocialPost=(id)=>{
 };
 window.markSocialPosted=async(id)=>{
   try{
-    await updateDoc(doc(db,'social_posts',id),{status:'POSTED',posted_at:serverTimestamp(),updated_at:serverTimestamp()});
+    await _sbUpdateDoc('social_posts',id,{status:'POSTED',posted_at:serverTimestamp(),updated_at:serverTimestamp()});
     showToast('Post marked as posted.','var(--green)');
     loadSocialPosts();
   }catch(e){showToast('Could not update post: '+e.message, 'error');}
 };
 window.pauseSocialPost=async(id)=>{
   try{
-    await updateDoc(doc(db,'social_posts',id),{status:'PAUSED',updated_at:serverTimestamp()});
+    await _sbUpdateDoc('social_posts',id,{status:'PAUSED',updated_at:serverTimestamp()});
     showToast('Scheduled post paused.','var(--orange)');
     loadSocialPosts();
   }catch(e){showToast('Could not pause post: '+e.message, 'error');}
@@ -3343,7 +3449,7 @@ window.duplicateSocialPost=async(id)=>{
   clone.scheduled_for=null;
   clone.title=(post.title||'Untitled post')+' Copy';
   try{
-    await addDoc(collection(db,'social_posts'),{...clone,created_at:serverTimestamp(),updated_at:serverTimestamp(),posted_at:null});
+    await _sbAddDoc('social_posts',{...clone,created_at:serverTimestamp(),updated_at:serverTimestamp(),posted_at:null});
     showToast('Post duplicated into drafts.','var(--green)');
     loadSocialPosts();
   }catch(e){showToast('Could not duplicate post: '+e.message, 'error');}
@@ -3430,7 +3536,7 @@ window.saveScheduleConfig = async () => {
     _scheduleConfig.minNotice = parseInt(document.getElementById('schedule-min-notice').value);
     _scheduleConfig.bookDays = parseInt(document.getElementById('schedule-book-days').value);
 
-    await setDoc(doc(db,'system_config','schedule'), _scheduleConfig, {merge: true});
+    await _sbSetDoc('system_config','schedule', _scheduleConfig, {merge: true});
     showToast('Schedule settings saved.', 'var(--green)');
   }catch(e){
     showToast('Error: '+e.message, 'error');
@@ -3600,7 +3706,7 @@ function renderTerritoryAssignments() {
 
 window.approveAssignment = async (id) => {
   try {
-    await updateDoc(doc(db,'territory_assignments',id), {status:'approved',approvedAt:serverTimestamp()});
+    await _sbUpdateDoc('territory_assignments',id, {status:'approved',approvedAt:serverTimestamp()});
     showToast('Assignment approved.', 'var(--green)');
     await loadTerritoryAssignments();
   }catch(e){
@@ -3612,7 +3718,7 @@ window.overrideAssignment = async (id) => {
   const newZips = prompt('Enter new primary zip code:');
   if(!newZips) return;
   try {
-    await updateDoc(doc(db,'territory_assignments',id), {primaryZip:newZips,status:'approved',overriddenAt:serverTimestamp()});
+    await _sbUpdateDoc('territory_assignments',id, {primaryZip:newZips,status:'approved',overriddenAt:serverTimestamp()});
     showToast('Assignment overridden.', 'var(--orange)');
     await loadTerritoryAssignments();
   }catch(e){
@@ -3624,7 +3730,7 @@ window.approveAllAssignments = async () => {
   try {
     const batch = [];
     for(const a of _territoryAssignments) {
-      if(a.status !== 'approved') batch.push(updateDoc(doc(db,'territory_assignments',a.id), {status:'approved',approvedAt:serverTimestamp()}));
+      if(a.status !== 'approved') batch.push(_sbUpdateDoc('territory_assignments',a.id, {status:'approved',approvedAt:serverTimestamp()}));
     }
     await Promise.all(batch);
     showToast('All assignments approved.', 'var(--green)');
@@ -3728,7 +3834,7 @@ function loadAgentApprovals() {
 
 window.resolveApproval = async (id, status) => {
   try {
-    await updateDoc(doc(db, 'pending_approvals', id), {
+    await _sbUpdateDoc('pending_approvals', id, {
       status,
       resolvedAt: serverTimestamp(),
       resolvedBy: 'owner'
@@ -3834,14 +3940,14 @@ function loadContentQueue() {
 
 window.approveContent = async (id) => {
   try {
-    await updateDoc(doc(db, 'content_queue', id), { status: 'approved', approvedAt: serverTimestamp() });
+    await _sbUpdateDoc('content_queue', id, { status: 'approved', approvedAt: serverTimestamp() });
     showToast('Content approved');
   } catch (e) { showToast('Error: ' + e.message, 'var(--red)'); }
 };
 
 window.declineContent = async (id) => {
   try {
-    await updateDoc(doc(db, 'content_queue', id), { status: 'declined', declinedAt: serverTimestamp() });
+    await _sbUpdateDoc('content_queue', id, { status: 'declined', declinedAt: serverTimestamp() });
     showToast('Content declined', 'var(--red)');
   } catch (e) { showToast('Error: ' + e.message, 'var(--red)'); }
 };
@@ -3921,7 +4027,7 @@ window.sendBoardroomMessage = async () => {
   input.value = '';
   input.disabled = true;
   try {
-    await addDoc(collection(db, 'agent_messages'), {
+    await _sbAddDoc('agent_messages', {
       from: 'owner',
       emoji: '👑',
       message: text,
