@@ -4,6 +4,7 @@
  * Removes known test phone numbers from all collections.
  * Usage: node scripts/remove-test-numbers.js [--dry-run]
  */
+require('dotenv').config();
 const admin = require('firebase-admin');
 
 if (!admin.apps.length) {

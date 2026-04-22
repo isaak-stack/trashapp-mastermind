@@ -4,6 +4,7 @@
  * Removes test data from Firestore collections.
  * Usage: node scripts/cleanup-test-data.js [--dry-run]
  */
+require('dotenv').config();
 const admin = require('firebase-admin');
 
 // Initialize with ADC or service account
