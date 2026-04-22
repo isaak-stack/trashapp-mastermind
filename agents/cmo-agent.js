@@ -143,72 +143,83 @@ When asked for JSON, respond only in JSON. When asked for plain text, respond in
   }
 
   async checkRankings() {
-    const keywords = [
-      'junk removal fresno',
-      'junk removal fresno ca',
-      'trash removal fresno',
-      'furniture removal fresno',
-      'appliance removal fresno',
-      'junk hauling fresno'
-    ];
-
-    const results = [];
-    for (const kw of keywords) {
+    const CACHE_KEY = 'cmo_rankings';
+    for (let attempt = 1; attempt <= 3; attempt++) {
       try {
-        const res = await axios.get(`https://www.google.com/search?q=${encodeURIComponent(kw)}&num=20`, {
+        const res = await axios.get(`https://www.google.com/search?q=${encodeURIComponent('junk removal fresno')}`, {
           timeout: 10000,
           headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
         });
         const $ = cheerio.load(res.data);
-        const allResults = [];
-        $('div.g').each((i, el) => {
-          const link = $(el).find('a').attr('href') || '';
-          allResults.push(link);
+        const results = [];
+        $('div.BNeawe').each((i, el) => {
+          const text = $(el).text();
+          if (text.length > 20 && text.length < 200) {
+            results.push({ position: i + 1, snippet: text.substring(0, 100) });
+          }
         });
-
-        const trashappPos = allResults.findIndex(l =>
-          l.includes('trashapp') || l.includes('trash-app')
-        );
-
-        results.push({
-          keyword: kw,
-          position: trashappPos >= 0 ? trashappPos + 1 : null,
-          topResult: allResults[0]?.substring(0, 60) || 'unknown'
-        });
-      } catch {
-        results.push({ keyword: kw, position: null, error: 'fetch failed' });
+        const data = results.slice(0, 10);
+        // Cache successful result
+        try { await db.collection('intel').doc(CACHE_KEY).set({ data, cachedAt: new Date().toISOString() }); } catch(_){}
+        return data;
+      } catch(e) {
+        if (attempt < 3) await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000));
       }
     }
-    return results;
+    // All retries failed — try cache
+    try {
+      const cached = await db.collection('intel').doc(CACHE_KEY).get();
+      if (cached.exists) {
+        const { data, cachedAt } = cached.data();
+        const age = (Date.now() - new Date(cachedAt).getTime()) / 3600000;
+        if (age < 24) return data.map(d => ({ ...d, _fromCache: true }));
+      }
+    } catch(_){}
+    return [{ position: 0, snippet: 'Market data unavailable — web scraping blocked. Manual competitor research needed.' }];
   }
 
   async scrapeCompetitors() {
+    const CACHE_KEY = 'cmo_competitors';
     const competitors = [
       'College Hunks Hauling Junk Fresno',
       'Junk King Fresno',
       '1-800-GOT-JUNK Fresno'
     ];
 
-    const results = [];
-    for (const name of competitors) {
+    for (let attempt = 1; attempt <= 3; attempt++) {
       try {
-        const res = await axios.get(`https://www.google.com/search?q=${encodeURIComponent(name + ' reviews')}`, {
-          timeout: 10000,
-          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
-        });
-        const $ = cheerio.load(res.data);
-        const ratingText = $('span.Aq14fc').first().text() || '';
-        const reviewCountText = $('span.hqzQac').first().text() || '';
-        results.push({
-          name,
-          rating: parseFloat(ratingText) || null,
-          reviewCount: parseInt(reviewCountText.replace(/[^\d]/g, '')) || null
-        });
-      } catch {
-        results.push({ name, rating: null, reviewCount: null });
+        const results = [];
+        for (const name of competitors) {
+          const res = await axios.get(`https://www.google.com/search?q=${encodeURIComponent(name + ' reviews')}`, {
+            timeout: 10000,
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+          });
+          const $ = cheerio.load(res.data);
+          const ratingText = $('span.Aq14fc').first().text() || '';
+          const reviewCountText = $('span.hqzQac').first().text() || '';
+          results.push({
+            name,
+            rating: parseFloat(ratingText) || null,
+            reviewCount: parseInt(reviewCountText.replace(/[^\d]/g, '')) || null
+          });
+        }
+        // Cache successful result
+        try { await db.collection('intel').doc(CACHE_KEY).set({ data: results, cachedAt: new Date().toISOString() }); } catch(_){}
+        return results;
+      } catch(e) {
+        if (attempt < 3) await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000));
       }
     }
-    return results;
+    // All retries failed — try cache
+    try {
+      const cached = await db.collection('intel').doc(CACHE_KEY).get();
+      if (cached.exists) {
+        const { data, cachedAt } = cached.data();
+        const age = (Date.now() - new Date(cachedAt).getTime()) / 3600000;
+        if (age < 24) return data.map(d => ({ ...d, _fromCache: true }));
+      }
+    } catch(_){}
+    return [{ name: 'Unknown', rating: null, reviewCount: null, _fromCache: false, error: 'Competitor data unavailable — web scraping blocked.' }];
   }
 
   async pullLeadVolume() {

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TrashApp — Free Junk Removal Quote v1.6.1</title>
+<title>TrashApp — Free Junk Removal Quote v1.6.2</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗑️</text></svg>">
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#F5A623">
@@ -428,6 +428,7 @@ footer strong{color:var(--text-secondary)}
           </div>
           <div class="form-field"><label>Email <span style="color:var(--red)">*</span></label><input type="email" id="f-email" placeholder="john@email.com"></div>
           <div class="form-field"><label>Phone number</label><input type="tel" id="f-phone" placeholder="(559) 000-0000"></div>
+          <div id="deposit-wrap-single"></div>
           <div id="slot-picker-single" style="margin:1rem 0"></div>
           <button class="btn-book" id="book-btn" onclick="bookJob()">Book this job — it's free to schedule!</button>
           <button class="btn-reset" onclick="resetApp()">Start over</button>
@@ -469,6 +470,7 @@ footer strong{color:var(--text-secondary)}
           </div>
           <div class="form-field"><label>Email <span style="color:var(--red)">*</span></label><input type="email" id="f-email-multi" placeholder="john@email.com"></div>
           <div class="form-field"><label>Phone number</label><input type="tel" id="f-phone-multi" placeholder="(559) 000-0000"></div>
+          <div id="deposit-wrap-multi"></div>
           <div id="slot-picker-multi" style="margin:1rem 0"></div>
           <button class="btn-book" id="book-btn-multi" onclick="bookJobMulti()">Book this job — it's free to schedule!</button>
           <button class="btn-reset" onclick="resetApp()">Start over</button>
@@ -1259,6 +1261,18 @@ function renderResult() {
   const tr = document.getElementById('travel-row');
   tr.style.display = 'none';
 
+  // Deposit toggle
+  const depositWrap = document.getElementById('deposit-wrap-single');
+  if (depositWrap) {
+    depositWrap.innerHTML = `
+      <div class="deposit-toggle" style="background:var(--bg-elevated);border:1px solid var(--border-strong);border-radius:var(--radius-md);padding:14px 16px;margin:12px 0">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px">
+          <input type="checkbox" id="deposit-check" style="width:20px;height:20px;accent-color:var(--brand)">
+          <span><strong>Secure with $25 deposit</strong> <span style="color:var(--text-secondary)">(applied to your total)</span></span>
+        </label>
+      </div>`;
+  }
+
   // Initialize slot picker
   buildSlotPicker('slot-picker-single', {
     mode: 'client',
@@ -1315,6 +1329,18 @@ function renderMultiResult() {
   if (hasManualReview) notesHtml += '<div style="margin-top:8px;color:var(--brand)">One of your areas needs a closer look — our team will contact you within 1 hour with a confirmed quote</div>';
   notesHtml += '</div>';
   notesContainer.innerHTML = notesHtml;
+
+  // Deposit toggle
+  const depositWrapMulti = document.getElementById('deposit-wrap-multi');
+  if (depositWrapMulti) {
+    depositWrapMulti.innerHTML = `
+      <div class="deposit-toggle" style="background:var(--bg-elevated);border:1px solid var(--border-strong);border-radius:var(--radius-md);padding:14px 16px;margin:12px 0">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px">
+          <input type="checkbox" id="deposit-check-multi" style="width:20px;height:20px;accent-color:var(--brand)">
+          <span><strong>Secure with $25 deposit</strong> <span style="color:var(--text-secondary)">(applied to your total)</span></span>
+        </label>
+      </div>`;
+  }
 
   // Initialize slot picker
   buildSlotPicker('slot-picker-multi', {
@@ -1396,6 +1422,8 @@ async function bookJob() {
         scheduledSlotLabel: window_selectedSlotLabel || null,
         travelFee: travelCost,
         travelMiles: travelMiles,
+        depositPaid: document.getElementById('deposit-check')?.checked || false,
+        depositAmount: document.getElementById('deposit-check')?.checked ? 25 : 0,
         created_at: window._fbServerTimestamp(),
         updated_at: window._fbServerTimestamp()
       };
@@ -1408,6 +1436,27 @@ async function bookJob() {
         });
       }
       fbOk = true;
+
+      // If deposit selected, create Stripe checkout
+      if (document.getElementById('deposit-check')?.checked) {
+        try {
+          const stripeRes = await fetch('/api/create-deposit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              amount: 2500, // $25 in cents
+              customerName: fname + ' ' + (lname || ''),
+              customerPhone: phone,
+              customerEmail: email
+            })
+          });
+          const stripeData = await stripeRes.json();
+          if (stripeData.url) {
+            window.location.href = stripeData.url; // Redirect to Stripe Checkout
+            return;
+          }
+        } catch(e) { console.warn('Stripe deposit failed, booking without deposit:', e); }
+      }
 
       // Queue SMS notification for server pickup
       try {
@@ -1511,6 +1560,8 @@ async function bookJobMulti() {
         scheduledSlotLabel: window_selectedSlotLabel || null,
         travelFee: travelCost,
         travelMiles: travelMiles,
+        depositPaid: document.getElementById('deposit-check-multi')?.checked || false,
+        depositAmount: document.getElementById('deposit-check-multi')?.checked ? 25 : 0,
         created_at: window._fbServerTimestamp(),
         updated_at: window._fbServerTimestamp()
       };
@@ -1523,6 +1574,27 @@ async function bookJobMulti() {
         });
       }
       fbOk = true;
+
+      // If deposit selected, create Stripe checkout
+      if (document.getElementById('deposit-check-multi')?.checked) {
+        try {
+          const stripeRes = await fetch('/api/create-deposit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              amount: 2500, // $25 in cents
+              customerName: fname + ' ' + (lname || ''),
+              customerPhone: phone,
+              customerEmail: email
+            })
+          });
+          const stripeData = await stripeRes.json();
+          if (stripeData.url) {
+            window.location.href = stripeData.url; // Redirect to Stripe Checkout
+            return;
+          }
+        } catch(e) { console.warn('Stripe deposit failed, booking without deposit:', e); }
+      }
 
       // Queue SMS notification for server pickup
       try {

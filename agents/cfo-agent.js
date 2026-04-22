@@ -184,34 +184,48 @@ When asked for JSON, respond only in JSON. When asked for plain text, respond in
   }
 
   async scrapeDumpSitePricing() {
+    const CACHE_KEY = 'cfo_dump_pricing';
     const sites = [
       { name: 'Fresno Recycling & Transfer (Jensen)', searchUrl: 'fresno recycling transfer station jensen rates' },
       { name: 'Clovis Transfer Station', searchUrl: 'clovis transfer station dump fees' },
       { name: 'West Fresno Transfer Station', searchUrl: 'west fresno transfer station rates' }
     ];
 
-    const results = [];
-    for (const site of sites) {
+    for (let attempt = 1; attempt <= 3; attempt++) {
       try {
-        // Simple search scrape for pricing info
-        const res = await axios.get(`https://www.google.com/search?q=${encodeURIComponent(site.searchUrl)}`, {
-          timeout: 10000,
-          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
-        });
-        const $ = cheerio.load(res.data);
-        const snippet = $('div.BNeawe').first().text() || '';
-        const priceMatch = snippet.match(/\$(\d+(?:\.\d{2})?)/);
-        results.push({
-          name: site.name,
-          pricePerTon: priceMatch ? parseFloat(priceMatch[1]) : null,
-          snippet: snippet.substring(0, 100),
-          scraped: true
-        });
-      } catch {
-        results.push({ name: site.name, pricePerTon: null, scraped: false });
+        const results = [];
+        for (const site of sites) {
+          const res = await axios.get(`https://www.google.com/search?q=${encodeURIComponent(site.searchUrl)}`, {
+            timeout: 10000,
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+          });
+          const $ = cheerio.load(res.data);
+          const snippet = $('div.BNeawe').first().text() || '';
+          const priceMatch = snippet.match(/\$(\d+(?:\.\d{2})?)/);
+          results.push({
+            name: site.name,
+            pricePerTon: priceMatch ? parseFloat(priceMatch[1]) : null,
+            snippet: snippet.substring(0, 100),
+            scraped: true
+          });
+        }
+        // Cache successful result
+        try { await db.collection('intel').doc(CACHE_KEY).set({ data: results, cachedAt: new Date().toISOString() }); } catch(_){}
+        return results;
+      } catch(e) {
+        if (attempt < 3) await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000));
       }
     }
-    return results;
+    // All retries failed — try cache
+    try {
+      const cached = await db.collection('intel').doc(CACHE_KEY).get();
+      if (cached.exists) {
+        const { data, cachedAt } = cached.data();
+        const age = (Date.now() - new Date(cachedAt).getTime()) / 3600000;
+        if (age < 24) return data.map(d => ({ ...d, _fromCache: true }));
+      }
+    } catch(_){}
+    return sites.map(s => ({ name: s.name, pricePerTon: null, scraped: false }));
   }
 
   // ── BOARDROOM THINK ────────────────────────────────────────────

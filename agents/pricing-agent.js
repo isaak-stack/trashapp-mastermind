@@ -125,57 +125,77 @@ When asked for JSON, respond only in JSON. When asked for plain text, respond in
   }
 
   async scrapeCraigslistPricing() {
+    const CACHE_KEY = 'pricing_craigslist';
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const res = await axios.get('https://fresno.craigslist.org/search/hss', {
+          params: { query: 'junk removal' },
+          timeout: 10000,
+          headers: { 'User-Agent': 'Mozilla/5.0' }
+        });
+        const $ = cheerio.load(res.data);
+        const prices = [];
+        $('li.cl-search-result').each((i, el) => {
+          const title = $(el).find('.cl-search-result-title')?.text() || '';
+          const priceMatch = title.match(/\$(\d+)/);
+          if (priceMatch) {
+            prices.push({ price: parseInt(priceMatch[1]), title: title.substring(0, 80), source: 'craigslist' });
+          }
+        });
+        const data = prices.slice(0, 15);
+        try { await db.collection('intel').doc(CACHE_KEY).set({ data, cachedAt: new Date().toISOString() }); } catch(_){}
+        return data;
+      } catch(e) {
+        if (attempt < 3) await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000));
+      }
+    }
     try {
-      const res = await axios.get('https://fresno.craigslist.org/search/hss', {
-        params: { query: 'junk removal' },
-        timeout: 10000,
-        headers: { 'User-Agent': 'Mozilla/5.0' }
-      });
-
-      const $ = cheerio.load(res.data);
-      const prices = [];
-
-      $('li.cl-search-result').each((i, el) => {
-        const title = $(el).find('.cl-search-result-title')?.text() || '';
-        const priceMatch = title.match(/\$(\d+)/);
-        if (priceMatch) {
-          prices.push({
-            price: parseInt(priceMatch[1]),
-            title: title.substring(0, 80),
-            source: 'craigslist'
-          });
-        }
-      });
-
-      return prices.slice(0, 15);
-    } catch { return []; }
+      const cached = await db.collection('intel').doc(CACHE_KEY).get();
+      if (cached.exists) {
+        const { data, cachedAt } = cached.data();
+        if ((Date.now() - new Date(cachedAt).getTime()) / 3600000 < 24) return data;
+      }
+    } catch(_){}
+    return [];
   }
 
   async scrapeGooglePricing() {
+    const CACHE_KEY = 'pricing_google';
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const res = await axios.get(`https://www.google.com/search?q=${encodeURIComponent('junk removal fresno price cost')}`, {
+          timeout: 10000,
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+        });
+        const $ = cheerio.load(res.data);
+        const prices = [];
+        $('div.BNeawe').each((i, el) => {
+          const text = $(el).text();
+          const priceMatches = text.match(/\$(\d{2,4})/g);
+          if (priceMatches) {
+            priceMatches.forEach(p => {
+              const val = parseInt(p.replace('$', ''));
+              if (val >= 50 && val <= 2000) {
+                prices.push({ price: val, snippet: text.substring(0, 60), source: 'google' });
+              }
+            });
+          }
+        });
+        const data = prices.slice(0, 10);
+        try { await db.collection('intel').doc(CACHE_KEY).set({ data, cachedAt: new Date().toISOString() }); } catch(_){}
+        return data;
+      } catch(e) {
+        if (attempt < 3) await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000));
+      }
+    }
     try {
-      const res = await axios.get(`https://www.google.com/search?q=${encodeURIComponent('junk removal fresno price cost')}`, {
-        timeout: 10000,
-        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
-      });
-
-      const $ = cheerio.load(res.data);
-      const prices = [];
-
-      $('div.BNeawe').each((i, el) => {
-        const text = $(el).text();
-        const priceMatches = text.match(/\$(\d{2,4})/g);
-        if (priceMatches) {
-          priceMatches.forEach(p => {
-            const val = parseInt(p.replace('$', ''));
-            if (val >= 50 && val <= 2000) {
-              prices.push({ price: val, snippet: text.substring(0, 60), source: 'google' });
-            }
-          });
-        }
-      });
-
-      return prices.slice(0, 10);
-    } catch { return []; }
+      const cached = await db.collection('intel').doc(CACHE_KEY).get();
+      if (cached.exists) {
+        const { data, cachedAt } = cached.data();
+        if ((Date.now() - new Date(cachedAt).getTime()) / 3600000 < 24) return data;
+      }
+    } catch(_){}
+    return [];
   }
 
   // ── BOARDROOM THINK ────────────────────────────────────────────

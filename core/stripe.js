@@ -105,6 +105,30 @@ async function validateCredentials() {
   }
 }
 
+async function createDepositSession({ amount, customerName, customerEmail, metadata }) {
+  if (!stripe) throw new Error('Stripe not initialized');
+  const session = await stripe.checkout.sessions.create({
+    payment_method_types: ['card'],
+    line_items: [{
+      price_data: {
+        currency: 'usd',
+        product_data: {
+          name: 'TrashApp Booking Deposit',
+          description: '$25 deposit applied to your junk removal total'
+        },
+        unit_amount: amount || 2500
+      },
+      quantity: 1
+    }],
+    mode: 'payment',
+    success_url: 'https://quote.trashappjunkremoval.com?deposit=success',
+    cancel_url: 'https://quote.trashappjunkremoval.com?deposit=cancelled',
+    customer_email: customerEmail || undefined,
+    metadata: { ...metadata, customerName }
+  });
+  return session;
+}
+
 initStripe();
 
-module.exports = { createPaymentLink, isConfigured: () => isConfigured, validateCredentials };
+module.exports = { createPaymentLink, isConfigured: () => isConfigured, validateCredentials, createDepositSession };

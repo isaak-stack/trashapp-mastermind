@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TrashApp — Admin Console v1.9.1</title>
+<title>TrashApp — Admin Console v1.9.5</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%231a1a1a'/%3E%3Crect x='28' y='36' width='44' height='46' rx='6' fill='%23F5A623'/%3E%3Crect x='20' y='27' width='60' height='11' rx='5' fill='%23F5A623'/%3E%3Crect x='40' y='16' width='20' height='13' rx='4' fill='%23F5A623'/%3E%3Crect x='40' y='49' width='6' height='22' rx='3' fill='%231a1a1a'/%3E%3Crect x='54' y='49' width='6' height='22' rx='3' fill='%231a1a1a'/%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDtkh_G25Kr6YaAeNJOd9D9YJuyZnKvu08&libraries=places,geocoding" async defer></script>
@@ -533,7 +533,7 @@ select.inline-input{cursor:pointer}
       <button class="hamburger-btn" onclick="toggleSidebar()">☰</button>
       <div class="topbar-title" id="topbar-title">Overview</div>
       <div class="topbar-right">
-        <a href="https://flourishing-hotteok-596592.netlify.app" target="_blank" style="color:var(--gold);text-decoration:none;font-size:12px;font-weight:600">View Rep Platform →</a>
+        <a href="https://reps.trashappjunkremoval.com" target="_blank" style="color:var(--gold);text-decoration:none;font-size:12px;font-weight:600">View Rep Platform →</a>
         <span style="color:var(--border)">|</span>
         <a href="#" onclick="showView('crews');return false;" style="color:var(--blue);text-decoration:none;font-size:12px;font-weight:600">Crew Dashboard →</a>
         <span style="color:var(--border)">|</span>
@@ -2745,14 +2745,122 @@ window.subscribeToHealth = () => {
 };
 
 // ── API HEALTH CHECK ──
-function checkApiHealth(){
-  // Placeholder for API health monitoring
-  console.log('API health check initiated');
+async function checkApiHealth(){
+  const results = [];
+  // 1. Railway AI Quote API
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 5000);
+    const r = await fetch('https://junk-quote-api-production.up.railway.app/health', { signal: ctrl.signal });
+    clearTimeout(t);
+    results.push({ name: 'Railway API', status: r.ok ? 'online' : 'error', code: r.status });
+  } catch(e) {
+    results.push({ name: 'Railway API', status: 'offline', error: e.message });
+  }
+  // 2. Firebase
+  try {
+    const snap = await getDoc(doc(db, 'system_config', 'gas_price'));
+    results.push({ name: 'Firebase', status: 'connected' });
+  } catch(e) {
+    results.push({ name: 'Firebase', status: 'error', error: e.message });
+  }
+  // 3. Dashboard server
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 5000);
+    const r = await fetch('/health', { signal: ctrl.signal });
+    clearTimeout(t);
+    const data = await r.json();
+    results.push({ name: 'Dashboard', status: data.status === 'ok' ? 'online' : 'degraded' });
+  } catch(e) {
+    results.push({ name: 'Dashboard', status: 'offline', error: e.message });
+  }
+
+  const html = results.map(r => {
+    const icon = r.status === 'online' || r.status === 'connected' ? '\u2705' : r.status === 'degraded' ? '\u26a0\ufe0f' : '\u274c';
+    return `<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">${icon} <strong>${r.name}</strong> — ${r.status}${r.error ? ' <span style="color:var(--red)">(' + r.error + ')</span>' : ''}</div>`;
+  }).join('');
+
+  showToast('Health check complete', 'success');
+  // Show in modal
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;padding:24px';
+  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+  modal.innerHTML = `<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;max-width:400px;width:100%">
+    <div style="font-size:16px;font-weight:700;margin-bottom:16px">System Health Check</div>
+    ${html}
+    <button onclick="this.closest('div[style*=fixed]').remove()" style="margin-top:16px;width:100%;padding:12px;background:var(--gold);color:var(--black);border:none;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer">Close</button>
+  </div>`;
+  document.body.appendChild(modal);
 }
 
 // ── DAILY SUMMARY ──
-function generateDailySummary(){
-  console.log('Daily summary generated');
+async function generateDailySummary(){
+  try {
+    showToast('Generating summary...', 'info');
+    const todayTs = todayTimestamp();
+
+    const [jobsSnap, doorsSnap, sessionsSnap] = await Promise.all([
+      getDocs(query(collection(db, 'jobs'), where('created_at', '>=', todayTs))),
+      getDocs(query(collection(db, 'doors'), where('timestamp', '>=', todayTs))),
+      getDocs(query(collection(db, 'rep_sessions'), where('startedAt', '>=', new Date().toISOString().split('T')[0])))
+    ]);
+
+    let totalJobs = jobsSnap.size;
+    let totalRevenue = 0;
+    let completedJobs = 0;
+    jobsSnap.forEach(d => {
+      const j = d.data();
+      if (j.status === 'COMPLETED') completedJobs++;
+      const price = parseFloat((j.aiQuote || '').replace(/[^0-9.]/g, '')) || 0;
+      if (price > 0) totalRevenue += price;
+    });
+
+    const totalDoors = doorsSnap.size;
+    const activeSessions = sessionsSnap.size;
+
+    const summaryHtml = `
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px">
+        <div style="font-size:15px;font-weight:700;margin-bottom:14px">\ud83d\udcca Daily Summary — ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</div>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">
+          <div style="background:var(--card2);border-radius:10px;padding:14px;text-align:center">
+            <div style="font-size:24px;font-weight:800;color:var(--gold)">${totalJobs}</div>
+            <div style="font-size:11px;color:var(--gray);margin-top:4px">Jobs Today</div>
+          </div>
+          <div style="background:var(--card2);border-radius:10px;padding:14px;text-align:center">
+            <div style="font-size:24px;font-weight:800;color:var(--green)">${completedJobs}</div>
+            <div style="font-size:11px;color:var(--gray);margin-top:4px">Completed</div>
+          </div>
+          <div style="background:var(--card2);border-radius:10px;padding:14px;text-align:center">
+            <div style="font-size:24px;font-weight:800;color:var(--white)">${totalDoors}</div>
+            <div style="font-size:11px;color:var(--gray);margin-top:4px">Doors Knocked</div>
+          </div>
+          <div style="background:var(--card2);border-radius:10px;padding:14px;text-align:center">
+            <div style="font-size:24px;font-weight:800;color:var(--blue)">${activeSessions}</div>
+            <div style="font-size:11px;color:var(--gray);margin-top:4px">Rep Sessions</div>
+          </div>
+        </div>
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);font-size:13px;color:var(--gray)">
+          Est. Revenue: <strong style="color:var(--gold)">$${totalRevenue.toLocaleString()}</strong> |
+          Completion Rate: <strong style="color:var(--green)">${totalJobs > 0 ? Math.round((completedJobs/totalJobs)*100) : 0}%</strong>
+        </div>
+      </div>`;
+
+    // Insert at top of overview content
+    const overviewEl = document.querySelector('#view-overview .content-inner') || document.getElementById('view-overview');
+    if (overviewEl) {
+      const existing = document.getElementById('daily-summary-card');
+      if (existing) existing.remove();
+      const wrapper = document.createElement('div');
+      wrapper.id = 'daily-summary-card';
+      wrapper.innerHTML = summaryHtml;
+      overviewEl.insertBefore(wrapper, overviewEl.firstChild);
+    }
+    showToast('Summary generated', 'success');
+  } catch(e) {
+    console.error('generateDailySummary error:', e);
+    showToast('Failed to generate summary: ' + e.message, 'error');
+  }
 }
 
 // Expose functions

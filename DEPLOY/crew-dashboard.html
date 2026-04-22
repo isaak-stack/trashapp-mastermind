@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
-<title>TrashApp — Crew Dashboard v1.1</title>
+<title>TrashApp — Crew Dashboard v1.2</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%231a1a1a'/%3E%3Crect x='28' y='36' width='44' height='46' rx='6' fill='%23F5A623'/%3E%3Crect x='20' y='27' width='60' height='11' rx='5' fill='%23F5A623'/%3E%3Crect x='40' y='16' width='20' height='13' rx='4' fill='%23F5A623'/%3E%3C/svg%3E">
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#F5A623">
@@ -271,6 +271,27 @@ input,textarea{font-family:inherit;font-size:17px}
   <div class="success-sub">Great work.</div>
 </div>
 
+<!-- Access denied screen -->
+<div id="denied-screen" class="auth-wrap hidden">
+  <div class="auth-card" style="text-align:center">
+    <div style="font-size:48px;margin-bottom:16px">🚫</div>
+    <div class="auth-title">ACCESS DENIED</div>
+    <div class="auth-sub">Your phone number isn't registered as crew.<br>Contact TrashApp to get set up.</div>
+    <a href="tel:+15597744249" class="btn btn-primary" style="margin-top:16px;text-decoration:none">Call TrashApp</a>
+    <button class="btn btn-outline" style="margin-top:8px" onclick="doSignOut()">Sign Out</button>
+  </div>
+</div>
+
+<!-- Pending approval screen -->
+<div id="pending-screen" class="auth-wrap hidden">
+  <div class="auth-card" style="text-align:center">
+    <div style="font-size:48px;margin-bottom:16px">⏳</div>
+    <div class="auth-title">PENDING APPROVAL</div>
+    <div class="auth-sub">Your account is pending approval.<br>You'll be able to log in once approved.</div>
+    <button class="btn btn-outline" style="margin-top:16px" onclick="doSignOut()">Sign Out</button>
+  </div>
+</div>
+
 <div id="toast" class="toast"></div>
 
 <script type="module">
@@ -373,19 +394,63 @@ onAuthStateChanged(auth, async (user) => {
   }
   currentUser = user;
   currentCrewId = user.uid;
-  // Load or create crew profile
+
+  // Check crew_members authorization
   try {
+    // First check by UID
     const cRef = doc(db, 'crew_members', user.uid);
-    const snap = await getDoc(cRef);
-    if (snap.exists()) {
-      currentCrew = snap.data();
-    } else {
-      currentCrew = { name: 'Crew Member', phone: user.phoneNumber || '', createdAt: serverTimestamp() };
-      await setDoc(cRef, currentCrew);
+    let snap = await getDoc(cRef);
+
+    // If not found by UID, search by phone number
+    if (!snap.exists() && user.phoneNumber) {
+      const phoneQuery = query(collection(db, 'crew_members'), where('phone', '==', user.phoneNumber));
+      const phoneSnap = await getDocs(phoneQuery);
+      if (!phoneSnap.empty) {
+        snap = phoneSnap.docs[0];
+        // Migrate: update the doc ID to match UID for future lookups
+        const existingData = snap.data();
+        await setDoc(cRef, { ...existingData, uid: user.uid });
+      }
     }
-  } catch(e) { console.warn('crew profile load failed', e); }
+
+    if (!snap.exists()) {
+      // Not registered as crew
+      document.getElementById('auth').classList.add('hidden');
+      document.getElementById('app').classList.add('hidden');
+      document.getElementById('denied-screen').classList.remove('hidden');
+      document.getElementById('pending-screen').classList.add('hidden');
+      return;
+    }
+
+    currentCrew = snap.data ? snap.data() : snap;
+
+    if (currentCrew.status === 'pending') {
+      document.getElementById('auth').classList.add('hidden');
+      document.getElementById('app').classList.add('hidden');
+      document.getElementById('denied-screen').classList.add('hidden');
+      document.getElementById('pending-screen').classList.remove('hidden');
+      return;
+    }
+
+    if (currentCrew.status && currentCrew.status !== 'approved') {
+      document.getElementById('auth').classList.add('hidden');
+      document.getElementById('app').classList.add('hidden');
+      document.getElementById('denied-screen').classList.remove('hidden');
+      document.getElementById('pending-screen').classList.add('hidden');
+      return;
+    }
+  } catch(e) {
+    console.warn('crew authorization check failed', e);
+    // On error, deny access for safety
+    document.getElementById('auth').classList.add('hidden');
+    document.getElementById('app').classList.add('hidden');
+    document.getElementById('denied-screen').classList.remove('hidden');
+    return;
+  }
 
   document.getElementById('auth').classList.add('hidden');
+  document.getElementById('denied-screen').classList.add('hidden');
+  document.getElementById('pending-screen').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
   document.getElementById('crew-name').textContent = currentCrew.name || 'Crew Member';
   document.getElementById('prof-name').textContent = currentCrew.name || 'Crew Member';
@@ -450,6 +515,84 @@ function stopGPS() {
 }
 
 window.addEventListener('beforeunload', stopGPS);
+
+// ── Offline queue ──
+const OFFLINE_QUEUE_KEY = 'trashapp_crew_offline_queue';
+
+function getOfflineQueue() {
+  try { return JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY) || '[]'); } catch { return []; }
+}
+
+function saveOfflineQueue(queue) {
+  try { localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue)); } catch(_) {}
+}
+
+function queueOfflineUpdate(operation) {
+  const queue = getOfflineQueue();
+  queue.push({ ...operation, queuedAt: new Date().toISOString() });
+  saveOfflineQueue(queue);
+  toast('Saved offline — will sync when connected', 'info');
+}
+
+async function flushOfflineQueue() {
+  const queue = getOfflineQueue();
+  if (queue.length === 0) return;
+
+  let flushed = 0;
+  const remaining = [];
+
+  for (const op of queue) {
+    try {
+      if (op.type === 'status_update') {
+        await updateDoc(doc(db, 'jobs', op.jobId), { status: op.status, updatedAt: serverTimestamp() });
+        await addDoc(collection(db, 'jobs', op.jobId, 'statusHistory'), { status: op.status, timestamp: serverTimestamp(), crewId: currentCrewId });
+        flushed++;
+      } else if (op.type === 'complete_job') {
+        await updateDoc(doc(db, 'jobs', op.jobId), { status: 'COMPLETED', completedAt: serverTimestamp() });
+        await addDoc(collection(db, 'jobs', op.jobId, 'statusHistory'), { status: 'COMPLETED', timestamp: serverTimestamp(), crewId: currentCrewId });
+        flushed++;
+      } else if (op.type === 'notification') {
+        await addDoc(collection(db, 'pending_notifications'), op.data);
+        flushed++;
+      } else {
+        remaining.push(op); // Unknown type, keep in queue
+      }
+    } catch(e) {
+      console.warn('Failed to flush offline op:', e);
+      remaining.push(op);
+    }
+  }
+
+  saveOfflineQueue(remaining);
+  if (flushed > 0) toast(`Synced ${flushed} offline update(s)`, 'success');
+}
+
+// Offline/online indicators
+function showOfflineBanner() {
+  let banner = document.getElementById('offline-banner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'offline-banner';
+    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:var(--red);color:#fff;text-align:center;padding:8px;font-size:13px;font-weight:700;letter-spacing:0.5px';
+    banner.textContent = '⚡ OFFLINE — updates will sync when connection returns';
+    document.body.appendChild(banner);
+  }
+  banner.style.display = 'block';
+}
+
+function hideOfflineBanner() {
+  const banner = document.getElementById('offline-banner');
+  if (banner) banner.style.display = 'none';
+}
+
+window.addEventListener('offline', showOfflineBanner);
+window.addEventListener('online', () => {
+  hideOfflineBanner();
+  flushOfflineQueue();
+});
+
+// Check on load
+if (!navigator.onLine) showOfflineBanner();
 
 // ── Jobs subscription ──
 const DUMP_YARD = {
@@ -670,6 +813,14 @@ window.advanceStatus = async (jobId, newStatus) => {
   const prevDisabled = Array.from(btns).map(b => b.disabled);
   btns.forEach(b => b.disabled = true);
   try {
+    if (!navigator.onLine) {
+      queueOfflineUpdate({ type: 'status_update', jobId, status: newStatus });
+      // Optimistically update local state
+      if (liveJobs[jobId]) liveJobs[jobId].status = newStatus;
+      renderRoute();
+      btns.forEach((b, i) => b.disabled = prevDisabled[i]);
+      return;
+    }
     const jref = doc(db, 'jobs', jobId);
     await updateDoc(jref, { status: newStatus, updatedAt: serverTimestamp() });
     // Log to statusHistory subcollection

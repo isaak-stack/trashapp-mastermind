@@ -255,6 +255,31 @@ function startDashboard(port = 3000) {
     }
   });
 
+  // Stripe deposit checkout session
+  app.post('/api/create-deposit', async (req, res) => {
+    try {
+      const { amount, customerName, customerPhone, customerEmail } = req.body || {};
+      if (!amount) return res.status(400).json({ error: 'amount required' });
+
+      const stripe = require('../core/stripe');
+      if (!stripe.isConfigured || !stripe.isConfigured()) {
+        return res.status(503).json({ error: 'Stripe not configured' });
+      }
+
+      const session = await stripe.createDepositSession({
+        amount: amount || 2500,
+        customerName: customerName || 'Customer',
+        customerEmail: customerEmail || undefined,
+        metadata: { phone: customerPhone || '', type: 'booking_deposit' }
+      });
+
+      res.json({ url: session.url, sessionId: session.id });
+    } catch (err) {
+      console.error('[create-deposit] error:', err.message);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // Process pending notifications (called by cron or scheduler)
   app.post('/api/process-notifications', async (req, res) => {
     try {

@@ -278,21 +278,50 @@ RULES:
   }
 
   async detectRepeatCustomers() {
+    // Check cache first (1hr TTL)
     try {
-      const jobsSnap = await db.collection('jobs').get();
-      const phoneCount = {};
-      jobsSnap.docs.forEach(doc => {
-        const phone = doc.data().phone;
+      const stateDoc = await db.collection('agent_state').doc('customer-success').get();
+      if (stateDoc.exists) {
+        const state = stateDoc.data();
+        if (state.repeatCustomerCache && state.repeatCacheAt) {
+          const cacheAge = (Date.now() - new Date(state.repeatCacheAt).getTime()) / 3600000;
+          if (cacheAge < 1) return state.repeatCustomerCache;
+        }
+      }
+    } catch(_){}
+
+    try {
+      // Only scan last 90 days
+      const ninetyDaysAgo = new Date(Date.now() - 90 * 86400000).toISOString();
+      const snap = await db.collection('jobs')
+        .where('created_at', '>', ninetyDaysAgo)
+        .get();
+
+      const phoneCounts = {};
+      snap.docs.forEach(doc => {
+        const job = doc.data();
+        const phone = job.phone || job.customerPhone;
         if (phone) {
-          if (!phoneCount[phone]) phoneCount[phone] = { count: 0, name: doc.data().customer_name, jobs: [] };
-          phoneCount[phone].count++;
-          phoneCount[phone].jobs.push(doc.id);
+          if (!phoneCounts[phone]) phoneCounts[phone] = { count: 0, name: job.customer_name || 'Unknown', lastJob: null };
+          phoneCounts[phone].count++;
+          phoneCounts[phone].lastJob = job.created_at;
         }
       });
 
-      return Object.entries(phoneCount)
-        .filter(([_, data]) => data.count >= 2)
-        .map(([phone, data]) => ({ phone, customerName: data.name, jobCount: data.count, jobIds: data.jobs }));
+      const repeats = Object.entries(phoneCounts)
+        .filter(([_, v]) => v.count > 1)
+        .map(([phone, v]) => ({ phone, name: v.name, jobCount: v.count, lastJob: v.lastJob }))
+        .sort((a, b) => b.jobCount - a.jobCount);
+
+      // Cache result
+      try {
+        await db.collection('agent_state').doc('customer-success').set({
+          repeatCustomerCache: repeats,
+          repeatCacheAt: new Date().toISOString()
+        }, { merge: true });
+      } catch(_){}
+
+      return repeats;
     } catch { return []; }
   }
 
