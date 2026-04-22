@@ -208,7 +208,7 @@ function agentShouldRespond(agent, messages, lastPosted) {
 
   // 2. 10-minute per-agent cooldown
   const lastTime = lastPosted.get(agentId) || 0;
-  if (Date.now() - lastTime < 10 * 60 * 1000) return false;
+  if (Date.now() - lastTime < 3 * 60 * 1000) return false;
 
   const last5 = messages.slice(-5);
   const last10 = messages.slice(-10);
@@ -489,4 +489,4 @@ process.on('uncaughtException', (err) => {
 process.on('unhandledRejection', (reason) => {
   console.error('[WARNING] Unhandled promise rejection:', reason);
   logger.error('system', `Unhandled rejection: ${reason}`, { error: String(reason) }).catch(() => {});
-});
+});

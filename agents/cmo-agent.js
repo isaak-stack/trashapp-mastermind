@@ -7,6 +7,7 @@
 
 const BaseAgent = require('./base-agent');
 const { db } = require('../core/firestore');
+const logger = require('../core/logger');
 const axios = require('axios');
 const cheerio = require('cheerio');
 
@@ -30,6 +31,26 @@ When asked for JSON, respond only in JSON. When asked for plain text, respond in
   }
 
   async runCycle() {
+    // 0. Report capability gaps ONCE per session
+    await this.reportCapabilityGap('cmo_facebook', {
+      envKeys: ['FACEBOOK_PAGE_ID', 'FACEBOOK_ACCESS_TOKEN'],
+      missing: 'Facebook posting',
+      steps: 'Go to developers.facebook.com/tools/explorer → select TrashApp page → add pages_manage_posts permission → regenerate token → add FACEBOOK_PAGE_ID and FACEBOOK_ACCESS_TOKEN to .env',
+      unlocks: 'Auto-posting approved content drafts to your Facebook page'
+    });
+    await this.reportCapabilityGap('cmo_google_business', {
+      envKeys: ['GBP_LOCATION_ID', 'GBP_ACCESS_TOKEN'],
+      missing: 'Google Business Profile posting',
+      steps: 'Go to business.google.com → verify your listing → copy the location ID from the URL → set up OAuth at console.cloud.google.com → add GBP_LOCATION_ID and GBP_ACCESS_TOKEN to .env',
+      unlocks: 'Auto-posting updates and offers to your Google Business listing'
+    });
+    await this.reportCapabilityGap('cmo_craigslist', {
+      envKeys: ['__CRAIGSLIST_NO_API__'], // Will never exist — permanent gap
+      missing: 'Craigslist auto-posting (no API exists)',
+      steps: 'Craigslist has no public API. Manually repost ads every 48 hours using the drafts I queue in content_queue. Copy/paste the body text from the admin console.',
+      unlocks: 'N/A — I will keep drafting copy for you to post manually'
+    });
+
     // 1. Check Google rankings for key terms
     const rankings = await this.checkRankings();
 
@@ -217,6 +238,10 @@ When asked for JSON, respond only in JSON. When asked for plain text, respond in
     const standDown = BaseAgent.checkOwnerStandDown(recentMessages);
     if (standDown === 'stand_down' || standDown === 'quiet') return null;
 
+    // Attempt to post pending Facebook content (one per cycle)
+    const fbResult = await this.processContentQueue();
+    if (fbResult) return fbResult; // Return the post result as the boardroom message
+
     const leadData = await this.pullLeadVolume();
     const msgContext = recentMessages.slice(-10).map(m => `[${m.from || m.agentId}]: ${m.message}`).join('\n');
 
@@ -253,24 +278,107 @@ RULES:
     return response.trim();
   }
 
-  // ── REAL API: Post to Facebook ────────────────────────────────
-  async postToFacebook(message) {
-    if (!process.env.FACEBOOK_PAGE_ID || !process.env.FACEBOOK_ACCESS_TOKEN) return null;
+  // ── REAL API: Post to Facebook (Graph API v18.0) ───────────────
+  async postToFacebook(postText) {
+    const pageId = process.env.FACEBOOK_PAGE_ID;
+    const token = process.env.FACEBOOK_ACCESS_TOKEN;
+
+    if (!pageId || !token) {
+      // Gap already reported in runCycle — just return null
+      return { success: false, error: 'Missing FACEBOOK_PAGE_ID or FACEBOOK_ACCESS_TOKEN' };
+    }
+
     try {
-      const res = await axios.post(`https://graph.facebook.com/${process.env.FACEBOOK_PAGE_ID}/feed`, {
-        message,
-        access_token: process.env.FACEBOOK_ACCESS_TOKEN
-      }, { timeout: 15000 });
-      return res.data?.id || null;
+      const res = await axios.post(
+        `https://graph.facebook.com/v18.0/${pageId}/feed`,
+        { message: postText, access_token: token },
+        { timeout: 15000 }
+      );
+      const postId = res.data?.id || null;
+      logger.log(this.agentId, 'SUCCESS', `Facebook post published: ${postId}`);
+      return { success: true, postId };
     } catch (e) {
-      console.error('[CMO] Facebook post failed:', e.message);
+      const fbError = e.response?.data?.error;
+      const errorMsg = fbError
+        ? `Facebook API error ${fbError.code}: ${fbError.message}`
+        : `Facebook post failed: ${e.message}`;
+
+      logger.log(this.agentId, 'ERROR', errorMsg);
+
+      // Detect permission-specific errors
+      if (fbError?.code === 200 || fbError?.type === 'OAuthException') {
+        await this.reportCapabilityGap('cmo_facebook_permission', {
+          envKeys: ['__FACEBOOK_PERMISSION_FIX__'], // Manual fix needed
+          missing: 'Facebook token permission (pages_manage_posts)',
+          steps: 'Your token exists but lacks the pages_manage_posts permission. Go to developers.facebook.com/tools/explorer → reselect TrashApp page → add pages_manage_posts → regenerate token → update FACEBOOK_ACCESS_TOKEN in .env',
+          unlocks: 'Auto-posting to Facebook'
+        });
+      }
+
+      return { success: false, error: errorMsg };
+    }
+  }
+
+  /**
+   * Process pending Facebook posts from content_queue.
+   * Called from boardroomThink when credentials are configured.
+   * Posts ONE item per cycle to avoid spam.
+   */
+  async processContentQueue() {
+    if (!process.env.FACEBOOK_PAGE_ID || !process.env.FACEBOOK_ACCESS_TOKEN) return null;
+
+    try {
+      const snap = await db.collection('content_queue')
+        .where('platform', '==', 'facebook')
+        .where('status', '==', 'pending')
+        .orderBy('createdAt', 'asc')
+        .limit(1)
+        .get();
+
+      if (snap.empty) return null;
+
+      const doc = snap.docs[0];
+      const post = doc.data();
+      const postText = post.body || post.title || '';
+      if (!postText) return null;
+
+      const result = await this.postToFacebook(postText);
+
+      if (result.success) {
+        // Update content_queue doc
+        await db.collection('content_queue').doc(doc.id).update({
+          status: 'posted',
+          postedAt: new Date(),
+          postId: result.postId,
+          performanceData: { platform: 'facebook', postId: result.postId }
+        });
+        return `Posted to Facebook: "${postText.substring(0, 60)}..." (ID: ${result.postId}) — CMO`;
+      } else {
+        // Mark as failed so we don't retry forever
+        await db.collection('content_queue').doc(doc.id).update({
+          status: 'failed',
+          error: result.error,
+          failedAt: new Date()
+        });
+        return `Facebook post failed: ${result.error} — CMO`;
+      }
+    } catch (err) {
+      logger.log(this.agentId, 'ERROR', `processContentQueue error: ${err.message}`);
       return null;
     }
   }
 
   // ── REAL API: Deploy blog to Netlify ──────────────────────────
   async deployBlog(content) {
-    if (!process.env.NETLIFY_API_TOKEN || !process.env.NETLIFY_BLOG_SITE_ID) return null;
+    if (!process.env.NETLIFY_API_TOKEN || !process.env.NETLIFY_BLOG_SITE_ID) {
+      await this.reportCapabilityGap('cmo_netlify', {
+        envKeys: ['NETLIFY_API_TOKEN', 'NETLIFY_BLOG_SITE_ID'],
+        missing: 'Netlify blog deployment',
+        steps: 'Go to app.netlify.com → Site settings → create a personal access token → add NETLIFY_API_TOKEN and NETLIFY_BLOG_SITE_ID to .env',
+        unlocks: 'Auto-deploying blog posts to your Netlify site'
+      });
+      return null;
+    }
     try {
       const res = await axios.post(`https://api.netlify.com/api/v1/sites/${process.env.NETLIFY_BLOG_SITE_ID}/deploys`, {}, {
         headers: { 'Authorization': `Bearer ${process.env.NETLIFY_API_TOKEN}` },

@@ -31,6 +31,14 @@ When asked for JSON, respond only in JSON. When asked for plain text, respond in
   }
 
   async runCycle() {
+    // 0. Report capability gaps ONCE per session
+    await this.reportCapabilityGap('cfo_quickbooks', {
+      envKeys: ['QB_REFRESH_TOKEN', 'QB_REALM_ID'],
+      missing: 'QuickBooks integration',
+      steps: 'Go to developer.intuit.com → your TrashApp app → OAuth Playground → complete the OAuth flow → copy the refresh token and realm ID → add QB_REFRESH_TOKEN and QB_REALM_ID to .env',
+      unlocks: 'Real P&L data, expense tracking, and invoice sync instead of Firestore estimates'
+    });
+
     // 1. Pull all jobs from Firestore for financial analysis
     const financials = await this.pullFinancials();
 

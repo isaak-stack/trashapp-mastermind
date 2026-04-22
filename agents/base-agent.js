@@ -258,9 +258,112 @@ class BaseAgent {
   }
 
   formatCurrency(n) { return `$${Number(n).toLocaleString('en-US', {minimumFractionDigits:0,maximumFractionDigits:0})}`; }
+
+  // ── CAPABILITY GAP REPORTING ───────────────────────────────────
+  /**
+   * Report a capability gap ONCE per session via agent_state/{agentId}.reportedGaps.
+   * When the credential is later added and PM2 restarts, the gap clears and a
+   * confirmation message is posted.
+   *
+   * Usage:
+   *   await this.reportCapabilityGap('cmo_facebook', {
+   *     envKeys: ['FACEBOOK_PAGE_ID', 'FACEBOOK_ACCESS_TOKEN'],
+   *     missing: 'Facebook posting',
+   *     steps: 'Go to developers.facebook.com/tools/explorer → select TrashApp page → add pages_manage_posts → regenerate token → add FACEBOOK_ACCESS_TOKEN + FACEBOOK_PAGE_ID to .env',
+   *     unlocks: 'Auto-posting approved content to your Facebook page'
+   *   });
+   *
+   * @param {string} gapKey  Unique key like 'cmo_facebook'
+   * @param {object} gap     { envKeys: string[], missing: string, steps: string, unlocks: string }
+   * @returns {boolean} true if gap was reported or cleared, false if already handled
+   */
+  async reportCapabilityGap(gapKey, gap) {
+    if (BaseAgent._gapsReported.has(gapKey)) return false;
+
+    const credentialsPresent = (gap.envKeys || []).every(k => !!process.env[k]);
+
+    // Check if this gap was previously reported in agent_state
+    let previouslyReported = false;
+    try {
+      const stateDoc = await db.collection('agent_state').doc(this.agentId).get();
+      const reportedGaps = stateDoc.exists ? (stateDoc.data().reportedGaps || []) : [];
+      previouslyReported = reportedGaps.includes(gapKey);
+    } catch {}
+
+    // If credentials are NOW present and gap was previously reported → confirm activation
+    if (credentialsPresent && previouslyReported) {
+      try {
+        const { admin: fbAdmin } = require('../core/firestore');
+        await db.collection('agent_messages').add({
+          from: this.agentName,
+          agentId: this.agentId,
+          emoji: this.emoji,
+          message: `✅ ${this.agentName} — ${gap.missing} is now active! Credentials detected. Ready to go. — ${this.agentName}`,
+          timestamp: fbAdmin?.firestore ? fbAdmin.firestore.FieldValue.serverTimestamp() : new Date(),
+          type: 'capability_gap'
+        });
+        // Remove from reportedGaps
+        const { FieldValue } = fbAdmin?.firestore || {};
+        if (FieldValue) {
+          await db.collection('agent_state').doc(this.agentId).update({
+            reportedGaps: FieldValue.arrayRemove(gapKey)
+          });
+        }
+        logger.log(this.agentId, 'SUCCESS', `Capability unlocked: ${gapKey}`);
+      } catch (err) {
+        logger.log(this.agentId, 'WARN', `Failed to confirm capability ${gapKey}: ${err.message}`);
+      }
+      BaseAgent._gapsReported.add(gapKey);
+      return true;
+    }
+
+    // If credentials are present and never reported → nothing to do
+    if (credentialsPresent) {
+      BaseAgent._gapsReported.add(gapKey);
+      return false;
+    }
+
+    // If already reported this session → skip
+    if (previouslyReported) {
+      BaseAgent._gapsReported.add(gapKey);
+      return false;
+    }
+
+    // Report the gap to boardroom
+    try {
+      const { admin: fbAdmin } = require('../core/firestore');
+      const message = `🔧 ${this.agentName} needs your help: ${gap.missing} → ${gap.steps} → Unlocks: ${gap.unlocks}`;
+      await db.collection('agent_messages').add({
+        from: this.agentName,
+        agentId: this.agentId,
+        emoji: this.emoji,
+        message,
+        timestamp: fbAdmin?.firestore ? fbAdmin.firestore.FieldValue.serverTimestamp() : new Date(),
+        type: 'capability_gap'
+      });
+
+      // Record in agent_state.reportedGaps
+      const { FieldValue } = fbAdmin?.firestore || {};
+      if (FieldValue) {
+        await db.collection('agent_state').doc(this.agentId).set({
+          reportedGaps: FieldValue.arrayUnion(gapKey)
+        }, { merge: true });
+      }
+
+      BaseAgent._gapsReported.add(gapKey);
+      logger.log(this.agentId, 'INFO', `Capability gap reported: ${gapKey}`);
+      return true;
+    } catch (err) {
+      logger.log(this.agentId, 'WARN', `Failed to report capability gap ${gapKey}: ${err.message}`);
+      return false;
+    }
+  }
 }
 
-// Shared stand-down state — set after class is defined
+// Shared stand-down state — set after class is defined (TDZ-safe)
 BaseAgent._standingDown = false;
+
+// Capability gaps reported this session (persists until process restart)
+BaseAgent._gapsReported = new Set();
 
 module.exports = BaseAgent;

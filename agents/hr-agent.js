@@ -30,6 +30,20 @@ When asked for JSON, respond only in JSON. When asked for plain text, respond in
   }
 
   async runCycle() {
+    // 0. Report capability gaps ONCE per session
+    await this.reportCapabilityGap('hr_indeed', {
+      envKeys: ['INDEED_API_KEY'],
+      missing: 'Indeed job posting',
+      steps: 'Indeed has no free posting API. Manually post at indeed.com/hire using the drafts I queue. If you upgrade to Indeed Sponsored Jobs, add INDEED_API_KEY to .env for auto-posting',
+      unlocks: 'Auto-posting job listings to Indeed (requires paid account)'
+    });
+    await this.reportCapabilityGap('hr_linkedin', {
+      envKeys: ['LINKEDIN_ACCESS_TOKEN'],
+      missing: 'LinkedIn Jobs posting',
+      steps: 'Go to linkedin.com/company/trashapp → Admin tools → request API access with w_organization_social permission → once approved, add LINKEDIN_ACCESS_TOKEN to .env',
+      unlocks: 'Auto-posting job listings to LinkedIn Jobs'
+    });
+
     // 1. Check active rep count and activity
     const repActivity = await this.checkRepActivity();
 

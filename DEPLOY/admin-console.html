@@ -3755,11 +3755,14 @@ const AGENT_COLORS = {
 
 function renderBoardroomMessage(msg) {
   const isOwner = msg.from === 'owner' || msg.type === 'owner_input';
+  const isGap = msg.type === 'capability_gap';
   const time = msg.timestamp?.toDate ? msg.timestamp.toDate() : (msg.timestamp ? new Date(msg.timestamp) : new Date());
   const agentColor = AGENT_COLORS[msg.from] || 'var(--gold)';
+  const bgColor = isOwner ? 'rgba(245,166,35,0.15)' : isGap ? 'rgba(231,76,60,0.08)' : 'var(--card2,#1A1A1F)';
+  const borderColor = isOwner ? 'rgba(245,166,35,0.3)' : isGap ? 'rgba(231,76,60,0.3)' : 'var(--border)';
   return `<div style="display:flex;flex-direction:column;align-items:${isOwner ? 'flex-end' : 'flex-start'}">
-    <div style="max-width:80%;background:${isOwner ? 'rgba(245,166,35,0.15)' : 'var(--card2,#1A1A1F)'};border:1px solid ${isOwner ? 'rgba(245,166,35,0.3)' : 'var(--border)'};color:var(--white);padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.5">
-      <div style="font-weight:700;margin-bottom:4px;color:${isOwner ? 'var(--gold)' : agentColor}">${isOwner ? '👑 You' : (msg.emoji || '🤖') + ' ' + (msg.from || 'Agent')}</div>
+    <div style="max-width:80%;background:${bgColor};border:1px solid ${borderColor};color:var(--white);padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.5">
+      <div style="font-weight:700;margin-bottom:4px;color:${isOwner ? 'var(--gold)' : isGap ? '#E74C3C' : agentColor}">${isOwner ? '👑 You' : (msg.emoji || '🤖') + ' ' + (msg.from || 'Agent')}${isGap ? ' · Setup Needed' : ''}</div>
       <div>${escapeHtml(msg.message || '')}</div>
     </div>
     <div style="font-size:10px;color:var(--text-tertiary,#666);margin-top:4px">${time.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})} · ${time.toLocaleDateString()}</div>
@@ -3780,7 +3783,7 @@ function loadBoardroomFeed() {
     // Filter to boardroom + owner messages client-side
     const allDocs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     const messages = allDocs
-      .filter(m => m.type === 'boardroom' || m.type === 'owner_input')
+      .filter(m => m.type === 'boardroom' || m.type === 'owner_input' || m.type === 'capability_gap')
       .slice(0, 50)
       .reverse(); // chronological
 

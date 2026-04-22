@@ -28,6 +28,20 @@ When asked for JSON, respond only in JSON. When asked for plain text, respond in
   }
 
   async runCycle() {
+    // 0. Report capability gaps ONCE per session
+    await this.reportCapabilityGap('cs_yelp_post', {
+      envKeys: ['__YELP_NO_POST_API__'], // Will never exist — permanent gap
+      missing: 'Yelp review solicitation (API is read-only)',
+      steps: 'Yelp Fusion API does not support posting reviews or sending review requests. I send review request links via SMS instead. Customers must leave reviews at yelp.com directly.',
+      unlocks: 'N/A — this is a Yelp platform limitation, not a credential issue'
+    });
+    await this.reportCapabilityGap('cs_yelp_read', {
+      envKeys: ['YELP_BUSINESS_ID', 'YELP_API_KEY'],
+      missing: 'Yelp review monitoring',
+      steps: 'Go to yelp.com/biz/trashapp-junk-removal-fresno → copy the business ID from the URL → go to yelp.com/developers → create an app → copy the API key → add YELP_BUSINESS_ID and YELP_API_KEY to .env',
+      unlocks: 'Reading and monitoring your Yelp reviews, tracking rating trends'
+    });
+
     // 1. Find completed jobs needing review requests
     const needsReview = await this.findNeedsReviewRequest();
 
@@ -289,7 +303,7 @@ RULES:
     await this.sendMeetingMessage(weekId,
       `Customer success: ${needsReview.length} jobs pending review requests.\n` +
       `${repeats.length} repeat customers identified — loyalty offers being drafted.\n` +
-      `Review collection and NPS tracking active.`,
+      `SMS review requests active. NPS tracking not yet configured.`,
       { repeatCount: repeats.length }
     );
   }
