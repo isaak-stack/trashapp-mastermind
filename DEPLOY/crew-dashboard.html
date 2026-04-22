@@ -834,12 +834,20 @@ window.completeJob = async (jobId) => {
   stopJobTimer(jobId);
   showSuccess();
 
-  // Queue review SMS 2 hours out
+  // Schedule review SMS via Firestore (survives page close)
   if (j && j.customerPhone) {
     const fname = (j.customerName || '').split(' ')[0] || 'there';
-    setTimeout(() => {
-      sendSMS(j.customerPhone, `Hi ${fname}! Thanks for choosing TrashApp. Mind leaving us a quick Google review? It helps a ton: https://g.page/r/trashapp-review`);
-    }, 7200000);
+    try {
+      await addDoc(collection(db, 'pending_notifications'), {
+        type: 'review_request',
+        to: j.customerPhone,
+        message: `Hi ${fname}! Thanks for choosing TrashApp. Mind leaving us a quick Google review? It helps a ton: https://g.page/r/trashapp-review`,
+        status: 'pending',
+        sendAfter: new Date(Date.now() + 7200000).toISOString(),
+        jobId: jobId,
+        created_at: serverTimestamp()
+      });
+    } catch(e) { console.warn('Review SMS queue failed:', e); }
   }
 
   setTimeout(() => {

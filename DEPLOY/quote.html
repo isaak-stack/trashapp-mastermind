@@ -1113,7 +1113,8 @@ function buildSlotPicker(containerId, options) {
   let holdExpiry = null;
   let unsubSlots = null;
 
-  // Placeholder - basic implementation
+  const FALLBACK_SLOTS = ['9:00 AM', '10:00 AM', '11:00 AM', '1:00 PM', '2:00 PM', '3:00 PM'];
+
   // Generate date buttons for next 6 weekdays (skip Sunday)
   const dateRow = document.createElement('div');
   dateRow.className = 'slot-dates';
@@ -1122,23 +1123,14 @@ function buildSlotPicker(containerId, options) {
   let daysAdded = 0;
   const dates = [];
 
-  while (daysAdded < 6) {
+  while (dates.length < 6) {
     const d = new Date(today);
     d.setDate(d.getDate() + daysAdded);
     if (d.getDay() !== 0) { // Skip Sunday
-      dates.push(d);
+      dates.push(new Date(d));
     }
     daysAdded++;
   }
-
-  dates.slice(0, 6).forEach((date, idx) => {
-    const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
-    const monthDay = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    const btn = document.createElement('button');
-    btn.className = 'slot-date-btn' + (idx === 0 ? ' selected' : '');
-    btn.textContent = dayName + ' ' + monthDay;
-    dateRow.appendChild(btn);
-  });
 
   container.innerHTML = '<div class="slot-section-label">Pick your slot</div>';
   container.appendChild(dateRow);
@@ -1147,18 +1139,84 @@ function buildSlotPicker(containerId, options) {
   slotGrid.className = 'slot-grid';
   container.appendChild(slotGrid);
 
-  // Add some basic slot buttons
-  ['9:00 AM', '10:00 AM', '11:00 AM', '1:00 PM', '2:00 PM', '3:00 PM'].forEach(time => {
+  function renderFallbackSlots() {
+    slotGrid.innerHTML = '';
+    FALLBACK_SLOTS.forEach(time => {
+      const btn = document.createElement('button');
+      btn.className = 'slot-btn available';
+      btn.textContent = time;
+      btn.onclick = () => {
+        slotGrid.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        const fakeId = 'slot_' + Math.random().toString(36).substr(2, 9);
+        selectedSlotId = fakeId;
+        window_selectedSlot = fakeId;
+        window_selectedSlotLabel = time;
+        if (onSelect) onSelect(fakeId, time);
+      };
+      slotGrid.appendChild(btn);
+    });
+  }
+
+  async function loadSlotsForDate(date) {
+    slotGrid.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text-muted,#888);">Loading slots...</div>';
+    const dateStr = date.getFullYear() + '-' +
+      String(date.getMonth() + 1).padStart(2, '0') + '-' +
+      String(date.getDate()).padStart(2, '0');
+    try {
+      const q = window._fbQuery(
+        window._fbCollection(window._fbDb, 'job_slots'),
+        window._fbWhere('date', '==', dateStr),
+        window._fbWhere('status', '==', 'available')
+      );
+      const snapshot = await window._fbGetDocs(q);
+      if (snapshot.empty) {
+        renderFallbackSlots();
+        return;
+      }
+      slotGrid.innerHTML = '';
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        const slotId = docSnap.id;
+        const label = data.time || data.label || data.slot_time || slotId;
+        const btn = document.createElement('button');
+        btn.className = 'slot-btn available';
+        btn.textContent = label;
+        btn.onclick = () => {
+          slotGrid.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('selected'));
+          btn.classList.add('selected');
+          selectedSlotId = slotId;
+          window_selectedSlot = slotId;
+          window_selectedSlotLabel = label;
+          if (onSelect) onSelect(slotId, label);
+        };
+        slotGrid.appendChild(btn);
+      });
+    } catch (e) {
+      console.warn('Firestore slot query failed, using fallback:', e);
+      renderFallbackSlots();
+    }
+  }
+
+  dates.forEach((date, idx) => {
+    const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+    const monthDay = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     const btn = document.createElement('button');
-    btn.className = 'slot-btn available';
-    btn.textContent = time;
+    btn.className = 'slot-date-btn' + (idx === 0 ? ' selected' : '');
+    btn.textContent = dayName + ' ' + monthDay;
     btn.onclick = () => {
-      if (onSelect) onSelect('slot_' + Math.random().toString(36).substr(2, 9), time);
-      window_selectedSlot = 'slot_' + Math.random().toString(36).substr(2, 9);
-      window_selectedSlotLabel = time;
+      dateRow.querySelectorAll('.slot-date-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedSlotId = null;
+      window_selectedSlot = null;
+      window_selectedSlotLabel = null;
+      loadSlotsForDate(date);
     };
-    slotGrid.appendChild(btn);
+    dateRow.appendChild(btn);
   });
+
+  // Load slots for the first date
+  loadSlotsForDate(dates[0]);
 }
 
 function renderResult() {
@@ -1350,6 +1408,17 @@ async function bookJob() {
         });
       }
       fbOk = true;
+
+      // Queue SMS notification for server pickup
+      try {
+        await window._fbAddDoc(window._fbCollection(window._fbDb, 'pending_notifications'), {
+          type: 'booking_confirmation',
+          to: phone,
+          message: `Hi ${fname}! Your TrashApp pickup is booked${window_selectedSlotLabel ? ' for ' + window_selectedSlotLabel : ''}. We'll text you 30 min before arrival. Questions? Call (559) 774-4249`,
+          status: 'pending',
+          created_at: window._fbServerTimestamp()
+        });
+      } catch(e) { console.warn('SMS queue failed:', e); }
     }
   } catch(e) {
     console.error('Firestore error:', e);
@@ -1454,6 +1523,17 @@ async function bookJobMulti() {
         });
       }
       fbOk = true;
+
+      // Queue SMS notification for server pickup
+      try {
+        await window._fbAddDoc(window._fbCollection(window._fbDb, 'pending_notifications'), {
+          type: 'booking_confirmation',
+          to: phone,
+          message: `Hi ${fname}! Your TrashApp pickup is booked${window_selectedSlotLabel ? ' for ' + window_selectedSlotLabel : ''}. We'll text you 30 min before arrival. Questions? Call (559) 774-4249`,
+          status: 'pending',
+          created_at: window._fbServerTimestamp()
+        });
+      } catch(e) { console.warn('SMS queue failed:', e); }
     }
   } catch(e) {
     console.error('Firestore error:', e);

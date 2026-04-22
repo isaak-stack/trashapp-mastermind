@@ -156,7 +156,7 @@ When asked for JSON, respond only in JSON. When asked for plain text, respond in
         weeklyCloseRate: totalQuotes > 0 ? ((totalBooked / totalQuotes) * 100).toFixed(1) + '%' : '0%',
         slotUtilization: totalSlots > 0 ? ((bookedSlots / totalSlots) * 100).toFixed(0) + '%' : '0%',
         activeReps: sessions.filter(s => s.status === 'active').length,
-        totalJobsAllTime: (await db.collection('jobs').get()).size
+        totalJobsAllTime: await (async () => { try { const countDoc = await db.collection('system_config').doc('job_counter').get(); return countDoc.exists ? (countDoc.data().count || 0) : (await db.collection('jobs').get()).size; } catch(_) { return 0; } })()
       };
     } catch (err) {
       return { error: err.message };

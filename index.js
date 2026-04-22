@@ -459,6 +459,16 @@ agentCron.schedule('0 9 * * 1', async () => {
   }
 }, { timezone: 'America/Los_Angeles' });
 
+// Process pending notifications every 5 minutes
+agentCron.schedule('*/5 * * * *', async () => {
+  try {
+    const axios = require('axios');
+    await axios.post(`http://localhost:${PORT}/api/process-notifications`);
+  } catch (err) {
+    // Silent — notification processor will retry next cycle
+  }
+});
+
 // Start the boardroom
 logger.log('startup', 'INFO', 'Starting TrashApp AI Boardroom...');
 runBoardroom().catch(err => {

@@ -2728,8 +2728,10 @@ async function fetchNearbyAddresses(lat,lng){
 
 // ── PLACES AUTOCOMPLETE on address inputs ──
 // v1.6.1 Bug 3 fix — retry until google.maps.places is loaded
+let _acRetries = 0;
 function initAddressAutocomplete(){
   if (typeof google === 'undefined' || !google.maps || !google.maps.places) {
+    if (++_acRetries > 20) { console.warn('Google Maps Places API not available after 10s, giving up autocomplete init'); return; }
     setTimeout(initAddressAutocomplete, 500);
     return;
   }
@@ -2754,8 +2756,9 @@ function initAddressAutocomplete(){
 // Kick it off now, and retry if deps not ready. Also called from auth state change.
 setTimeout(initAddressAutocomplete, 300);
 
+let _sacRetries = 0;
 function setupAddressAutocomplete(){
-  if(!google || !google.maps || !google.maps.places){ setTimeout(setupAddressAutocomplete, 500); return; }
+  if(typeof google === 'undefined' || !google.maps || !google.maps.places){ if(++_sacRetries > 20){ console.warn('Google Maps Places not available, skipping setup'); return; } setTimeout(setupAddressAutocomplete, 500); return; }
   // Bias results toward Fresno area but don't hard restrict
   const fresnoBounds=new google.maps.LatLngBounds(
     {lat:36.6,lng:-120.1},{lat:36.95,lng:-119.6}

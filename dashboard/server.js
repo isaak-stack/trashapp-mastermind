@@ -255,6 +255,36 @@ function startDashboard(port = 3000) {
     }
   });
 
+  // Process pending notifications (called by cron or scheduler)
+  app.post('/api/process-notifications', async (req, res) => {
+    try {
+      const { sendSMS } = require('../core/twilio');
+      const now = new Date().toISOString();
+      const snap = await db.collection('pending_notifications')
+        .where('status', '==', 'pending')
+        .limit(10)
+        .get();
+
+      let sent = 0;
+      for (const doc of snap.docs) {
+        const notif = doc.data();
+        // Skip if sendAfter is in the future
+        if (notif.sendAfter && notif.sendAfter > now) continue;
+        try {
+          await sendSMS(notif.to, notif.message);
+          await doc.ref.update({ status: 'sent', sentAt: new Date().toISOString() });
+          sent++;
+        } catch (err) {
+          await doc.ref.update({ status: 'failed', error: err.message });
+        }
+      }
+      res.json({ ok: true, processed: sent });
+    } catch (err) {
+      console.error('[process-notifications] error:', err.message);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // Crew dashboard beforeunload beacon: mark crew offline
   app.post('/api/crew-inactive', async (req, res) => {
     try {
@@ -981,6 +1011,12 @@ function startDashboard(port = 3000) {
   // Start listening
   server.listen(port, () => {
     console.log(`✓ Dashboard running at http://localhost:${port}`);
+  }).on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`✗ Port ${port} is already in use. Try: DASHBOARD_PORT=${port + 1} node index.js`);
+      process.exit(1);
+    }
+    throw err;
   });
 
   return { app, server, io };
