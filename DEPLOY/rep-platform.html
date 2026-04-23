@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>TrashApp — Rep Platform v1.9.0</title>
+<title>TrashApp — Rep Platform v1.9.5</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%231a1a1a'/%3E%3Crect x='28' y='36' width='44' height='46' rx='6' fill='%23F5A623'/%3E%3Crect x='20' y='27' width='60' height='11' rx='5' fill='%23F5A623'/%3E%3Crect x='40' y='16' width='20' height='13' rx='4' fill='%23F5A623'/%3E%3Crect x='40' y='49' width='6' height='22' rx='3' fill='%231a1a1a'/%3E%3Crect x='54' y='49' width='6' height='22' rx='3' fill='%231a1a1a'/%3E%3C/svg%3E">
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#F5A623">
@@ -377,7 +377,12 @@ input:checked+.slider:before{transform:translateX(15px)}
 @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
 /* ── HIDE OLD VIEWS (v1.8) ── */
-#view-dashboard, #view-map, #view-quote, #view-followup, #view-scripts, #view-stats {
+/* v1.9.4 — scope this legacy hide to non-v1.9.0 body states. When body.v190 is
+   active, the hamburger drawer is the single nav source and these views ARE
+   reachable (via _origShowView without the 'dashboard→home' remap). Without
+   this scoping, the !important on line-380 would force-hide them even when
+   .active, and the drawer would appear to do nothing. */
+body:not(.v190) #view-dashboard, body:not(.v190) #view-map, body:not(.v190) #view-quote, body:not(.v190) #view-followup, body:not(.v190) #view-scripts, body:not(.v190) #view-stats {
   display: none !important;
 }
 
@@ -608,6 +613,43 @@ body.v190 #recap-overlay:not(.open) { display: none !important; }
   margin-left: auto; font-family: 'Inter', 'DM Sans', sans-serif;
 }
 
+/* v1.9.1 — Active Reps ("Team — Live") widget */
+.v190-team-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 1rem; margin-bottom: 1rem;
+}
+.v190-team-title {
+  font-size: 11px; font-weight: 700; color: var(--gold);
+  text-transform: uppercase; letter-spacing: 1px;
+  margin-bottom: .75rem; display: flex; align-items: center; gap: 8px;
+}
+.v190-team-title-pulse {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--green);
+  display: inline-block; animation: v190-team-pulse 1.5s infinite;
+}
+@keyframes v190-team-pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+.v190-team-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .5rem 0; border-top: 1px solid var(--border); font-size: 13px;
+}
+.v190-team-row:first-of-type { border-top: none; }
+.v190-team-name {
+  color: var(--white); font-weight: 600; flex: 1; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  display: flex; align-items: center;
+}
+.v190-team-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--green); margin-right: 8px; flex-shrink: 0;
+}
+.v190-team-meta {
+  color: var(--gray); font-size: 11px; white-space: nowrap;
+  margin-left: .5rem;
+}
+.v190-team-empty {
+  color: var(--gray); font-size: 13px; text-align: center; padding: .75rem 0;
+}
+
 .v190-cta-start {
   width: 100%; padding: 1.1rem; min-height: 64px;
   background: var(--gold); color: var(--black);
@@ -812,6 +854,14 @@ body.v190 #recap-overlay:not(.open) { display: none !important; }
               <div class="v190-goal-count"><span id="v190-goal-current">0</span>/<span id="v190-goal-target">20</span> doors</div>
             </div>
             <div class="v190-goal-bar"><div class="v190-goal-fill" id="v190-goal-fill"></div></div>
+          </div>
+
+          <!-- Team — Live (v1.9.1, additive) -->
+          <div class="v190-team-card">
+            <div class="v190-team-title"><span class="v190-team-title-pulse"></span>Team — Live</div>
+            <div id="v190-team-list">
+              <div class="v190-team-empty">Loading team activity…</div>
+            </div>
           </div>
 
           <!-- Recent Jobs -->
@@ -1528,6 +1578,8 @@ body.v190 #recap-overlay:not(.open) { display: none !important; }
 
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDtkh_G25Kr6YaAeNJOd9D9YJuyZnKvu08&libraries=places,geometry,geocoding&callback=Function.prototype" async defer></script>
 <script type="module">
+/* v1.9.1 — additive features: active reps widget, rep self-listener, session ghost cleanup.
+   No UX rewiring. No existing feature touched. */
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getAuth, RecaptchaVerifier, signInWithPhoneNumber, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import { getFirestore, doc, setDoc, getDoc, collection, addDoc, onSnapshot, query, where, updateDoc, deleteDoc, serverTimestamp, getDocs, orderBy, limit, Timestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
@@ -1818,6 +1870,14 @@ let sessionPaused=false, pausedSeconds=0;
 let watchId=null, map=null, myMarker=null, mapInitRetries=0;
 let cachedPosition=null, cachedPosTime=0;
 let doorMarkers={}, repMarkers={}, pathLine=null, pathPoints=[];
+// v1.9.2 — doors→houses dedupe state
+//   _allDoors: docId → door data (one entry per knock, unchanged schema)
+//   houseMarkers: addressKey → google.maps.Marker (one marker per physical house)
+//   _rerenderHousesQueued: microtask-level debounce flag so a snapshot burst
+//     coalesces into a single re-render.
+let _allDoors = {};
+let houseMarkers = {};
+let _rerenderHousesQueued = false;
 let unsubs=[], photos=[], quoteData=null, travelCost=0, travelWaived=false, pinUnlocked=false;
 let confirmResult=null;
 let currentDoor={lat:null,lng:null,address:'',docId:null,zip:null};
@@ -2115,6 +2175,14 @@ function initApp() {
   setText('dash-comm',(currentRep.commission||15)+'%');
   setText('drawer-name',name);
   setText('drawer-meta',`${currentRep.zipCode||'No zip'} · ${currentRep.commission||15}%`);
+  // v1.9.1 — ghost cleanup must run BEFORE restoreSession() / loadDashboard()
+  // so any stale 'active' rep_sessions are closed before history queries see them.
+  // Fire-and-forget (awaiting would block dashboard render).
+  cleanupGhostSessions();
+  // v1.9.1 — self-listener keeps currentRep in sync when admin edits rep's record.
+  subscribeToRepSelf();
+  // v1.9.1 — Team — Live widget on the new dashboard.
+  subscribeToActiveRepsWidget();
   renderQuotePhotoGrid();
   renderDoorPhotoGrid();
   loadDashboard();
@@ -2183,7 +2251,12 @@ function initApp() {
 
 // ── VIEWS ──
 function _origShowView(view){
-  // Map old view names to new ones
+  // v1.9.4 — when body.v190 is active, bypass the legacy mobile-only remap
+  // so drawer nav ('dashboard', 'map', 'followup', 'scripts', 'stats') lands
+  // on the correct view container, not the mobile-era #view-home fallback.
+  const inV190 = document.body.classList.contains('v190');
+
+  // Map old view names to new ones (legacy desktop→mobile remap, v1.8 era)
   const viewMap = {
     'dashboard': 'home',
     'map': 'home',
@@ -2193,18 +2266,30 @@ function _origShowView(view){
     'quote': 'openQuoteOverlay'
   };
 
-  const resolvedView = viewMap[view] || view;
+  // In v1.9.0+ we use the requested view name directly (except 'quote' which
+  // still opens the overlay on every path — that UX is unchanged).
+  const resolvedView = (inV190 && view !== 'quote') ? view : (viewMap[view] || view);
 
-  // Special handler for quote overlay
+  // Special handler for quote overlay (unchanged)
   if(resolvedView === 'openQuoteOverlay') {
     window.openQuoteOverlay();
     return;
   }
 
-  // Resume field mode if active and navigating back to home
-  if(fieldModeActive && currentSessionDoc && resolvedView !== 'home') {
-    // Keep field mode visible, don't switch views
-    return;
+  // v1.9.5 — relaxed Field Mode guard for drawer-originated nav.
+  // When the hamburger drawer is the user's intent, any target view should
+  // exit field mode and render the requested view. We detect "drawer nav"
+  // by body.v190 being set (drawer is the only nav source in that state).
+  // Legacy (non-v1.9.0) paths keep the original guard so nothing regresses
+  // on the old mobile-tab flow.
+  if (fieldModeActive && currentSessionDoc) {
+    if (inV190) {
+      console.log('[field-mode] drawer nav exiting field mode →', view);
+      try { if (typeof window.exitFieldMode === 'function') window.exitFieldMode(); } catch (_) {}
+    } else if (resolvedView !== 'home') {
+      // Legacy pre-v1.9.0 behavior preserved (original guard, v1.9.4 dashboard carve-out removed).
+      return;
+    }
   }
 
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
@@ -2225,8 +2310,10 @@ function _origShowView(view){
   if(bnav)bnav.classList.add('active');
   closeDrawer();
 
-  // Load data based on resolved view
-  if(resolvedView==='home') {
+  // Load data based on resolved view OR the original view name when v1.9.0
+  // has bypassed the remap. Loaders are idempotent / cached, so firing them
+  // is safe even when the view container's already populated.
+  if(resolvedView==='home' || (inV190 && view==='dashboard')) {
     loadDashboard();
     setTimeout(() => {
       try {
@@ -2236,11 +2323,22 @@ function _origShowView(view){
       } catch(_){}
     }, 150);
   }
-  if(resolvedView==='doors') {
+  // v1.9.4 — when drawer routes to Live Map, trigger a resize so the embedded
+  // Google Map re-lays itself correctly after being shown.
+  if(inV190 && view==='map') {
+    setTimeout(() => {
+      try {
+        if (window.map && google?.maps?.event) {
+          google.maps.event.trigger(window.map, 'resize');
+        }
+      } catch(_){}
+    }, 150);
+  }
+  if(resolvedView==='doors' || (inV190 && view==='followup')) {
     loadFollowUps();
     loadDoorsToday();
   }
-  if(resolvedView==='profile') {
+  if(resolvedView==='profile' || (inV190 && (view==='scripts' || view==='stats' || view==='profile'))) {
     loadMyStats();
     loadScripts();
   }
@@ -2380,6 +2478,18 @@ function renderDashboard({tDoors,tDeals,repStats}){
 window.v190Nav = function(view) {
   // Close the drawer (mobile UX) then route via the existing showView().
   // Desktop keeps drawer closed because .mobile-drawer is display:none on wide viewports.
+  // v1.9.4 — telemetry: log the label + intended target view so the browser
+  // console shows exactly what the drawer is trying to activate. If the user
+  // sees this log but the wrong view renders, it's the _origShowView remap,
+  // not the drawer binding.
+  const labelMap = {
+    dashboard: 'Dashboard', map: 'Live Map', quote: 'Quote Tool',
+    followup: 'Follow Ups', scripts: 'Scripts', stats: 'My Stats',
+    profile: 'Profile & Territory'
+  };
+  const label = labelMap[view] || view;
+  const targetId = (view === 'quote') ? '(quote overlay)' : ('#view-' + view);
+  console.log('[drawer-nav] clicked:', label, '→ targeting view:', targetId);
   try { closeDrawer(); } catch (_) {}
   try { showView(view); } catch (e) { console.warn('v190Nav showView failed:', e); }
   // Highlight the active drawer item
@@ -2529,6 +2639,210 @@ if (typeof window.escapeHtml !== 'function') {
   window.escapeHtml = function(s) {
     return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   };
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// v1.9.1 — additive features
+//   F1: Active Reps widget  — new onSnapshot on live_reps (dashboard-only)
+//   F2: Rep self-listener   — onSnapshot on reps/{uid} for live commission/zip/status
+//   F3: Session ghost cleanup — close stale active rep_sessions on login
+// Each registers its unsubscribe function into the existing `unsubs` array
+// so the legacy _legacySignOut handler cleans them up automatically.
+// No existing onSnapshot callbacks modified. No existing feature touched.
+// ══════════════════════════════════════════════════════════════════════
+
+// ── F1: Active Reps widget (dashboard Team — Live) ───────────────────
+// Rendering-only snapshot on live_reps. Rep-name / zip fallback lookups
+// on the `reps` collection are cached for 60s to avoid a read storm when
+// many reps are active.
+const _v191RepNameCache = new Map(); // uid -> { name, zipCode, ts }
+const V191_REP_CACHE_TTL = 60000;
+
+async function _v191FetchRepMeta(uid) {
+  const cached = _v191RepNameCache.get(uid);
+  if (cached && (Date.now() - cached.ts) < V191_REP_CACHE_TTL) return cached;
+  try {
+    const snap = await getDoc(doc(db, 'reps', uid));
+    const data = snap.exists() ? snap.data() : {};
+    const entry = { name: data.name || 'Rep', zipCode: data.zipCode || '', ts: Date.now() };
+    _v191RepNameCache.set(uid, entry);
+    return entry;
+  } catch (_) {
+    const entry = { name: 'Rep', zipCode: '', ts: Date.now() };
+    _v191RepNameCache.set(uid, entry);
+    return entry;
+  }
+}
+
+function _v191MinsSince(ts) {
+  if (!ts) return '—';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  const mins = Math.floor((Date.now() - d.getTime()) / 60000);
+  if (mins < 1) return 'just now';
+  if (mins === 1) return '1 min ago';
+  if (mins < 60) return mins + ' min ago';
+  const hrs = Math.floor(mins / 60);
+  return hrs + 'h ago';
+}
+
+async function _v191RenderTeamList(docs) {
+  const el = document.getElementById('v190-team-list');
+  if (!el) return;
+
+  // Filter out self; cap at 10
+  const others = docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .filter(d => d.repId !== (currentUser && currentUser.uid) && d.id !== (currentUser && currentUser.uid))
+    .slice(0, 10);
+
+  if (!others.length) {
+    el.innerHTML = '<div class="v190-team-empty">You\'re the only rep out right now.</div>';
+    return;
+  }
+
+  // Fill in name/zip from cache/reps collection where live_reps doesn't have them
+  const enriched = await Promise.all(others.map(async r => {
+    const needMeta = !r.name || !r.zipCode;
+    const meta = needMeta ? await _v191FetchRepMeta(r.repId || r.id) : { name: r.name, zipCode: r.zipCode };
+    return {
+      name: r.name || meta.name || 'Rep',
+      zip: r.zipCode || meta.zipCode || '',
+      updatedAt: r.updatedAt,
+      paused: !!r.paused,
+      knocking: !!r.knocking
+    };
+  }));
+
+  el.innerHTML = enriched.map(r => {
+    const zip = r.zip ? escapeHtml(r.zip) : '—';
+    const dotColor = r.paused ? 'var(--yellow)' : (r.knocking ? 'var(--gold)' : 'var(--green)');
+    return `
+      <div class="v190-team-row">
+        <div class="v190-team-name">
+          <span class="v190-team-dot" style="background:${dotColor}"></span>${escapeHtml(r.name)}
+        </div>
+        <div class="v190-team-meta">${zip} · ${_v191MinsSince(r.updatedAt)}</div>
+      </div>`;
+  }).join('');
+}
+
+function subscribeToActiveRepsWidget() {
+  if (!currentUser) return;
+  try {
+    const q = query(collection(db, 'live_reps'), where('active', '==', true));
+    const unsub = onSnapshot(q, snap => {
+      _v191RenderTeamList(snap.docs).catch(e => console.warn('[v1.9.1 team widget] render failed:', e));
+    }, err => {
+      if (err && err.code === 'permission-denied') return;
+      console.warn('[v1.9.1 team widget] snapshot error:', err);
+    });
+    // Piggyback on the existing signout cleanup path
+    if (Array.isArray(unsubs)) unsubs.push(unsub);
+  } catch (e) {
+    console.warn('[v1.9.1 team widget] init failed:', e);
+  }
+}
+
+// ── F2: Rep self-record live listener ────────────────────────────────
+// Keeps window.currentRep in sync when an admin edits the rep's commission,
+// zip, status, role, etc. Re-renders the three dashboard pills (name, zip,
+// commission) without forcing a page reload.
+function subscribeToRepSelf() {
+  if (!currentUser) return;
+  try {
+    const ref = doc(db, 'reps', currentUser.uid);
+    const unsub = onSnapshot(ref, snap => {
+      if (!snap.exists()) return;
+      const next = snap.data();
+      const prev = currentRep || {};
+
+      // Diff the fields we care about (plus anything that changed)
+      const changedFields = {};
+      const watched = ['name', 'phone', 'zipCode', 'commission', 'status', 'role', 'doorsKnocked', 'dealsClosedTotal', 'commissionEarned'];
+      for (const k of watched) {
+        if (prev[k] !== next[k]) changedFields[k] = { from: prev[k], to: next[k] };
+      }
+
+      // Always refresh the global; even "no diff" snapshots are safe.
+      currentRep = next;
+
+      if (Object.keys(changedFields).length) {
+        console.log('[rep-self-listener] reps doc updated:', changedFields);
+      }
+
+      // Re-render the v1.9.0 dashboard pills IF the dashboard is the active view.
+      const dashEl = document.getElementById('view-dashboard');
+      const isActive = dashEl && dashEl.classList.contains('active');
+      if (isActive || document.body.classList.contains('v190')) {
+        const nameEl = document.getElementById('dash-name');
+        const zipEl = document.getElementById('dash-zip');
+        const commEl = document.getElementById('dash-comm');
+        if (nameEl) nameEl.textContent = next.name || 'Rep';
+        if (zipEl) zipEl.textContent = next.zipCode || '—';
+        if (commEl) commEl.textContent = (next.commission || 15) + '%';
+
+        // Also refresh the sidebar + drawer labels so they don't drift.
+        const sbName = document.getElementById('sidebar-rep-name');
+        const sbMeta = document.getElementById('sidebar-rep-meta');
+        const drName = document.getElementById('drawer-name');
+        const drMeta = document.getElementById('drawer-meta');
+        if (sbName) sbName.textContent = next.name || 'Rep';
+        if (sbMeta) sbMeta.textContent = `${next.zipCode || 'No zip'} · ${next.commission || 15}% commission`;
+        if (drName) drName.textContent = next.name || 'Rep';
+        if (drMeta) drMeta.textContent = `${next.zipCode || 'No zip'} · ${next.commission || 15}%`;
+
+        // Status pill re-sync (ON DUTY / OFF DUTY / PAUSED computed from session state)
+        try { v190UpdateStatusPill(); } catch (_) {}
+      }
+    }, err => {
+      if (err && err.code === 'permission-denied') return;
+      console.warn('[rep-self-listener] snapshot error:', err);
+    });
+    if (Array.isArray(unsubs)) unsubs.push(unsub);
+  } catch (e) {
+    console.warn('[rep-self-listener] init failed:', e);
+  }
+}
+
+// ── F3: Session ghost cleanup on login ───────────────────────────────
+// Closes out any rep_sessions belonging to the current user that are still
+// status:'active' but whose startedAt is >30 min old. Best-effort — swallows
+// all errors so it never blocks login.
+async function cleanupGhostSessions() {
+  if (!currentUser) return;
+  try {
+    const q = query(
+      collection(db, 'rep_sessions'),
+      where('repId', '==', currentUser.uid),
+      where('status', '==', 'active')
+    );
+    const snap = await getDocs(q);
+    if (snap.empty) return;
+    const cutoffMs = Date.now() - 30 * 60 * 1000;
+    let closed = 0;
+    for (const d of snap.docs) {
+      const data = d.data();
+      const startedAt = data.startedAt && data.startedAt.toDate ? data.startedAt.toDate() : null;
+      if (!startedAt) continue; // no timestamp — skip rather than risk closing a fresh one
+      if (startedAt.getTime() < cutoffMs) {
+        try {
+          // Use the sandbox-aware helper so the write redirects correctly
+          // when SANDBOX_MODE is on.
+          await _sbUpdateDoc('rep_sessions', d.id, {
+            status: 'abandoned',
+            endedAt: serverTimestamp(),
+            abandoned_by_cleanup: true
+          });
+          closed++;
+        } catch (innerErr) {
+          console.warn('[ghost-cleanup] failed to close', d.id, innerErr && innerErr.message);
+        }
+      }
+    }
+    console.log('[ghost-cleanup] closed', closed, 'abandoned sessions');
+  } catch (e) {
+    console.warn('[ghost-cleanup] failed (non-blocking):', e && e.message);
+  }
 }
 
 // ── SESSION ──
@@ -2960,6 +3274,8 @@ window.initMap=function initMap() {
         if (currentUser && dd.repId && dd.repId !== currentUser.uid && !dd.showAll) { /* still render — shows team doors */ }
         if(c.type==='added')addDoorMarker(dd,c.doc.id);
         if(c.type==='modified'){if(doorMarkers[c.doc.id])doorMarkers[c.doc.id].setMap(null);addDoorMarker(dd,c.doc.id);}
+        // v1.9.2 — honor deletions so the per-house dedupe can re-group cleanly
+        if(c.type==='removed'){ if(doorMarkers[c.doc.id]){ try{doorMarkers[c.doc.id].setMap(null);}catch(_){} delete doorMarkers[c.doc.id]; } if(_allDoors[c.doc.id]){ delete _allDoors[c.doc.id]; _scheduleRerenderHouses(); } }
       });
     }, err => {
       if(err.code === 'permission-denied') return;
@@ -3037,31 +3353,172 @@ function makeDotIcon(color,size=12,border=2){
   };
 }
 
-function addDoorMarker(data,id){
-  if(!map||!data.lat||!data.lng)return;
-  // v1.6.1 Bug 2 fix — color spec: green=booked, yellow=interested, gray=not interested, red=no answer
-  const colors={
-    deal_closed:'#22c55e', closed:'#22c55e', booked:'#22c55e',
-    quote_given:'#EAB308', follow_up:'#EAB308', interested:'#EAB308', come_back:'#EAB308',
-    not_interested:'#888', no_junk:'#888',
-    no_answer:'#ef4444', not_home:'#ef4444',
-    pending_dispatch:'#3b82f6'
-  };
-  const color=colors[data.status]||'#888';
-  const m=new google.maps.Marker({
-    position:{lat:data.lat,lng:data.lng},
-    map,
-    icon:makeDotIcon(color,12),
-    title:data.address||''
+// ══════════════════════════════════════════════════════════════════════
+// v1.9.2 — doors→houses dedupe
+// ══════════════════════════════════════════════════════════════════════
+// Legacy status colors preserved (reused from earlier addDoorMarker body):
+//   green=booked, yellow=interested, gray=not interested, red=no answer.
+const _DOOR_STATUS_COLORS = {
+  deal_closed:'#22c55e', closed:'#22c55e', booked:'#22c55e',
+  quote_given:'#EAB308', follow_up:'#EAB308', interested:'#EAB308', come_back:'#EAB308',
+  not_interested:'#888', no_junk:'#888',
+  no_answer:'#ef4444', not_home:'#ef4444',
+  pending_dispatch:'#3b82f6'
+};
+
+// Normalize an address string to a stable grouping key.
+// Street number + street name + zip code, lowercased, punctuation stripped,
+// whitespace collapsed. If the address is missing but lat/lng are present,
+// fall back to a rounded geo key so two knocks at the same GPS coords group.
+function _normalizeAddressKey(data) {
+  const raw = (data && data.address) ? String(data.address).trim() : '';
+  if (raw) {
+    // Take the "1234 Van Ness Ave" portion + the zip.
+    // Extract zip: 5-digit sequence anywhere in the string
+    const zipMatch = raw.match(/\b\d{5}\b/);
+    const zip = zipMatch ? zipMatch[0] : (data.zipCode || '');
+    // Street part: the first comma-delimited segment (or the whole thing if no comma)
+    const streetPart = raw.split(',')[0] || raw;
+    const cleaned = streetPart
+      .toLowerCase()
+      .replace(/[.,#'"!?()]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (cleaned) return cleaned + (zip ? ' ' + zip : '');
+  }
+  // Fallback to geo key (5-decimal ≈ 1.1 m precision)
+  if (typeof data.lat === 'number' && typeof data.lng === 'number') {
+    return 'geo_' + data.lat.toFixed(5) + '_' + data.lng.toFixed(5);
+  }
+  return '';
+}
+
+// Compute aggregate status + representative for a group of doors (all at the
+// same normalized address). Rules (top-down, first match wins):
+//   1. ANY door with deal_closed/closed/booked         → 'client' (gold)
+//   2. Most recent status ∈ {quote_given, pending_dispatch} → 'lead' (green)
+//   3. Most recent status === 'follow_up'/'come_back'  → 'follow-up' (blue)
+//   4. Most recent status ∈ {no_junk, not_interested}  → 'no junk' (red)
+//   5. Most recent status === 'not_home'/'no_answer'   → 'not home' (gray)
+//   6. Fallback: reuse the legacy per-knock color of the most recent status
+function _computeHouseAggregate(doorsInGroup) {
+  // Sort by timestamp descending
+  const sorted = doorsInGroup.slice().sort((a, b) => {
+    const ta = a.timestamp && a.timestamp.toDate ? a.timestamp.toDate().getTime()
+             : (a.timestamp instanceof Date ? a.timestamp.getTime() : 0);
+    const tb = b.timestamp && b.timestamp.toDate ? b.timestamp.toDate().getTime()
+             : (b.timestamp instanceof Date ? b.timestamp.getTime() : 0);
+    return tb - ta;
   });
-  const content=`<div style="font-family:DM Sans,sans-serif;min-width:160px;font-size:13px;color:#222">
-    <div style="font-weight:700;margin-bottom:3px">${data.address||'—'}</div>
-    <div style="color:#666;margin-bottom:2px">Rep: ${data.repName}</div>
-    <div style="font-weight:600;color:${color}">${statusLabel(data.status)}</div>
-    ${data.notes?`<div style="color:#888;font-size:11px;margin-top:3px">${data.notes}</div>`:''}
-  </div>`;
-  m.addListener('click',()=>{infoWindow.setContent(content);infoWindow.open(map,m);});
-  doorMarkers[id]=m;
+  const canonical = sorted[0];
+  const latestStatus = canonical ? canonical.status : '';
+  const hasClient = sorted.some(d =>
+    d.status === 'deal_closed' || d.status === 'closed' || d.status === 'booked'
+  );
+  let bucket, color;
+  if (hasClient) {
+    bucket = 'client';     color = '#F5A623'; // gold
+  } else if (latestStatus === 'quote_given' || latestStatus === 'pending_dispatch') {
+    bucket = 'lead';       color = '#22c55e'; // green
+  } else if (latestStatus === 'follow_up' || latestStatus === 'come_back') {
+    bucket = 'follow-up';  color = '#3b82f6'; // blue
+  } else if (latestStatus === 'no_junk' || latestStatus === 'not_interested') {
+    bucket = 'no junk';    color = '#ef4444'; // red
+  } else if (latestStatus === 'not_home' || latestStatus === 'no_answer') {
+    bucket = 'not home';   color = '#888888'; // gray
+  } else {
+    // Fallback: the legacy per-knock color for this status
+    bucket = latestStatus || 'unknown';
+    color = _DOOR_STATUS_COLORS[latestStatus] || '#888888';
+  }
+  return { canonical, latestStatus, bucket, color, count: doorsInGroup.length };
+}
+
+// Schedule a single rerender per tick (coalesce burst updates from onSnapshot).
+function _scheduleRerenderHouses() {
+  if (_rerenderHousesQueued) return;
+  _rerenderHousesQueued = true;
+  const raf = (typeof requestAnimationFrame === 'function') ? requestAnimationFrame : (cb) => setTimeout(cb, 0);
+  raf(() => {
+    _rerenderHousesQueued = false;
+    try { _rerenderHouses(); } catch (e) { console.warn('[v1.9.2 dedupe] rerender failed:', e); }
+  });
+}
+
+// Rebuild every house marker from _allDoors. Called on every data change.
+function _rerenderHouses() {
+  if (!map) return;
+
+  // Group by normalized address key
+  const groups = {}; // key → array of door data
+  for (const id in _allDoors) {
+    const data = _allDoors[id];
+    if (!data || typeof data.lat !== 'number' || typeof data.lng !== 'number') continue;
+    const key = _normalizeAddressKey(data);
+    if (!key) continue;
+    (groups[key] = groups[key] || []).push(data);
+  }
+
+  // Diff against existing markers: add new, update changed, remove stale
+  const seen = new Set();
+  for (const key in groups) {
+    seen.add(key);
+    const agg = _computeHouseAggregate(groups[key]);
+    if (!agg.canonical) continue;
+    const pos = { lat: agg.canonical.lat, lng: agg.canonical.lng };
+
+    const existing = houseMarkers[key];
+    const ts = agg.canonical.timestamp && agg.canonical.timestamp.toDate
+      ? agg.canonical.timestamp.toDate().toLocaleString()
+      : '—';
+    const content = `
+      <div style="font-family:DM Sans,sans-serif;min-width:180px;font-size:13px;color:#222">
+        <div style="font-weight:700;margin-bottom:4px">${escapeHtml(agg.canonical.address || '—')}</div>
+        <div style="color:#666;margin-bottom:2px">Total knocks: ${agg.count}</div>
+        <div style="font-weight:600;color:${agg.color};margin-bottom:2px">${statusLabel(agg.latestStatus)} <span style="color:#999;font-weight:400">(${agg.bucket})</span></div>
+        <div style="color:#888;font-size:11px">Last: ${ts}${agg.canonical.repName ? ' · ' + escapeHtml(agg.canonical.repName) : ''}</div>
+        ${agg.canonical.notes ? `<div style="color:#888;font-size:11px;margin-top:3px">${escapeHtml(agg.canonical.notes)}</div>` : ''}
+      </div>`;
+
+    if (existing) {
+      existing.setPosition(pos);
+      existing.setIcon(makeDotIcon(agg.color, 12));
+      existing.setTitle(agg.canonical.address || '');
+      existing.__v192Content = content;
+    } else {
+      const m = new google.maps.Marker({
+        position: pos, map,
+        icon: makeDotIcon(agg.color, 12),
+        title: agg.canonical.address || ''
+      });
+      m.__v192Content = content;
+      m.addListener('click', () => {
+        if (infoWindow) { infoWindow.setContent(m.__v192Content); infoWindow.open(map, m); }
+      });
+      houseMarkers[key] = m;
+    }
+  }
+  // Remove markers for house keys that disappeared from the data
+  for (const key in houseMarkers) {
+    if (!seen.has(key)) {
+      try { houseMarkers[key].setMap(null); } catch (_) {}
+      delete houseMarkers[key];
+    }
+  }
+}
+
+// Public entry: records a door into _allDoors and schedules a house re-render.
+// Preserves the (data, id) signature of the legacy per-knock renderer so
+// existing call sites (loadDoorMarkers, onSnapshot 'added'/'modified',
+// optimistic update at line ~3784) continue to work unchanged.
+function addDoorMarker(data, id) {
+  if (!map || typeof data.lat !== 'number' || typeof data.lng !== 'number') return;
+  _allDoors[id] = data;
+  _scheduleRerenderHouses();
+  // Note: legacy `doorMarkers[id]` bookkeeping is intentionally not populated
+  // anymore — the onSnapshot 'modified' branch calls doorMarkers[id]?.setMap(null)
+  // as a cleanup, which becomes a no-op when the id isn't tracked. That's fine;
+  // the house-level renderer owns the actual map markers now.
 }
 
 function subscribeToLiveReps(){
