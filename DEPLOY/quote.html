@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TrashApp — Free Junk Removal Quote v1.6.2</title>
+<title>TrashApp — Free Junk Removal Quote v1.6.3</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗑️</text></svg>">
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#F5A623">
@@ -492,7 +492,7 @@ footer strong{color:var(--text-secondary)}
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-import { getFirestore, doc, getDoc, collection, query, where, orderBy, getDocs, onSnapshot, setDoc, updateDoc, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { getFirestore, doc, getDoc, collection, query, where, orderBy, getDocs, onSnapshot, setDoc, updateDoc, addDoc, deleteDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 const _fbApp = initializeApp({apiKey:"AIzaSyCtl7TaehqrgDCHhgNhOe5URh7YXfCzY8E",authDomain:"trashapp-reps.firebaseapp.com",projectId:"trashapp-reps",storageBucket:"trashapp-reps.firebasestorage.app",messagingSenderId:"146963908159",appId:"1:146963908159:web:d09090c0169186a45ada8a"});
 const _fbDb = getFirestore(_fbApp);
 window._fbDb = _fbDb;
@@ -507,7 +507,51 @@ window._fbOnSnapshot = onSnapshot;
 window._fbSetDoc = setDoc;
 window._fbUpdateDoc = updateDoc;
 window._fbAddDoc = addDoc;
+window._fbDeleteDoc = deleteDoc;
 window._fbServerTimestamp = serverTimestamp;
+</script>
+
+<script>
+// ── SANDBOX MODE (quote.html v1.6.3) ────────────────────────
+// Activated by adding ?sandbox=true to the URL. When active,
+// all Firestore WRITES are redirected to sandbox_* collections,
+// Stripe is disabled, and created docs are deleted on unload.
+window.SANDBOX_MODE = new URLSearchParams(window.location.search).get('sandbox') === 'true';
+window._sandboxRefs = [];
+
+function sandboxCollection(name) {
+  return window.SANDBOX_MODE ? 'sandbox_' + name : name;
+}
+function trackSandboxWrite(docRef) {
+  if (window.SANDBOX_MODE && docRef) window._sandboxRefs.push(docRef);
+}
+async function cleanupSandboxSession() {
+  if (!window.SANDBOX_MODE || !window._sandboxRefs.length) return;
+  console.log('[Sandbox] Cleaning up', window._sandboxRefs.length, 'test records...');
+  const refs = window._sandboxRefs.slice();
+  window._sandboxRefs = [];
+  for (const ref of refs) {
+    try { await window._fbDeleteDoc(ref); } catch (e) { /* ignore */ }
+  }
+  console.log('[Sandbox] Cleanup complete.');
+}
+function showSandboxBanner() {
+  if (!window.SANDBOX_MODE) return;
+  if (document.getElementById('sandbox-banner')) return;
+  const banner = document.createElement('div');
+  banner.id = 'sandbox-banner';
+  banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#f59e0b;color:#000;text-align:center;padding:8px 16px;font-weight:700;font-size:13px;font-family:Inter,sans-serif;letter-spacing:.3px;';
+  banner.textContent = '\uD83E\uDDEA SANDBOX MODE \u2014 Test freely. All data deleted on sign out.';
+  document.body.prepend(banner);
+  document.body.style.paddingTop = '36px';
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', showSandboxBanner);
+} else {
+  showSandboxBanner();
+}
+// Quote tool has no sign-out flow — clean up on page close / nav.
+window.addEventListener('beforeunload', () => { try { cleanupSandboxSession(); } catch (_) {} });
 </script>
 
 <script>
@@ -1427,18 +1471,22 @@ async function bookJob() {
         created_at: window._fbServerTimestamp(),
         updated_at: window._fbServerTimestamp()
       };
-      await window._fbAddDoc(window._fbCollection(window._fbDb, 'jobs'), jobData);
+      const __jobRef1 = await window._fbAddDoc(window._fbCollection(window._fbDb, sandboxCollection('jobs')), jobData);
+      trackSandboxWrite(__jobRef1);
 
-      // If slot was selected, mark it booked
-      if (window_selectedSlot) {
+      // If slot was selected, mark it booked (skip in sandbox to avoid burning a real slot)
+      if (window_selectedSlot && !window.SANDBOX_MODE) {
         await window._fbUpdateDoc(window._fbDoc(window._fbDb, 'job_slots', window_selectedSlot), {
           status: 'booked', bookedAt: window._fbServerTimestamp()
         });
       }
       fbOk = true;
 
-      // If deposit selected, create Stripe checkout
-      if (document.getElementById('deposit-check')?.checked) {
+      // If deposit selected, create Stripe checkout (disabled in sandbox)
+      if (document.getElementById('deposit-check')?.checked && window.SANDBOX_MODE) {
+        console.log('[Sandbox] \uD83D\uDCB3 Stripe disabled in sandbox');
+        showToast('\uD83D\uDCB3 Stripe disabled in sandbox', 'info');
+      } else if (document.getElementById('deposit-check')?.checked) {
         try {
           const stripeRes = await fetch('/api/create-deposit', {
             method: 'POST',
@@ -1458,16 +1506,21 @@ async function bookJob() {
         } catch(e) { console.warn('Stripe deposit failed, booking without deposit:', e); }
       }
 
-      // Queue SMS notification for server pickup
-      try {
-        await window._fbAddDoc(window._fbCollection(window._fbDb, 'pending_notifications'), {
-          type: 'booking_confirmation',
-          to: phone,
-          message: `Hi ${fname}! Your TrashApp pickup is booked${window_selectedSlotLabel ? ' for ' + window_selectedSlotLabel : ''}. We'll text you 30 min before arrival. Questions? Call (559) 774-4249`,
-          status: 'pending',
-          created_at: window._fbServerTimestamp()
-        });
-      } catch(e) { console.warn('SMS queue failed:', e); }
+      // Queue SMS notification for server pickup (skipped in sandbox — Twilio disabled)
+      if (window.SANDBOX_MODE) {
+        console.log('[Sandbox] \uD83D\uDCF1 Twilio SMS disabled — would have queued booking confirmation for', phone);
+      } else {
+        try {
+          const __notifRef1 = await window._fbAddDoc(window._fbCollection(window._fbDb, sandboxCollection('pending_notifications')), {
+            type: 'booking_confirmation',
+            to: phone,
+            message: `Hi ${fname}! Your TrashApp pickup is booked${window_selectedSlotLabel ? ' for ' + window_selectedSlotLabel : ''}. We'll text you 30 min before arrival. Questions? Call (559) 774-4249`,
+            status: 'pending',
+            created_at: window._fbServerTimestamp()
+          });
+          trackSandboxWrite(__notifRef1);
+        } catch(e) { console.warn('SMS queue failed:', e); }
+      }
     }
   } catch(e) {
     console.error('Firestore error:', e);
@@ -1565,18 +1618,22 @@ async function bookJobMulti() {
         created_at: window._fbServerTimestamp(),
         updated_at: window._fbServerTimestamp()
       };
-      await window._fbAddDoc(window._fbCollection(window._fbDb, 'jobs'), jobData);
+      const __jobRef2 = await window._fbAddDoc(window._fbCollection(window._fbDb, sandboxCollection('jobs')), jobData);
+      trackSandboxWrite(__jobRef2);
 
-      // If slot was selected, mark it booked
-      if (window_selectedSlot) {
+      // If slot was selected, mark it booked (skip in sandbox to avoid burning a real slot)
+      if (window_selectedSlot && !window.SANDBOX_MODE) {
         await window._fbUpdateDoc(window._fbDoc(window._fbDb, 'job_slots', window_selectedSlot), {
           status: 'booked', bookedAt: window._fbServerTimestamp()
         });
       }
       fbOk = true;
 
-      // If deposit selected, create Stripe checkout
-      if (document.getElementById('deposit-check-multi')?.checked) {
+      // If deposit selected, create Stripe checkout (disabled in sandbox)
+      if (document.getElementById('deposit-check-multi')?.checked && window.SANDBOX_MODE) {
+        console.log('[Sandbox] \uD83D\uDCB3 Stripe disabled in sandbox');
+        showToast('\uD83D\uDCB3 Stripe disabled in sandbox', 'info');
+      } else if (document.getElementById('deposit-check-multi')?.checked) {
         try {
           const stripeRes = await fetch('/api/create-deposit', {
             method: 'POST',
@@ -1596,16 +1653,21 @@ async function bookJobMulti() {
         } catch(e) { console.warn('Stripe deposit failed, booking without deposit:', e); }
       }
 
-      // Queue SMS notification for server pickup
-      try {
-        await window._fbAddDoc(window._fbCollection(window._fbDb, 'pending_notifications'), {
-          type: 'booking_confirmation',
-          to: phone,
-          message: `Hi ${fname}! Your TrashApp pickup is booked${window_selectedSlotLabel ? ' for ' + window_selectedSlotLabel : ''}. We'll text you 30 min before arrival. Questions? Call (559) 774-4249`,
-          status: 'pending',
-          created_at: window._fbServerTimestamp()
-        });
-      } catch(e) { console.warn('SMS queue failed:', e); }
+      // Queue SMS notification for server pickup (skipped in sandbox — Twilio disabled)
+      if (window.SANDBOX_MODE) {
+        console.log('[Sandbox] \uD83D\uDCF1 Twilio SMS disabled — would have queued booking confirmation for', phone);
+      } else {
+        try {
+          const __notifRef2 = await window._fbAddDoc(window._fbCollection(window._fbDb, sandboxCollection('pending_notifications')), {
+            type: 'booking_confirmation',
+            to: phone,
+            message: `Hi ${fname}! Your TrashApp pickup is booked${window_selectedSlotLabel ? ' for ' + window_selectedSlotLabel : ''}. We'll text you 30 min before arrival. Questions? Call (559) 774-4249`,
+            status: 'pending',
+            created_at: window._fbServerTimestamp()
+          });
+          trackSandboxWrite(__notifRef2);
+        } catch(e) { console.warn('SMS queue failed:', e); }
+      }
     }
   } catch(e) {
     console.error('Firestore error:', e);

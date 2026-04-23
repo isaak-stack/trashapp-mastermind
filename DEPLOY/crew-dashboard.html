@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
-<title>TrashApp — Crew Dashboard v1.2</title>
+<title>TrashApp — Crew Dashboard v1.2.1</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%231a1a1a'/%3E%3Crect x='28' y='36' width='44' height='46' rx='6' fill='%23F5A623'/%3E%3Crect x='20' y='27' width='60' height='11' rx='5' fill='%23F5A623'/%3E%3Crect x='40' y='16' width='20' height='13' rx='4' fill='%23F5A623'/%3E%3C/svg%3E">
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#F5A623">
@@ -297,7 +297,7 @@ input,textarea{font-family:inherit;font-size:17px}
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getAuth, RecaptchaVerifier, signInWithPhoneNumber, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, addDoc, onSnapshot, query, where, serverTimestamp, getDocs, orderBy, arrayUnion, Timestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, collection, addDoc, onSnapshot, query, where, serverTimestamp, getDocs, orderBy, arrayUnion, Timestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { getStorage, ref as sRef, uploadString, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
 
 const FB = {apiKey:"AIzaSyCtl7TaehqrgDCHhgNhOe5URh7YXfCzY8E",authDomain:"trashapp-reps.firebaseapp.com",projectId:"trashapp-reps",storageBucket:"trashapp-reps.firebasestorage.app",messagingSenderId:"146963908159",appId:"1:146963908159:web:d09090c0169186a45ada8a"};
@@ -308,6 +308,76 @@ const storage = getStorage(app);
 
 if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
   auth.settings.appVerificationDisabledForTesting = true;
+}
+
+// ── SANDBOX MODE (crew-dashboard v1.2.1) ────────────────────
+// Activated by adding ?sandbox=true. Redirects writes to
+// sandbox_* collections; disables Twilio SMS. Cleanup runs on
+// sign out / end shift.
+window.SANDBOX_MODE = new URLSearchParams(window.location.search).get('sandbox') === 'true';
+window._sandboxRefs = [];
+window.sandboxCollection = function(name) {
+  return window.SANDBOX_MODE ? 'sandbox_' + name : name;
+};
+window.trackSandboxWrite = function(docRef) {
+  if (window.SANDBOX_MODE && docRef) window._sandboxRefs.push(docRef);
+};
+window.cleanupSandboxSession = async function() {
+  if (!window.SANDBOX_MODE || !window._sandboxRefs.length) return;
+  console.log('[Sandbox] Cleaning up', window._sandboxRefs.length, 'test records...');
+  const refs = window._sandboxRefs.slice();
+  window._sandboxRefs = [];
+  for (const ref of refs) {
+    try { await deleteDoc(ref); } catch (e) { /* ignore */ }
+  }
+  console.log('[Sandbox] Cleanup complete.');
+};
+window.showSandboxBanner = function() {
+  if (!window.SANDBOX_MODE) return;
+  if (document.getElementById('sandbox-banner')) return;
+  const banner = document.createElement('div');
+  banner.id = 'sandbox-banner';
+  banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#f59e0b;color:#000;text-align:center;padding:8px 16px;font-weight:700;font-size:13px;font-family:Inter,sans-serif;letter-spacing:.3px;';
+  banner.textContent = '\uD83E\uDDEA SANDBOX MODE \u2014 Test freely. All data deleted on sign out.';
+  document.body.prepend(banner);
+  document.body.style.paddingTop = '36px';
+};
+const sandboxCollection = window.sandboxCollection;
+const trackSandboxWrite = window.trackSandboxWrite;
+const cleanupSandboxSession = window.cleanupSandboxSession;
+
+// Tracked write helpers — redirect to sandbox_* in sandbox mode
+const _sbCol = (name) => collection(db, sandboxCollection(name));
+const _sbDoc = (name, id) => doc(db, sandboxCollection(name), id);
+const _sbAddDoc = async (name, data) => {
+  const ref = await addDoc(_sbCol(name), data);
+  if (window.SANDBOX_MODE) window._sandboxRefs.push(ref);
+  return ref;
+};
+const _sbSetDoc = async (name, id, data, opts) => {
+  const ref = _sbDoc(name, id);
+  const r = opts !== undefined ? await setDoc(ref, data, opts) : await setDoc(ref, data);
+  if (window.SANDBOX_MODE) window._sandboxRefs.push(ref);
+  return r;
+};
+const _sbUpdateDoc = async (name, id, data) => {
+  const ref = _sbDoc(name, id);
+  const r = await updateDoc(ref, data);
+  if (window.SANDBOX_MODE) window._sandboxRefs.push(ref);
+  return r;
+};
+// Subcollection helper (e.g. addDoc to jobs/{jobId}/statusHistory).
+// In sandbox mode, the parent collection name is rewritten.
+const _sbAddSubDoc = async (parentName, parentId, subName, data) => {
+  const ref = await addDoc(collection(db, sandboxCollection(parentName), parentId, subName), data);
+  if (window.SANDBOX_MODE) window._sandboxRefs.push(ref);
+  return ref;
+};
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', window.showSandboxBanner);
+} else {
+  window.showSandboxBanner();
 }
 
 // ── State ──
@@ -381,6 +451,7 @@ window.backToStep1 = () => {
 };
 
 window.doSignOut = async () => {
+  try { await cleanupSandboxSession(); } catch(_){}
   stopGPS();
   try { await signOut(auth); } catch(_){}
   location.reload();
@@ -408,8 +479,11 @@ onAuthStateChanged(auth, async (user) => {
       if (!phoneSnap.empty) {
         snap = phoneSnap.docs[0];
         // Migrate: update the doc ID to match UID for future lookups
+        // (Skip the migration in sandbox mode — don't touch real crew_members.)
         const existingData = snap.data();
-        await setDoc(cRef, { ...existingData, uid: user.uid });
+        if (!window.SANDBOX_MODE) {
+          await setDoc(cRef, { ...existingData, uid: user.uid });
+        }
       }
     }
 
@@ -484,7 +558,7 @@ function startGPSTracking() {
   const push = () => {
     navigator.geolocation.getCurrentPosition(async (pos) => {
       try {
-        await setDoc(doc(db, 'crew_locations', currentCrewId), {
+        await _sbSetDoc('crew_locations', currentCrewId, {
           crewId: currentCrewId,
           name: currentCrew.name || 'Crew Member',
           lat: pos.coords.latitude,
@@ -544,15 +618,19 @@ async function flushOfflineQueue() {
   for (const op of queue) {
     try {
       if (op.type === 'status_update') {
-        await updateDoc(doc(db, 'jobs', op.jobId), { status: op.status, updatedAt: serverTimestamp() });
-        await addDoc(collection(db, 'jobs', op.jobId, 'statusHistory'), { status: op.status, timestamp: serverTimestamp(), crewId: currentCrewId });
+        await _sbUpdateDoc('jobs', op.jobId, { status: op.status, updatedAt: serverTimestamp() });
+        await _sbAddSubDoc('jobs', op.jobId, 'statusHistory', { status: op.status, timestamp: serverTimestamp(), crewId: currentCrewId });
         flushed++;
       } else if (op.type === 'complete_job') {
-        await updateDoc(doc(db, 'jobs', op.jobId), { status: 'COMPLETED', completedAt: serverTimestamp() });
-        await addDoc(collection(db, 'jobs', op.jobId, 'statusHistory'), { status: 'COMPLETED', timestamp: serverTimestamp(), crewId: currentCrewId });
+        await _sbUpdateDoc('jobs', op.jobId, { status: 'COMPLETED', completedAt: serverTimestamp() });
+        await _sbAddSubDoc('jobs', op.jobId, 'statusHistory', { status: 'COMPLETED', timestamp: serverTimestamp(), crewId: currentCrewId });
         flushed++;
       } else if (op.type === 'notification') {
-        await addDoc(collection(db, 'pending_notifications'), op.data);
+        if (window.SANDBOX_MODE) {
+          console.log('[Sandbox] \uD83D\uDCF1 Twilio SMS disabled — skipping queued notification:', op.data);
+        } else {
+          await _sbAddDoc('pending_notifications', op.data);
+        }
         flushed++;
       } else {
         remaining.push(op); // Unknown type, keep in queue
@@ -821,10 +899,9 @@ window.advanceStatus = async (jobId, newStatus) => {
       btns.forEach((b, i) => b.disabled = prevDisabled[i]);
       return;
     }
-    const jref = doc(db, 'jobs', jobId);
-    await updateDoc(jref, { status: newStatus, updatedAt: serverTimestamp() });
+    await _sbUpdateDoc('jobs', jobId, { status: newStatus, updatedAt: serverTimestamp() });
     // Log to statusHistory subcollection
-    await addDoc(collection(db, 'jobs', jobId, 'statusHistory'), {
+    await _sbAddSubDoc('jobs', jobId, 'statusHistory', {
       status: newStatus,
       timestamp: serverTimestamp(),
       crewId: currentCrewId
@@ -959,7 +1036,7 @@ window.confirmSig = async (jobId) => {
   const ps = jobPhotoState[jobId] = jobPhotoState[jobId] || { before: [], after: [], signature: null };
   ps.signature = dataUrl;
   try {
-    await updateDoc(doc(db, 'jobs', jobId), { signature: dataUrl, signedAt: serverTimestamp() });
+    await _sbUpdateDoc('jobs', jobId, { signature: dataUrl, signedAt: serverTimestamp() });
     const st = document.getElementById('sig-status-' + jobId); if (st) { st.textContent = '✓ Signature captured'; st.classList.add('ok'); }
     toast('Signature captured', 'success');
   } catch(e) {
@@ -978,27 +1055,31 @@ window.completeJob = async (jobId) => {
   const ps = jobPhotoState[jobId] || { after: [], signature: null };
   if (ps.after.length === 0 || !ps.signature) { toast('Need after photos + signature', 'error'); return; }
   try {
-    await updateDoc(doc(db, 'jobs', jobId), { status: 'COMPLETED', completedAt: serverTimestamp() });
-    await addDoc(collection(db, 'jobs', jobId, 'statusHistory'), { status: 'COMPLETED', timestamp: serverTimestamp(), crewId: currentCrewId });
+    await _sbUpdateDoc('jobs', jobId, { status: 'COMPLETED', completedAt: serverTimestamp() });
+    await _sbAddSubDoc('jobs', jobId, 'statusHistory', { status: 'COMPLETED', timestamp: serverTimestamp(), crewId: currentCrewId });
   } catch(e) { console.warn('complete failed', e); }
 
   stopJobTimer(jobId);
   showSuccess();
 
-  // Schedule review SMS via Firestore (survives page close)
+  // Schedule review SMS via Firestore (survives page close) — disabled in sandbox (Twilio off)
   if (j && j.customerPhone) {
     const fname = (j.customerName || '').split(' ')[0] || 'there';
-    try {
-      await addDoc(collection(db, 'pending_notifications'), {
-        type: 'review_request',
-        to: j.customerPhone,
-        message: `Hi ${fname}! Thanks for choosing TrashApp. Mind leaving us a quick Google review? It helps a ton: https://g.page/r/trashapp-review`,
-        status: 'pending',
-        sendAfter: new Date(Date.now() + 7200000).toISOString(),
-        jobId: jobId,
-        created_at: serverTimestamp()
-      });
-    } catch(e) { console.warn('Review SMS queue failed:', e); }
+    if (window.SANDBOX_MODE) {
+      console.log('[Sandbox] \uD83D\uDCF1 Twilio SMS disabled — would have queued review request for', j.customerPhone);
+    } else {
+      try {
+        await _sbAddDoc('pending_notifications', {
+          type: 'review_request',
+          to: j.customerPhone,
+          message: `Hi ${fname}! Thanks for choosing TrashApp. Mind leaving us a quick Google review? It helps a ton: https://g.page/r/trashapp-review`,
+          status: 'pending',
+          sendAfter: new Date(Date.now() + 7200000).toISOString(),
+          jobId: jobId,
+          created_at: serverTimestamp()
+        });
+      } catch(e) { console.warn('Review SMS queue failed:', e); }
+    }
   }
 
   setTimeout(() => {
@@ -1026,6 +1107,7 @@ function showSummary(realJobs) {
 
 window.endShift = async () => {
   if (!confirm('End your shift now?')) return;
+  try { await cleanupSandboxSession(); } catch(_){}
   stopGPS();
   try { await signOut(auth); } catch(_){}
   location.reload();
@@ -1067,6 +1149,10 @@ window.switchView = (name) => {
 
 // ── SMS helper ──
 async function sendSMS(to, message) {
+  if (window.SANDBOX_MODE) {
+    console.log('[Sandbox] \uD83D\uDCF1 Twilio SMS disabled —', { to, message });
+    return;
+  }
   try {
     const res = await fetch('/api/crew-sms', {
       method: 'POST',

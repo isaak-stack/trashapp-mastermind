@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>TrashApp — Rep Platform v1.8.3</title>
+<title>TrashApp — Rep Platform v1.8.5</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%231a1a1a'/%3E%3Crect x='28' y='36' width='44' height='46' rx='6' fill='%23F5A623'/%3E%3Crect x='20' y='27' width='60' height='11' rx='5' fill='%23F5A623'/%3E%3Crect x='40' y='16' width='20' height='13' rx='4' fill='%23F5A623'/%3E%3Crect x='40' y='49' width='6' height='22' rx='3' fill='%231a1a1a'/%3E%3Crect x='54' y='49' width='6' height='22' rx='3' fill='%231a1a1a'/%3E%3C/svg%3E">
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#F5A623">
@@ -1272,7 +1272,7 @@ body.field-sidebar-open .sidebar .sidebar-close{display:flex;position:absolute;t
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getAuth, RecaptchaVerifier, signInWithPhoneNumber, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-import { getFirestore, doc, setDoc, getDoc, collection, addDoc, onSnapshot, query, where, updateDoc, serverTimestamp, getDocs, orderBy, limit, Timestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { getFirestore, doc, setDoc, getDoc, collection, addDoc, onSnapshot, query, where, updateDoc, deleteDoc, serverTimestamp, getDocs, orderBy, limit, Timestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 const FB = {apiKey:"AIzaSyCtl7TaehqrgDCHhgNhOe5URh7YXfCzY8E",authDomain:"trashapp-reps.firebaseapp.com",projectId:"trashapp-reps",storageBucket:"trashapp-reps.firebasestorage.app",messagingSenderId:"146963908159",appId:"1:146963908159:web:d09090c0169186a45ada8a"};
 const app = initializeApp(FB);
@@ -1286,8 +1286,81 @@ window.doc = doc; window.setDoc = setDoc; window.getDoc = getDoc; window.collect
 window.addDoc = addDoc; window.onSnapshot = onSnapshot; window.query = query; window.where = where;
 window.updateDoc = updateDoc; window.serverTimestamp = serverTimestamp; window.getDocs = getDocs;
 window.orderBy = orderBy; window.limit = limit; window.Timestamp = Timestamp;
+window.deleteDoc = deleteDoc;
 window.onAuthStateChanged = onAuthStateChanged; window.signOut = signOut;
 window.RecaptchaVerifier = RecaptchaVerifier; window.signInWithPhoneNumber = signInWithPhoneNumber;
+
+// ── SANDBOX MODE (rep-platform v1.8.4) ──────────────────────
+// Activated by adding ?sandbox=true. Redirects all Firestore
+// WRITES to sandbox_* collections. Stripe + Twilio disabled.
+// All tracked docs are deleted when the rep signs out.
+window.SANDBOX_MODE = new URLSearchParams(window.location.search).get('sandbox') === 'true';
+window._sandboxRefs = [];
+window.sandboxCollection = function(name) {
+  return window.SANDBOX_MODE ? 'sandbox_' + name : name;
+};
+window.trackSandboxWrite = function(docRef) {
+  if (window.SANDBOX_MODE && docRef) window._sandboxRefs.push(docRef);
+};
+window.cleanupSandboxSession = async function() {
+  if (!window.SANDBOX_MODE || !window._sandboxRefs.length) return;
+  console.log('[Sandbox] Cleaning up', window._sandboxRefs.length, 'test records...');
+  const refs = window._sandboxRefs.slice();
+  window._sandboxRefs = [];
+  for (const ref of refs) {
+    try { await deleteDoc(ref); } catch (e) { /* ignore */ }
+  }
+  console.log('[Sandbox] Cleanup complete.');
+};
+window.showSandboxBanner = function() {
+  if (!window.SANDBOX_MODE) return;
+  if (document.getElementById('sandbox-banner')) return;
+  const banner = document.createElement('div');
+  banner.id = 'sandbox-banner';
+  banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#f59e0b;color:#000;text-align:center;padding:8px 16px;font-weight:700;font-size:13px;font-family:Inter,sans-serif;letter-spacing:.3px;';
+  banner.textContent = '\uD83E\uDDEA SANDBOX MODE \u2014 Test freely. All data deleted on sign out.';
+  document.body.prepend(banner);
+  document.body.style.paddingTop = '36px';
+};
+// Short aliases for internal use below
+const sandboxCollection = window.sandboxCollection;
+const trackSandboxWrite = window.trackSandboxWrite;
+const cleanupSandboxSession = window.cleanupSandboxSession;
+
+// Tracked write helpers — redirect collection to sandbox_* in sandbox mode
+// and push the resulting ref onto window._sandboxRefs for cleanup on sign out.
+const _sbCol = (name) => collection(db, sandboxCollection(name));
+const _sbDoc = (name, id) => doc(db, sandboxCollection(name), id);
+const _sbAddDoc = async (name, data) => {
+  const ref = await addDoc(_sbCol(name), data);
+  if (window.SANDBOX_MODE) window._sandboxRefs.push(ref);
+  return ref;
+};
+const _sbSetDoc = async (name, id, data, opts) => {
+  const ref = _sbDoc(name, id);
+  const r = opts !== undefined ? await setDoc(ref, data, opts) : await setDoc(ref, data);
+  if (window.SANDBOX_MODE) window._sandboxRefs.push(ref);
+  return r;
+};
+const _sbUpdateDoc = async (name, id, data) => {
+  const ref = _sbDoc(name, id);
+  const r = await updateDoc(ref, data);
+  if (window.SANDBOX_MODE) window._sandboxRefs.push(ref);
+  return r;
+};
+const _sbDeleteDoc = async (name, id) => {
+  return deleteDoc(_sbDoc(name, id));
+};
+// For pre-built refs (e.g. `const slotRef = doc(db, sandboxCollection('job_slots'), id)`)
+const _trackRef = (ref) => {
+  if (window.SANDBOX_MODE && ref) window._sandboxRefs.push(ref);
+  return ref;
+};
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', window.showSandboxBanner);
+} else {
+  window.showSandboxBanner();
+}
 
 // ── PHONE AUTH TEST MODE ──
 // Test phone numbers (must also be configured in Firebase Console → Authentication → Phone → Test numbers):
@@ -1331,10 +1404,10 @@ function checkOnboarding() {
 
 // ── GLOBAL ERROR HANDLER ──
 window.onerror=(msg,src,line,col,err)=>{
-  try{addDoc(collection(db,'client_errors'),{message:String(msg),source:src||'',line:line||0,col:col||0,stack:err?.stack||'',page:'rep-platform',userAgent:navigator.userAgent,timestamp:serverTimestamp()});}catch(e){}
+  try{_sbAddDoc('client_errors',{message:String(msg),source:src||'',line:line||0,col:col||0,stack:err?.stack||'',page:'rep-platform',userAgent:navigator.userAgent,timestamp:serverTimestamp()});}catch(e){}
 };
 window.addEventListener('unhandledrejection',e=>{
-  try{addDoc(collection(db,'client_errors'),{message:String(e.reason),source:'promise',line:0,col:0,stack:e.reason?.stack||'',page:'rep-platform',userAgent:navigator.userAgent,timestamp:serverTimestamp()});}catch(ex){}
+  try{_sbAddDoc('client_errors',{message:String(e.reason),source:'promise',line:0,col:0,stack:e.reason?.stack||'',page:'rep-platform',userAgent:navigator.userAgent,timestamp:serverTimestamp()});}catch(ex){}
 });
 
 const MARGIN_PIN='5831';
@@ -1454,10 +1527,10 @@ async function syncOfflineQueue(){
       data.timestamp=serverTimestamp();
       if(data._existingDocId){
         const docId=data._existingDocId; delete data._existingDocId;
-        await updateDoc(doc(db,'doors',docId),{status:data.status,address:data.address,timestamp:serverTimestamp()});
+        await _sbUpdateDoc('doors',docId,{status:data.status,address:data.address,timestamp:serverTimestamp()});
       } else {
         delete data._existingDocId;
-        await addDoc(collection(db,'doors'),data);
+        await _sbAddDoc('doors',data);
       }
     } catch(e){ failed.push(item); }
   }
@@ -1567,13 +1640,28 @@ let rcvReady=false;
 let resendTimer=null;
 
 function initRecaptcha() {
-  if(rcv) return;
+  // v1.8.5 — Always clear any prior verifier + container DOM before instantiating.
+  // Fixes "reCAPTCHA has already been rendered in this element" when the page is
+  // re-opened (e.g. admin "View Rep Platform" → new tab, bfcache restores, or any
+  // scenario where the module re-runs with a stale widget still in the DOM).
+  if (rcv || window.recaptchaVerifier) {
+    try { (rcv || window.recaptchaVerifier).clear(); }
+    catch (e) { console.warn('recaptcha clear failed', e); }
+    rcv = null;
+    rcvReady = false;
+    window.recaptchaVerifier = null;
+  }
+  const recaptchaContainer = document.getElementById('recaptcha-container');
+  if (recaptchaContainer) recaptchaContainer.innerHTML = '';
+
   try {
     rcv=new RecaptchaVerifier(auth,'recaptcha-container',{
       size:'invisible',
       callback:()=>{ console.log('reCAPTCHA solved'); },
       'expired-callback':()=>{ console.warn('reCAPTCHA expired, will re-render'); rcvReady=false; }
     });
+    // Mirror to window so a future script / page re-entry can find and clear it.
+    window.recaptchaVerifier = rcv;
     rcv.render().then(()=>{ rcvReady=true; console.log('reCAPTCHA rendered and ready'); }).catch(e=>{ console.error('reCAPTCHA render failed:',e); });
   } catch(e) { console.error('reCAPTCHA init failed:',e); }
 }
@@ -1591,7 +1679,11 @@ function ensureRecaptcha() {
 }
 
 function resetRecaptcha() {
-  if(rcv){try{rcv.clear();}catch(e){}rcv=null;rcvReady=false;}
+  if(rcv){try{rcv.clear();}catch(e){console.warn('recaptcha clear failed',e);}rcv=null;rcvReady=false;}
+  window.recaptchaVerifier = null;
+  // Clear the container DOM — `.clear()` doesn't always wipe the rendered widget.
+  const recaptchaContainer = document.getElementById('recaptcha-container');
+  if (recaptchaContainer) recaptchaContainer.innerHTML = '';
   confirmResult=null;
   // Re-init after clearing
   setTimeout(()=>initRecaptcha(),200);
@@ -1714,7 +1806,7 @@ window.submitSetup = async () => {
   if(!name){document.getElementById('setup-err').textContent='Enter your full name';return;}
   setBtn('setup-btn',true);
   try {
-    await setDoc(doc(db,'reps',currentUser.uid),{
+    await _sbSetDoc('reps',currentUser.uid,{
       name,phone:currentUser.phoneNumber,status:'pending',role:'rep',
       commission:15,zipCode:null,doorsKnocked:0,dealsClosedTotal:0,commissionEarned:0,
       createdAt:serverTimestamp()
@@ -1727,6 +1819,7 @@ window.submitSetup = async () => {
 
 // ── SIGN OUT ──
 window._legacySignOut = async () => {
+  try { await cleanupSandboxSession(); } catch (_) {}
   unsubs.forEach(u=>u()); unsubs=[];
   if(watchId)navigator.geolocation.clearWatch(watchId);
   clearInterval(sessionTimer);
@@ -2025,7 +2118,7 @@ async function restoreSession() {
     const lastUpdate = sess.lastUpdate?.toDate?.() || new Date(0);
     const minsAgo = (Date.now() - lastUpdate.getTime()) / 60000;
     if(minsAgo > 30) {
-      await updateDoc(doc(db,'sessions',currentUser.uid),{active:false});
+      await _sbUpdateDoc('sessions',currentUser.uid,{active:false});
       return;
     }
     // Restore session
@@ -2065,7 +2158,7 @@ function startSessionTimer() {
     setText('ss-comm','$'+commEst);
     // Persist heartbeat to Firestore every ~60 seconds (12 ticks × 5s)
     if(sessionSeconds % 60 < 5) {
-      setDoc(doc(db,'sessions',currentUser.uid),{lastUpdate:serverTimestamp()},{merge:true}).catch(()=>{});
+      _sbSetDoc('sessions',currentUser.uid,{lastUpdate:serverTimestamp()},{merge:true}).catch(()=>{});
     }
   },5000);
 }
@@ -2077,13 +2170,13 @@ window.startSession = async () => {
   sessionSeconds=0; sessionDoors=0; sessionDeals=0;
   sessionPaused=false;
   // Save session to Firestore for persistence
-  await setDoc(doc(db,'sessions',currentUser.uid),{
+  await _sbSetDoc('sessions',currentUser.uid,{
     repId:currentUser.uid, repName:currentRep.name,
     startTime:serverTimestamp(), lastUpdate:serverTimestamp(),
     active:true, doorsKnocked:0, dealsClosedCount:0
   });
   startSessionTimer();
-  try{await setDoc(doc(db,'live_reps',currentUser.uid),{repId:currentUser.uid,name:currentRep.name,active:true,sessionActive:true,updatedAt:serverTimestamp()},{merge:true});}catch(e){}
+  try{await _sbSetDoc('live_reps',currentUser.uid,{repId:currentUser.uid,name:currentRep.name,active:true,sessionActive:true,updatedAt:serverTimestamp()},{merge:true});}catch(e){}
   // Notify admin that session started
   notifySessionStart();
   document.getElementById('session-inactive-side').style.display='none';
@@ -2104,8 +2197,8 @@ window._legacyEndSession = async () => {
   clearInterval(sessionTimer);
   // Mark session inactive in Firestore
   try{
-    await updateDoc(doc(db,'sessions',currentUser.uid),{active:false,endTime:serverTimestamp()});
-    await setDoc(doc(db,'live_reps',currentUser.uid),{sessionActive:false},{merge:true});
+    await _sbUpdateDoc('sessions',currentUser.uid,{active:false,endTime:serverTimestamp()});
+    await _sbSetDoc('live_reps',currentUser.uid,{sessionActive:false},{merge:true});
     // Check if last rep — generate end-of-day summary
     checkEndOfDaySummary();
   }catch(e){}
@@ -2157,8 +2250,8 @@ window._legacyTogglePause = async () => {
   applyPauseUI();
   // Persist pause state to Firestore so admin map can reflect it
   try {
-    await setDoc(doc(db,'sessions',currentUser.uid),{paused:sessionPaused,lastUpdate:serverTimestamp()},{merge:true});
-    await setDoc(doc(db,'live_reps',currentUser.uid),{paused:sessionPaused},{merge:true});
+    await _sbSetDoc('sessions',currentUser.uid,{paused:sessionPaused,lastUpdate:serverTimestamp()},{merge:true});
+    await _sbSetDoc('live_reps',currentUser.uid,{paused:sessionPaused},{merge:true});
   } catch(e) {}
 };
 window.togglePauseSession = async (btnOrEvent) => {
@@ -2173,8 +2266,8 @@ window.togglePauseSession = async (btnOrEvent) => {
     startPitchTimer();
   }
   try {
-    await setDoc(doc(db,'sessions',currentUser.uid),{paused:sessionPaused,lastUpdate:serverTimestamp()},{merge:true});
-    await setDoc(doc(db,'live_reps',currentUser.uid),{paused:sessionPaused},{merge:true});
+    await _sbSetDoc('sessions',currentUser.uid,{paused:sessionPaused,lastUpdate:serverTimestamp()},{merge:true});
+    await _sbSetDoc('live_reps',currentUser.uid,{paused:sessionPaused},{merge:true});
   } catch(e) {
     sessionPaused = wasSessionPaused;
     applyPauseUI();
@@ -2235,7 +2328,7 @@ function updateSessionStats() {
   setText('map-door-count',sessionDoors+' doors this session');
   // Persist to Firestore session doc
   if(activeSession&&currentUser){
-    setDoc(doc(db,'sessions',currentUser.uid),{doorsKnocked:sessionDoors,dealsClosedCount:sessionDeals,lastUpdate:serverTimestamp()},{merge:true}).catch(()=>{});
+    _sbSetDoc('sessions',currentUser.uid,{doorsKnocked:sessionDoors,dealsClosedCount:sessionDeals,lastUpdate:serverTimestamp()},{merge:true}).catch(()=>{});
   }
 }
 
@@ -2247,7 +2340,7 @@ async function onGPSUpdate(pos) {
   const now=Date.now();
   if(now-_lastGPSWrite>=GPS_WRITE_INTERVAL){
     _lastGPSWrite=now;
-    try{await setDoc(doc(db,'live_reps',currentUser.uid),{repId:currentUser.uid,name:currentRep.name,lat,lng,active:true,sessionActive:!!activeSession,updatedAt:serverTimestamp()},{merge:true});}catch(e){}
+    try{await _sbSetDoc('live_reps',currentUser.uid,{repId:currentUser.uid,name:currentRep.name,lat,lng,active:true,sessionActive:!!activeSession,updatedAt:serverTimestamp()},{merge:true});}catch(e){}
   }
   if(!map)return;
   if(myMarker)myMarker.setPosition({lat,lng});
@@ -2329,11 +2422,11 @@ window.quickLog = async (status) => {
   const address=await reverseGeocode(lat,lng);
   const data={repId:currentUser.uid,repName:currentRep.name,address,status,lat,lng,zipCode:currentRep.zipCode,timestamp:serverTimestamp()};
   try{
-    const ref=await addDoc(collection(db,'doors'),data);
+    const ref=await _sbAddDoc('doors',data);
     const newDoors=(currentRep.doorsKnocked||0)+1;
     const isDeal=status==='pending_dispatch'||status==='quote_given';
     const newDeals=isDeal?(currentRep.dealsClosedTotal||0)+1:(currentRep.dealsClosedTotal||0);
-    await updateDoc(doc(db,'reps',currentUser.uid),{doorsKnocked:newDoors,dealsClosedTotal:newDeals});
+    await _sbUpdateDoc('reps',currentUser.uid,{doorsKnocked:newDoors,dealsClosedTotal:newDeals});
     currentRep.doorsKnocked=newDoors; currentRep.dealsClosedTotal=newDeals;
     sessionDoors++; if(isDeal)sessionDeals++;
     updateSessionStats();
@@ -2888,7 +2981,7 @@ async function openDoorSheet(lat,lng,address){
     map.panTo({lat,lng});
     map.setZoom(19);
     // Write knocking state to Firestore so admin can see
-    try{setDoc(doc(db,'live_reps',currentUser.uid),{knocking:true,knock_address:address,knock_lat:lat,knock_lng:lng},{merge:true});}catch(e){}
+    try{_sbSetDoc('live_reps',currentUser.uid,{knocking:true,knock_address:address,knock_lat:lat,knock_lng:lng},{merge:true});}catch(e){}
   }
 }
 
@@ -2908,7 +3001,7 @@ window.closeDoorSheet=()=>{
   if(knockingMarker){knockingMarker.setMap(null);knockingMarker=null;}
   // Clear knocking state in Firestore
   if(currentUser&&activeSession){
-    try{setDoc(doc(db,'live_reps',currentUser.uid),{knocking:false,knock_address:null,knock_lat:null,knock_lng:null},{merge:true});}catch(e){}
+    try{_sbSetDoc('live_reps',currentUser.uid,{knocking:false,knock_address:null,knock_lat:null,knock_lng:null},{merge:true});}catch(e){}
   }
   // Close suggestions panel
   const sugEl=document.getElementById('addr-suggestions');
@@ -2978,19 +3071,19 @@ window.setDoorStatus = async status => {
     data.timestamp=serverTimestamp();
     const isDeal=status==='pending_dispatch'||status==='quote_given';
     if(currentDoor.docId){
-      await updateDoc(doc(db,'doors',currentDoor.docId),{status,address,timestamp:serverTimestamp()});
+      await _sbUpdateDoc('doors',currentDoor.docId,{status,address,timestamp:serverTimestamp()});
       if(isDeal){
         const newDeals=(currentRep.dealsClosedTotal||0)+1;
-        await updateDoc(doc(db,'reps',currentUser.uid),{dealsClosedTotal:newDeals});
+        await _sbUpdateDoc('reps',currentUser.uid,{dealsClosedTotal:newDeals});
         currentRep.dealsClosedTotal=newDeals;
         if(activeSession){sessionDeals++;updateSessionStats();}
       }
     } else {
-      const ref=await addDoc(collection(db,'doors'),data);
+      const ref=await _sbAddDoc('doors',data);
       currentDoor.docId=ref.id;
       const newDoors=(currentRep.doorsKnocked||0)+1;
       const newDeals=isDeal?(currentRep.dealsClosedTotal||0)+1:(currentRep.dealsClosedTotal||0);
-      await updateDoc(doc(db,'reps',currentUser.uid),{doorsKnocked:newDoors,dealsClosedTotal:newDeals});
+      await _sbUpdateDoc('reps',currentUser.uid,{doorsKnocked:newDoors,dealsClosedTotal:newDeals});
       currentRep.doorsKnocked=newDoors; currentRep.dealsClosedTotal=newDeals;
       sessionDoors++; if(isDeal)sessionDeals++;
       updateSessionStats();
@@ -3005,7 +3098,7 @@ window.setDoorStatus = async status => {
     addDoorMarker({...data,status},currentDoor.docId||('tmp-'+Date.now()));
   }
   // Clear knocking state (closeDoorSheet will also try, but do it here for certainty)
-  if(currentUser){try{setDoc(doc(db,'live_reps',currentUser.uid),{knocking:false,knock_address:null,knock_lat:null,knock_lng:null},{merge:true});}catch(e){}}
+  if(currentUser){try{_sbSetDoc('live_reps',currentUser.uid,{knocking:false,knock_address:null,knock_lat:null,knock_lng:null},{merge:true});}catch(e){}}
   closeDoorSheet();
   loadDashboard();
 };
@@ -3015,9 +3108,9 @@ window.saveDoorNote = async () => {
   if(!notes)return;
   const address=document.getElementById('sheet-address').value.trim()||currentDoor.address;
   if(currentDoor.docId){
-    await updateDoc(doc(db,'doors',currentDoor.docId),{notes,address});
+    await _sbUpdateDoc('doors',currentDoor.docId,{notes,address});
   } else {
-    const ref=await addDoc(collection(db,'doors'),{repId:currentUser.uid,repName:currentRep.name,address,status:'not_home',notes,lat:currentDoor.lat,lng:currentDoor.lng,zipCode:currentRep.zipCode,timestamp:serverTimestamp()});
+    const ref=await _sbAddDoc('doors',{repId:currentUser.uid,repName:currentRep.name,address,status:'not_home',notes,lat:currentDoor.lat,lng:currentDoor.lng,zipCode:currentRep.zipCode,timestamp:serverTimestamp()});
     currentDoor.docId=ref.id;
     if(activeSession){sessionDoors++;updateSessionStats();}
   }
@@ -3376,28 +3469,28 @@ window.bookDoorJob = async () => {
     document.getElementById('dq-book-btn').style.display='none';
     // A booking sets status to pending_dispatch (not closed — only admin marks deal_closed)
     if(currentDoor.docId){
-      await updateDoc(doc(db,'doors',currentDoor.docId),{status:'pending_dispatch',timestamp:serverTimestamp()});
+      await _sbUpdateDoc('doors',currentDoor.docId,{status:'pending_dispatch',timestamp:serverTimestamp()});
       const newDeals=(currentRep.dealsClosedTotal||0)+1;
-      await updateDoc(doc(db,'reps',currentUser.uid),{dealsClosedTotal:newDeals});
+      await _sbUpdateDoc('reps',currentUser.uid,{dealsClosedTotal:newDeals});
       currentRep.dealsClosedTotal=newDeals;
     } else {
-      const ref=await addDoc(collection(db,'doors'),{repId:currentUser.uid,repName:currentRep.name,address,status:'pending_dispatch',lat:currentDoor.lat,lng:currentDoor.lng,zipCode:currentRep.zipCode,timestamp:serverTimestamp()});
+      const ref=await _sbAddDoc('doors',{repId:currentUser.uid,repName:currentRep.name,address,status:'pending_dispatch',lat:currentDoor.lat,lng:currentDoor.lng,zipCode:currentRep.zipCode,timestamp:serverTimestamp()});
       currentDoor.docId=ref.id;
       const newDoors=(currentRep.doorsKnocked||0)+1;
       const newDeals=(currentRep.dealsClosedTotal||0)+1;
-      await updateDoc(doc(db,'reps',currentUser.uid),{doorsKnocked:newDoors,dealsClosedTotal:newDeals});
+      await _sbUpdateDoc('reps',currentUser.uid,{doorsKnocked:newDoors,dealsClosedTotal:newDeals});
       currentRep.doorsKnocked=newDoors; currentRep.dealsClosedTotal=newDeals;
       if(activeSession) sessionDoors++;
     }
     if(activeSession){
       sessionDeals++;
-      await setDoc(doc(db,'sessions',currentUser.uid),{dealsClosedCount:sessionDeals},{merge:true});
+      await _sbSetDoc('sessions',currentUser.uid,{dealsClosedCount:sessionDeals},{merge:true});
       updateSessionStats();
     }
     // Customer profile — find or create
     const custId=await findOrCreateCustomer({name:fname+' '+lname,phone,email,address});
     // Create job document
-    const jobRef=await addDoc(collection(db,'jobs'),{
+    const jobRef=await _sbAddDoc('jobs',{
       repId:currentUser.uid, repName:currentRep?.name||'',
       customerId:custId, customer_name:fname+' '+lname, address, zip_code:currentRep.zipCode||'',
       phone, email, status:'PENDING_DISPATCH', same_day:false,
@@ -3473,22 +3566,22 @@ window.closeSameDayDeal = async () => {
   const commRate=(currentRep?.commission||15)/100;
   try{
     const isNewDoor=!currentDoor.docId;
-    if(currentDoor.docId) await updateDoc(doc(db,'doors',currentDoor.docId),{status:'pending_dispatch',timestamp:serverTimestamp()});
+    if(currentDoor.docId) await _sbUpdateDoc('doors',currentDoor.docId,{status:'pending_dispatch',timestamp:serverTimestamp()});
     else {
-      const dRef=await addDoc(collection(db,'doors'),{repId:currentUser.uid,repName:currentRep.name,address,status:'pending_dispatch',lat:currentDoor.lat,lng:currentDoor.lng,zipCode:currentRep.zipCode,timestamp:serverTimestamp()});
+      const dRef=await _sbAddDoc('doors',{repId:currentUser.uid,repName:currentRep.name,address,status:'pending_dispatch',lat:currentDoor.lat,lng:currentDoor.lng,zipCode:currentRep.zipCode,timestamp:serverTimestamp()});
       currentDoor.docId=dRef.id;
     }
     const newDeals=(currentRep.dealsClosedTotal||0)+1;
     if(isNewDoor){
       const newDoors=(currentRep.doorsKnocked||0)+1;
-      await updateDoc(doc(db,'reps',currentUser.uid),{doorsKnocked:newDoors,dealsClosedTotal:newDeals});
+      await _sbUpdateDoc('reps',currentUser.uid,{doorsKnocked:newDoors,dealsClosedTotal:newDeals});
       currentRep.doorsKnocked=newDoors;
     } else {
-      await updateDoc(doc(db,'reps',currentUser.uid),{dealsClosedTotal:newDeals});
+      await _sbUpdateDoc('reps',currentUser.uid,{dealsClosedTotal:newDeals});
     }
     currentRep.dealsClosedTotal=newDeals;
     const custId=await findOrCreateCustomer({name:`${fname} ${lname}`.trim(),phone,email,address});
-    const jobRef=await addDoc(collection(db,'jobs'),{
+    const jobRef=await _sbAddDoc('jobs',{
       repId:currentUser.uid,repName:currentRep.name,
       customerId:custId,customer_name:`${fname} ${lname}`.trim(),address,zip_code:currentRep.zipCode||'',
       phone,email,status:'PENDING_DISPATCH',same_day:true,
@@ -3598,11 +3691,11 @@ window.loadFollowUps = async () => {
 };
 
 window.updateDoorStatus = async (id,status)=>{
-  await updateDoc(doc(db,'doors',id),{status,timestamp:serverTimestamp()});
+  await _sbUpdateDoc('doors',id,{status,timestamp:serverTimestamp()});
   const isDeal=status==='pending_dispatch'||status==='quote_given';
   if(isDeal && currentUser) {
     const newDeals=(currentRep.dealsClosedTotal||0)+1;
-    await updateDoc(doc(db,'reps',currentUser.uid),{dealsClosedTotal:newDeals});
+    await _sbUpdateDoc('reps',currentUser.uid,{dealsClosedTotal:newDeals});
     currentRep.dealsClosedTotal=newDeals;
     if(activeSession){
       sessionDeals++;
@@ -3662,7 +3755,7 @@ window._legacySaveScript = async () => {
   const title=titleEl.value.trim();
   const body=bodyEl.value.trim();
   if(!title||!body){showToast('Enter title and script text', 'warning');return;}
-  await addDoc(collection(db,'scripts'),{type:'personal',uid:currentUser.uid,title,body,createdAt:serverTimestamp()});
+  await _sbAddDoc('scripts',{type:'personal',uid:currentUser.uid,title,body,createdAt:serverTimestamp()});
   titleEl.value='';
   bodyEl.value='';
   loadScripts();
@@ -3688,8 +3781,7 @@ window.savePersonalScript = async (btnOrEvent) => {
 
 window.deleteScript = async id => {
   if(!confirm('Delete this script?'))return;
-  const {deleteDoc}=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-  await deleteDoc(doc(db,'scripts',id));
+  await _sbDeleteDoc('scripts',id);
   loadScripts();
 };
 
@@ -3774,7 +3866,7 @@ function buildLongDistanceBanner(miles, fee) {
 
 window.flagForManualQuote = async () => {
   try {
-    await addDoc(collection(db, 'jobs'), {
+    await _sbAddDoc('jobs', {
       status: 'manual_review', address: currentDoor?.address || document.getElementById('q-address')?.value || '',
       repId: currentUser?.uid, repName: currentRep?.name,
       travelMiles: travelMiles || doorTravelMiles, flaggedAt: serverTimestamp(),
@@ -3921,7 +4013,7 @@ window._legacyBookJob = async () => {
   // Step 2: Create door record
   let doorRef;
   try {
-    doorRef=await addDoc(collection(db,'doors'),{repId:currentUser.uid,repName:currentRep.name,address:address||'Quote Tool',status:'pending_dispatch',lat:null,lng:null,zipCode:currentRep.zipCode,timestamp:serverTimestamp()});
+    doorRef=await _sbAddDoc('doors',{repId:currentUser.uid,repName:currentRep.name,address:address||'Quote Tool',status:'pending_dispatch',lat:null,lng:null,zipCode:currentRep.zipCode,timestamp:serverTimestamp()});
   } catch(e) { throw new Error('Couldn\'t create door'); }
 
   // Step 3: Create job and update rep stats
@@ -3929,15 +4021,15 @@ window._legacyBookJob = async () => {
   try {
     const newDeals=(currentRep.dealsClosedTotal||0)+1;
     const newDoors=(currentRep.doorsKnocked||0)+1;
-    await updateDoc(doc(db,'reps',currentUser.uid),{dealsClosedTotal:newDeals,doorsKnocked:newDoors});
+    await _sbUpdateDoc('reps',currentUser.uid,{dealsClosedTotal:newDeals,doorsKnocked:newDoors});
     currentRep.dealsClosedTotal=newDeals; currentRep.doorsKnocked=newDoors;
     if(activeSession){
       sessionDeals++; sessionDoors++;
-      await setDoc(doc(db,'sessions',currentUser.uid),{dealsClosedCount:sessionDeals,doorsKnocked:sessionDoors},{merge:true});
+      await _sbSetDoc('sessions',currentUser.uid,{dealsClosedCount:sessionDeals,doorsKnocked:sessionDoors},{merge:true});
     }
     updateSessionStats();
     const custId=await findOrCreateCustomer({name:fname+' '+lname,phone,email,address:address||''});
-    jobRef=await addDoc(collection(db,'jobs'),{
+    jobRef=await _sbAddDoc('jobs',{
       repId:currentUser.uid, repName:currentRep?.name||'',
       customerId:custId, customer_name:fname+' '+lname, address:address||'', zip_code:currentRep.zipCode||'',
       phone, email, status:'PENDING_DISPATCH', same_day:false,
@@ -4260,7 +4352,7 @@ function buildSlotPicker(containerId, opts = {}) {
 // Hold a slot with 5-minute countdown
 window.holdSlot = async (slotId, slotLabel) => {
   try {
-    const slotRef = doc(db, 'job_slots', slotId);
+    const slotRef = _trackRef(doc(db, sandboxCollection('job_slots'), slotId));
     await updateDoc(slotRef, {
       status: 'held',
       heldAt: serverTimestamp(),
@@ -4279,7 +4371,7 @@ window.holdSlot = async (slotId, slotLabel) => {
 
     // Update job doc with this slot ID
     if (lastBookedJobId) {
-      await updateDoc(doc(db, 'jobs', lastBookedJobId), {
+      await _sbUpdateDoc('jobs', lastBookedJobId, {
         slot_id: slotId,
         slot_label: slotLabel,
         updated_at: serverTimestamp()
@@ -4477,12 +4569,12 @@ window.setComeBackAt=async()=>{
   if(!navigator.onLine){queueDoorOffline(data);sessionDoors++;updateSessionStats();closeDoorSheet();return;}
   try{
     data.timestamp=serverTimestamp();
-    if(currentDoor.docId) await updateDoc(doc(db,'doors',currentDoor.docId),{status:'come_back',comeBackAt:Timestamp.fromDate(comeBackDate),timestamp:serverTimestamp()});
+    if(currentDoor.docId) await _sbUpdateDoc('doors',currentDoor.docId,{status:'come_back',comeBackAt:Timestamp.fromDate(comeBackDate),timestamp:serverTimestamp()});
     else {
-      const ref=await addDoc(collection(db,'doors'),data);
+      const ref=await _sbAddDoc('doors',data);
       currentDoor.docId=ref.id;
       const newDoors=(currentRep.doorsKnocked||0)+1;
-      await updateDoc(doc(db,'reps',currentUser.uid),{doorsKnocked:newDoors});
+      await _sbUpdateDoc('reps',currentUser.uid,{doorsKnocked:newDoors});
       currentRep.doorsKnocked=newDoors;
       sessionDoors++;updateSessionStats();
     }
@@ -4527,14 +4619,14 @@ async function findOrCreateCustomer(info){
         badge.style.display='inline-block';
       }
       // Append to job history
-      await updateDoc(doc(db,'customers',existing.id),{
+      await _sbUpdateDoc('customers',existing.id,{
         jobHistory:[...(custData.jobHistory||[]),{date:new Date().toISOString(),address:info.address}],
         updatedAt:serverTimestamp()
       });
       return existing.id;
     }
     // Create new customer
-    const ref=await addDoc(collection(db,'customers'),{
+    const ref=await _sbAddDoc('customers',{
       name:info.name,phone:info.phone,email:info.email||'',address:info.address,
       jobHistory:[{date:new Date().toISOString(),address:info.address}],
       createdAt:serverTimestamp(),updatedAt:serverTimestamp()
@@ -4546,7 +4638,7 @@ async function findOrCreateCustomer(info){
 // ── SESSION START NOTIFICATION ──
 async function notifySessionStart(){
   try{
-    await addDoc(collection(db,'admin_notifications'),{
+    await _sbAddDoc('admin_notifications',{
       type:'session_start',
       message:`${currentRep.name} started a session in zip ${currentRep.zipCode||'unknown'}`,
       repId:currentUser.uid,repName:currentRep.name,
@@ -4577,7 +4669,7 @@ async function checkEndOfDaySummary(){
     jobsSnap.forEach(d=>{estRevenue+=(d.data().estimated_revenue||0);});
     const dateStr=new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
     const msg=`TrashApp Daily Summary — ${dateStr}\n\nDoors Knocked: ${totalDoors}\nJobs Pending Dispatch: ${pendingDispatch}\nEstimated Revenue: $${estRevenue}\nReps Active Today: ${[...repNames].join(', ')||'None'}\n\n— Auto-generated by TrashApp`;
-    await addDoc(collection(db,'daily_summary'),{
+    await _sbAddDoc('daily_summary',{
       date:new Date().toDateString(),
       totalDoors,pendingDispatch,estimatedRevenue:estRevenue,
       repNames:[...repNames],
@@ -4676,7 +4768,7 @@ window.confirmStartSession = async () => {
   closeSessionStartModal();
 
   // Create rep_sessions document
-  const sessionRef = await addDoc(collection(db, 'rep_sessions'), {
+  const sessionRef = await _sbAddDoc('rep_sessions', {
     repId: currentUser.uid,
     repName: currentRep?.name || '',
     zipCode: zip,
@@ -4870,7 +4962,7 @@ async function fieldLogDoor(outcome) {
   // Update session document
   if (currentSessionDoc) {
     try {
-      const sessRef = doc(db, 'rep_sessions', currentSessionDoc.id);
+      const sessRef = _trackRef(doc(db, sandboxCollection('rep_sessions'), currentSessionDoc.id));
       await updateDoc(sessRef, {
         doorsKnocked: sessionData.doorsKnocked,
         quotesGiven: sessionData.quotesGiven,
@@ -4881,7 +4973,7 @@ async function fieldLogDoor(outcome) {
 
   // Also log to doors collection (existing pattern)
   try {
-    await addDoc(collection(db, 'doors'), {
+    await _sbAddDoc('doors', {
       repId: currentUser.uid,
       repName: currentRep?.name || '',
       address: doorData.address,
@@ -4895,7 +4987,7 @@ async function fieldLogDoor(outcome) {
   // Update rep stats
   try {
     const newDoors = (currentRep.doorsKnocked || 0) + 1;
-    await updateDoc(doc(db, 'reps', currentUser.uid), { doorsKnocked: newDoors });
+    await _sbUpdateDoc('reps', currentUser.uid, { doorsKnocked: newDoors });
     currentRep.doorsKnocked = newDoors;
   } catch(e) {}
 }
@@ -4919,7 +5011,7 @@ window.fieldConfirmBook = async () => {
 
   try {
     // Create job in Firestore
-    const jobRef = await addDoc(collection(db, 'jobs'), {
+    const jobRef = await _sbAddDoc('jobs', {
       repId: currentUser.uid, repName: currentRep?.name || '',
       customer_name: fname, phone, email: email || '',
       address: fAddr,
@@ -4935,7 +5027,7 @@ window.fieldConfirmBook = async () => {
 
     // Book slot if selected
     if (window._fieldSlotId) {
-      await updateDoc(doc(db, 'job_slots', window._fieldSlotId), {
+      await _sbUpdateDoc('job_slots', window._fieldSlotId, {
         status: 'booked', bookedAt: serverTimestamp(), jobId: jobRef.id
       });
     }
@@ -4951,12 +5043,12 @@ window.fieldConfirmBook = async () => {
 
     // Update rep deals
     const newDeals = (currentRep.dealsClosedTotal || 0) + 1;
-    await updateDoc(doc(db, 'reps', currentUser.uid), { dealsClosedTotal: newDeals });
+    await _sbUpdateDoc('reps', currentUser.uid, { dealsClosedTotal: newDeals });
     currentRep.dealsClosedTotal = newDeals;
 
     // Update session doc
     if (currentSessionDoc) {
-      await updateDoc(doc(db, 'rep_sessions', currentSessionDoc.id), {
+      await _sbUpdateDoc('rep_sessions', currentSessionDoc.id, {
         jobsBooked: sessionData.jobsBooked,
         totalBooked: sessionData.totalBooked,
         commissionEarned: sessionData.commissionEarned
@@ -4995,7 +5087,7 @@ window.confirmEndSession = async () => {
   // Update session doc
   if (currentSessionDoc) {
     try {
-      await updateDoc(doc(db, 'rep_sessions', currentSessionDoc.id), {
+      await _sbUpdateDoc('rep_sessions', currentSessionDoc.id, {
         status: 'ended',
         endedAt: serverTimestamp(),
         doorsKnocked: sessionData.doorsKnocked,
