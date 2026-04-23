@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>TrashApp — Rep Platform v1.9.5</title>
+<title>TrashApp — Rep Platform v1.9.6</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%231a1a1a'/%3E%3Crect x='28' y='36' width='44' height='46' rx='6' fill='%23F5A623'/%3E%3Crect x='20' y='27' width='60' height='11' rx='5' fill='%23F5A623'/%3E%3Crect x='40' y='16' width='20' height='13' rx='4' fill='%23F5A623'/%3E%3Crect x='40' y='49' width='6' height='22' rx='3' fill='%231a1a1a'/%3E%3Crect x='54' y='49' width='6' height='22' rx='3' fill='%231a1a1a'/%3E%3C/svg%3E">
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#F5A623">
@@ -1579,7 +1579,10 @@ body.v190 #recap-overlay:not(.open) { display: none !important; }
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDtkh_G25Kr6YaAeNJOd9D9YJuyZnKvu08&libraries=places,geometry,geocoding&callback=Function.prototype" async defer></script>
 <script type="module">
 /* v1.9.1 — additive features: active reps widget, rep self-listener, session ghost cleanup.
-   No UX rewiring. No existing feature touched. */
+   No UX rewiring. No existing feature touched.
+   v1.9.6 — fix drawer "Quote Tool" route (→ #view-quote instead of overlay) and
+           rebind Google Map to #gmap when Live Map drawer is tapped (map was
+           stuck on legacy #home-map-canvas under #view-home). */
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getAuth, RecaptchaVerifier, signInWithPhoneNumber, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import { getFirestore, doc, setDoc, getDoc, collection, addDoc, onSnapshot, query, where, updateDoc, deleteDoc, serverTimestamp, getDocs, orderBy, limit, Timestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
@@ -2266,11 +2269,13 @@ function _origShowView(view){
     'quote': 'openQuoteOverlay'
   };
 
-  // In v1.9.0+ we use the requested view name directly (except 'quote' which
-  // still opens the overlay on every path — that UX is unchanged).
-  const resolvedView = (inV190 && view !== 'quote') ? view : (viewMap[view] || view);
+  // v1.9.6 — under v1.9.0 drawer nav, 'quote' routes to the populated
+  // #view-quote container instead of the empty #quote-overlay slide-up.
+  // The overlay is a separate, older UI; its empty-content bug is tracked
+  // as deeper work and deliberately not fixed here.
+  const resolvedView = inV190 ? view : (viewMap[view] || view);
 
-  // Special handler for quote overlay (unchanged)
+  // Special handler for quote overlay (legacy path only — v1.9.0 never hits this)
   if(resolvedView === 'openQuoteOverlay') {
     window.openQuoteOverlay();
     return;
@@ -2323,9 +2328,11 @@ function _origShowView(view){
       } catch(_){}
     }, 150);
   }
-  // v1.9.4 — when drawer routes to Live Map, trigger a resize so the embedded
-  // Google Map re-lays itself correctly after being shown.
+  // v1.9.4/v1.9.6 — when drawer routes to Live Map, ensure the Google Map is
+  // bound to #gmap (not the legacy #home-map-canvas) and then trigger a
+  // resize so it lays out correctly inside #view-map.
   if(inV190 && view==='map') {
+    try { v190EnsureMapBinding(); } catch(_) {}
     setTimeout(() => {
       try {
         if (window.map && google?.maps?.event) {
@@ -3289,6 +3296,108 @@ window.initMap=function initMap() {
 
   // Setup Places Autocomplete on sheet-address input
   setupAddressAutocomplete();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// v1.9.6 — Live Map binding fix
+//   initMap() (above) chooses #home-map-canvas || #gmap and in v1.8 the
+//   legacy element came first, so window.map ends up attached to the
+//   mobile-era home-map-canvas that sits inside the now-CSS-hidden
+//   #view-home. The drawer's Live Map target is a SEPARATE empty #gmap.
+//   Google Maps can't move a Map instance between DOM nodes, so the fix
+//   is to construct a new Map on #gmap, copy over state (center, zoom,
+//   styles, click listener), and reparent every existing marker via
+//   .setMap(newMap). The old Map is orphaned but lives in JS memory only
+//   (the old DOM container gets its innerHTML cleared as a belt).
+// ══════════════════════════════════════════════════════════════════════
+function v190EnsureMapBinding() {
+  // Only runs in v1.9.0 dashboard-first UX
+  if (!document.body.classList.contains('v190')) return;
+  if (!window.map || typeof window.map.getDiv !== 'function') return;
+  const currentId = window.map.getDiv() && window.map.getDiv().id;
+  if (currentId !== 'home-map-canvas') return; // already bound correctly
+
+  const gmapEl = document.getElementById('gmap');
+  if (!gmapEl) return;
+  if (!window.google || !google.maps) return;
+
+  // Snapshot current state so the new map opens where the old one was
+  const oldMap = window.map;
+  const oldCenter = oldMap.getCenter();
+  const oldZoom = oldMap.getZoom() || 17;
+
+  try {
+    const newMap = new google.maps.Map(gmapEl, {
+      center: oldCenter || { lat: 36.7378, lng: -119.7871 },
+      zoom: oldZoom,
+      styles: DARK_MAP_STYLE,
+      disableDefaultUI: false,
+      zoomControl: true,
+      streetViewControl: false,
+      mapTypeControl: false,
+      fullscreenControl: false,
+      gestureHandling: 'greedy',
+      clickableIcons: false
+    });
+
+    // Re-attach the same tap-to-log-door listener that initMap wires up
+    newMap.addListener('click', async e => {
+      const lat = e.latLng.lat(), lng = e.latLng.lng();
+      if (newMap.getZoom() < 16) {
+        newMap.setCenter({ lat, lng });
+        newMap.setZoom(18);
+        return;
+      }
+      openDoorSheet(lat, lng, '\uD83D\uDCE1 Loading address...');
+      const address = await reverseGeocode(lat, lng);
+      const addrInput = document.getElementById('sheet-address');
+      if (addrInput) addrInput.value = address;
+      if (typeof currentDoor !== 'undefined' && currentDoor) currentDoor.address = address;
+      try { fetchNearbyAddresses(lat, lng); } catch (_) {}
+      const hint = document.getElementById('sheet-address-hint');
+      if (hint) { hint.style.display = 'block'; setTimeout(() => hint.style.display = 'none', 4000); }
+    });
+
+    // Reparent module-scope refs so every subsequent setPosition / setMap lands on newMap
+    map = newMap;
+    window.map = newMap;
+
+    // Migrate every marker we track into the new map
+    try { if (myMarker && myMarker.setMap) myMarker.setMap(newMap); } catch (_) {}
+    try { for (const k in houseMarkers) houseMarkers[k] && houseMarkers[k].setMap && houseMarkers[k].setMap(newMap); } catch (_) {}
+    try { for (const k in doorMarkers) doorMarkers[k] && doorMarkers[k].setMap && doorMarkers[k].setMap(newMap); } catch (_) {}
+    try { for (const k in repMarkers) repMarkers[k] && repMarkers[k].setMap && repMarkers[k].setMap(newMap); } catch (_) {}
+    try { if (zoneCircle && zoneCircle.setMap) zoneCircle.setMap(newMap); } catch (_) {}
+    try { if (pathLine && pathLine.setMap) pathLine.setMap(newMap); } catch (_) {}
+
+    // Clear the orphaned legacy canvas so it can't visually conflict
+    try { const oldDiv = oldMap.getDiv(); if (oldDiv) oldDiv.innerHTML = ''; } catch (_) {}
+
+    // Fresh InfoWindow bound to the new map (the old one's anchor is orphaned)
+    try { infoWindow = new google.maps.InfoWindow(); } catch (_) {}
+
+    // Force a re-render of the v1.9.2 per-house markers onto the new map in
+    // case some markers weren't in one of the tracked maps yet.
+    try { if (typeof _rerenderHouses === 'function') _rerenderHouses(); } catch (_) {}
+
+    // Trigger a resize so the Maps engine picks up #gmap's real box size
+    setTimeout(() => { try { google.maps.event.trigger(newMap, 'resize'); if (oldCenter) newMap.setCenter(oldCenter); } catch (_) {} }, 150);
+
+    // v1.9.6 — GPS: ensure watchPosition is running (diagnostic showed watchId
+    // was undefined on some sessions). onGPSUpdate is defined in the session
+    // block; guard so we don't start a duplicate watch if one already exists.
+    if (!watchId && navigator.geolocation) {
+      try {
+        watchId = navigator.geolocation.watchPosition(onGPSUpdate, () => {}, {
+          enableHighAccuracy: true, maximumAge: 10000, timeout: 10000
+        });
+      } catch (_) {}
+    }
+
+    console.log('[v1.9.6] Live Map rebound from #home-map-canvas to #gmap; markers migrated.');
+  } catch (e) {
+    console.warn('[v1.9.6] v190EnsureMapBinding failed (non-blocking):', e);
+  }
 }
 
 async function loadDoorMarkers(){
