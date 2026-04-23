@@ -447,6 +447,54 @@ body.v190 .bottom-nav { display: none !important; }
    padding no longer needs space for bottom-nav. */
 body.v190 .view { padding-bottom: 2rem; }
 
+/* ══════════════════════════════════════════════════════════════════════
+   v1.9.0 hotfix — legacy DOM hide audit
+   ────────────────────────────────────
+   Root causes the redesigned dashboard was colliding with:
+     (a) A v1.8 rule at line ~380 hides #view-dashboard with !important,
+         so the new dashboard container never rendered.
+     (b) _origShowView() at line ~2137 remaps 'dashboard' → 'home',
+         so showView('dashboard') activates #view-home instead of the
+         new #view-dashboard. view-home still has its own stats grid,
+         inline Google Map (#home-map-canvas), duplicate Start Session
+         button, and Leaderboard card — that's what was rendering.
+
+   These rules are CSS-only and surgical (no wildcards). They:
+     1. Force #view-dashboard visible under body.v190 (defeats rule a).
+     2. Kill #view-home entirely under body.v190 (kills the duplicates).
+     3. Yield the dashboard to drawer-opened views (view-doors,
+        view-profile, etc.) using :has() — so drawer nav still works.
+     4. Defensive hide on #recap-overlay when not .open.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* (1) Force the new dashboard visible. Overrides line-380 !important. */
+body.v190 #view-dashboard { display: block !important; }
+
+/* (2) Kill the mobile-only legacy home view — its stat grid, inline map,
+       leaderboard, and Start Session button all duplicate the v1.9.0
+       dashboard. Note: _origShowView() remaps 'dashboard' → 'home' and
+       'map' → 'home', so drawer clicks on Dashboard and Live Map will
+       activate view-home beneath the visible view-dashboard. Hiding
+       view-home here means those drawer clicks effectively return the
+       user to the v1.9.0 dashboard (safe no-op). A dedicated Live Map
+       re-entry point is a Phase B task. */
+body.v190 #view-home { display: none !important; }
+
+/* (3) When a drawer-reachable view (anything except #view-dashboard
+       itself and the hidden #view-home) has .active, hide the dashboard
+       so the user sees the target view instead. Requires :has() —
+       Chrome 105+, Safari 15.4+, Firefox 121+. The rep platform is used
+       on modern mobile browsers, so this baseline is safe. */
+body.v190 .content-area:has(.view.active:not(#view-dashboard):not(#view-home)) #view-dashboard {
+  display: none !important;
+}
+
+/* (4) Defensive: the daily recap modal must not leak visible on the
+       landing page. Its default .recap-overlay { display:none } already
+       handles this, but this rule is belt-and-suspenders in case a
+       stale .open class persists from a prior session end. */
+body.v190 #recap-overlay:not(.open) { display: none !important; }
+
 /* ── Drawer redesign — add nav link list ─────────────────────────── */
 .v190-drawer-nav {
   display: flex; flex-direction: column; gap: 2px;
