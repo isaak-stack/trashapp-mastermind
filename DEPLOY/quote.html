@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TrashApp — Free Junk Removal Quote v1.6.4</title>
+<title>TrashApp — Free Junk Removal Quote v1.6.5</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗑️</text></svg>">
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#F5A623">
@@ -1003,10 +1003,14 @@ async function getQuote() {
 }
 
 async function getMultiQuote() {
+  // v1.6.5 — single POST to /api/quote/multi so the server applies the 10%
+  // multi-location efficiency discount (customer page used to fan out parallel
+  // /api/quote calls and fake the discount client-side, which drifted from
+  // the rep platform's pricing and could produce inconsistent quotes).
   const nonEmptyAreas = areas.filter(a => a.photos.length > 0);
   if (!nonEmptyAreas.length) { showToast('Add at least one photo to get a quote!', 'warning'); return; }
   hideErrMulti();
-  showSpinner('Analyzing your areas... Area 1 of ' + nonEmptyAreas.length);
+  showSpinner('Analyzing your areas...');
 
   document.getElementById('blocked-msg').style.display = 'none';
   await loadGasPrice();
@@ -1034,92 +1038,90 @@ async function getMultiQuote() {
 
     apiTimeoutHandle = hardTimeoutHandle;
 
-    const urgencyAddon = selectedUrgency === 'same_day' ? 75 : 0;
+    // Build the multi-location payload — shape must match rep-platform's
+    // /api/quote/multi call (rep-platform.html line 3333) so the server
+    // handler at Railway Backend/server.js:787 accepts it identically.
+    const payload = {
+      locations: nonEmptyAreas.map((area, idx) => ({
+        label: area.label || `Area ${idx + 1}`,
+        photos: area.photos.map(p => p.b64),
+        imageMime: area.photos[0]?.mime || 'image/jpeg'
+      })),
+      address: addr,
+      urgency: selectedUrgency,
+      // Travel is computed and displayed client-side (we add travelCost to the
+      // combined range below). Pass 0 here so the server doesn't double-bill.
+      distanceMiles: 0
+    };
 
-    // Send individual API calls in parallel (each wrapped in try-catch)
-    const quotePromises = nonEmptyAreas.map((area, idx) => {
-      const ctrl = new AbortController();
-      const t = setTimeout(() => ctrl.abort(), 30000);
-      return fetch(API, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          images: area.photos.map(p => p.b64),
-          imageMime: area.photos[0].mime,
-          hints: selectedItemTypes,
-          urgency: selectedUrgency
-        }),
-        signal: ctrl.signal
-      }).then(r => { clearTimeout(t); return r.json(); }).then(data => ({
-        ...data,
-        label: area.label || `Area ${idx + 1}`,
-        areaIndex: idx
-      })).catch(err => ({
-        error: true,
-        message: err.name === 'AbortError' ? 'Timed out' : err.message,
-        label: area.label || `Area ${idx + 1}`,
-        areaIndex: idx
-      }));
+    const resp = await fetch(API_MULTI, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
     });
-
-    const results = await Promise.allSettled(quotePromises).then(r => r.map(x => x.status === 'fulfilled' ? x.value : { error: true, message: x.reason?.message || 'Unknown error' }));
     clearTimeout(softTimeoutHandle);
     clearTimeout(hardTimeoutHandle);
 
-    // Combine results
-    let totalMin = 0, totalMax = 0;
-    const locations = results.map((res, idx) => {
-      if (res.error) {
-        return { ...res, label: res.label, priceRange: '—', status: 'manual_review' };
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+
+    // Server response shape (see Railway Backend/server.js:847–867):
+    //   { status, locationCount, combinedRange, combinedMidpoint,
+    //     overallConfidence, travelFee, urgencyFee, negotiationFloor,
+    //     multiLocationDiscount, note,
+    //     locations: [{ label, quote: {...formatted...}, photos }],
+    //     manualReviewAreas }
+    //
+    // combinedRange is a string like "$525–$775"; extract numeric bounds.
+    // Handle both en-dash (–) and hyphen (-).
+    let baseMin = 0, baseMax = 0;
+    if (typeof data.combinedRange === 'string') {
+      const parts = data.combinedRange.replace(/\$/g, '').split(/[-–\s]+/).map(s => parseFloat(s.trim())).filter(Boolean);
+      if (parts.length >= 2) { baseMin = parts[0]; baseMax = parts[1]; }
+    }
+
+    // Flatten per-area locations into the shape renderMultiResult() expects:
+    //   { label, priceRange, status, confidence, itemsSeen, surcharges }
+    const locations = (data.locations || []).map((loc, idx) => {
+      const q = loc.quote || {};
+      let priceRange = q.priceRange || '—';
+      if (priceRange && priceRange !== '—') {
+        // Enforce the client-side minimum floor per area for display
+        // consistency with the single-location page.
+        priceRange = enforceMinimumPrice(priceRange.replace(/–/g, ' - '));
       }
-
-      let priceRange = res.priceRange || '—';
-      let min = 0, max = 0;
-
-      if (priceRange !== '—') {
-        const parts = priceRange.replace('$', '').split(' - ');
-        if (parts.length === 2) {
-          min = parseInt(parts[0]);
-          max = parseInt(parts[1]);
-
-          // Apply 10% discount to 2nd+ areas
-          if (idx > 0) {
-            min = Math.round(min * 0.9);
-            max = Math.round(max * 0.9);
-          }
-
-          // Apply urgency surcharge
-          if (urgencyAddon > 0) {
-            min += urgencyAddon;
-            max += urgencyAddon;
-          }
-
-          priceRange = `$${min} - $${max}`;
-          totalMin += min;
-          totalMax += max;
-        }
-      }
-
-      // Apply minimum price floor
-      priceRange = enforceMinimumPrice(priceRange);
-
       return {
-        label: res.label,
+        label: loc.label || `Area ${idx + 1}`,
         priceRange,
-        status: res.flag === 'call_for_quote' ? 'manual_review' : 'ok',
-        confidence: res.confidence,
-        itemsSeen: res.itemsSeen,
-        surcharges: res.surcharges
+        status: q.status === 'manual_review' ? 'manual_review' : 'ok',
+        confidence: q.confidence,
+        itemsSeen: q.itemsSeen || [],
+        surcharges: q.surcharges || []
       };
     });
 
+    // Apply travel fee to the combined total, then enforce the minimum floor.
+    let totalMin = Math.round(baseMin + (travelCost || 0));
+    let totalMax = Math.round(baseMax + (travelCost || 0));
+    const enforced = enforceMinimumPrice(`$${totalMin} - $${totalMax}`);
+    const enforcedParts = enforced.replace(/\$/g, '').split(' - ').map(s => parseInt(s, 10));
+    if (enforcedParts.length === 2 && !enforcedParts.some(Number.isNaN)) {
+      totalMin = enforcedParts[0];
+      totalMax = enforcedParts[1];
+    }
+
     quoteData = {
       locations,
-      totalMin: totalMin + travelCost,
-      totalMax: totalMax + travelCost,
-      travelCost: travelCost,
-      travelLabel: travelLabel,
-      travelMiles: travelMiles
+      totalMin,
+      totalMax,
+      travelCost,
+      travelLabel,
+      travelMiles,
+      // Preserve server-provided metadata so renderMultiResult can show it if desired.
+      overallConfidence: data.overallConfidence,
+      multiLocationDiscount: data.multiLocationDiscount,
+      note: data.note,
+      status: data.status
     };
 
     renderMultiResult();
