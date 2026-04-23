@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>TrashApp — Rep Platform v1.8.5</title>
+<title>TrashApp — Rep Platform v1.9.0</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%231a1a1a'/%3E%3Crect x='28' y='36' width='44' height='46' rx='6' fill='%23F5A623'/%3E%3Crect x='20' y='27' width='60' height='11' rx='5' fill='%23F5A623'/%3E%3Crect x='40' y='16' width='20' height='13' rx='4' fill='%23F5A623'/%3E%3Crect x='40' y='49' width='6' height='22' rx='3' fill='%231a1a1a'/%3E%3Crect x='54' y='49' width='6' height='22' rx='3' fill='%231a1a1a'/%3E%3C/svg%3E">
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#F5A623">
@@ -423,6 +423,153 @@ body.field-sidebar-open .sidebar .sidebar-close{display:flex;position:absolute;t
 .session-stat-row{display:flex;justify-content:space-between;font-size:13px;padding:4px 0}
 .session-stat-row .lbl{color:#888}
 .session-stat-row .val{color:#fff;font-weight:600}
+
+/* ══════════════════════════════════════════════════════════════════════
+   v1.9.0 — Dashboard-first UX rebuild
+   ────────────────────────────────────
+   Kills the bottom nav + desktop sidebar nav in favor of a single
+   hamburger drawer that surfaces every view. The landing page is the
+   redesigned dashboard (view-dashboard). Start Session → view-map
+   (existing behavior via showView('map') on session start).
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* Hide the old bottom nav EVERYWHERE. The hamburger drawer is the single
+   source of nav truth now. All onclick=showView() bindings still work;
+   just unreachable via the old nav chrome. */
+body.v190 .bottom-nav { display: none !important; }
+/* Hide the desktop-only sidebar nav-btn column (keep sidebar-rep and
+   sidebar-bottom session pill visible on desktop for continuity). */
+@media (min-width: 768px) {
+  body.v190 .sidebar-nav { display: none !important; }
+  body.v190 .sidebar { width: 240px; }
+}
+/* Pad content-area so the mobile-header doesn't clip content; bottom
+   padding no longer needs space for bottom-nav. */
+body.v190 .view { padding-bottom: 2rem; }
+
+/* ── Drawer redesign — add nav link list ─────────────────────────── */
+.v190-drawer-nav {
+  display: flex; flex-direction: column; gap: 2px;
+  margin: .75rem 0; padding-top: .5rem;
+  border-top: 1px solid var(--border);
+}
+.v190-drawer-label {
+  font-size: 10px; font-weight: 700; color: var(--gray);
+  text-transform: uppercase; letter-spacing: 1.5px;
+  padding: .4rem .5rem .25rem;
+}
+.v190-drawer-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: .65rem .5rem;
+  background: transparent; border: none; color: var(--white);
+  font-size: 14px; font-weight: 500; cursor: pointer;
+  text-align: left; border-radius: 8px;
+  font-family: 'Inter', 'DM Sans', sans-serif;
+  transition: background .15s;
+}
+.v190-drawer-item:hover, .v190-drawer-item.active {
+  background: rgba(245,166,35,.08); color: var(--gold);
+}
+.v190-drawer-item .v190-drawer-icon { font-size: 16px; width: 22px; text-align: center; }
+.v190-drawer-item .v190-drawer-badge {
+  margin-left: auto; background: var(--red); color: #fff;
+  font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 99px;
+  display: none;
+}
+.v190-drawer-item .v190-drawer-badge.visible { display: inline-block; }
+
+/* ── Dashboard redesign ──────────────────────────────────────────── */
+.v190-status-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .5rem .75rem; background: rgba(255,255,255,.02);
+  border: 1px solid var(--border); border-radius: 10px;
+  margin: 0 0 1rem 0; font-size: 12px;
+}
+.v190-status-bar .v190-status-greet { font-weight: 600; color: var(--white); }
+.v190-status-bar .v190-status-zip { color: var(--gray); margin-left: 6px; }
+.v190-status-bar .v190-status-pill {
+  font-size: 10px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; padding: 3px 10px; border-radius: 99px;
+  background: rgba(136,136,150,.18); color: var(--gray);
+}
+.v190-status-bar .v190-status-pill.active {
+  background: rgba(34,197,94,.15); color: var(--green);
+}
+
+.v190-stats-2x2 {
+  display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; margin-bottom: 1rem;
+}
+.v190-stats-2x2 .v190-stat-cell {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 1rem .9rem;
+}
+.v190-stats-2x2 .v190-stat-label {
+  font-size: 11px; color: var(--gray); text-transform: uppercase;
+  letter-spacing: 1px; font-weight: 700; margin-bottom: .35rem;
+}
+.v190-stats-2x2 .v190-stat-value {
+  font-family: 'Bebas Neue', sans-serif; font-size: 32px; color: var(--white);
+  line-height: 1;
+}
+.v190-stats-2x2 .v190-stat-value.money { color: var(--green); }
+
+.v190-goal-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 1rem; margin-bottom: 1rem;
+}
+.v190-goal-header {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: .6rem;
+}
+.v190-goal-title {
+  font-size: 11px; font-weight: 700; color: var(--gold);
+  text-transform: uppercase; letter-spacing: 1px;
+}
+.v190-goal-count { font-size: 12px; color: var(--gray); font-weight: 600; }
+.v190-goal-bar {
+  position: relative; height: 10px; background: rgba(255,255,255,.06);
+  border-radius: 99px; overflow: hidden;
+}
+.v190-goal-fill {
+  position: absolute; inset: 0 auto 0 0; width: 0%;
+  background: linear-gradient(90deg, var(--gold), #ffb84d);
+  border-radius: 99px; transition: width .4s ease;
+}
+
+.v190-recent-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 1rem; margin-bottom: 1rem;
+}
+.v190-recent-title {
+  font-size: 11px; font-weight: 700; color: var(--gold);
+  text-transform: uppercase; letter-spacing: 1px; margin-bottom: .75rem;
+}
+.v190-recent-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .55rem 0; border-top: 1px solid var(--border); font-size: 13px;
+}
+.v190-recent-row:first-of-type { border-top: none; }
+.v190-recent-addr { color: var(--white); font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.v190-recent-price { color: var(--green); font-weight: 700; font-size: 12px; margin-left: .75rem; white-space: nowrap; }
+.v190-recent-price.pending { color: var(--gray); }
+.v190-recent-empty { color: var(--gray); font-size: 13px; text-align: center; padding: 1rem 0; }
+.v190-recent-link {
+  display: block; text-align: right; color: var(--gold); font-size: 12px;
+  font-weight: 600; cursor: pointer; padding-top: .5rem;
+  text-decoration: none; background: none; border: none;
+  margin-left: auto; font-family: 'Inter', 'DM Sans', sans-serif;
+}
+
+.v190-cta-start {
+  width: 100%; padding: 1.1rem; min-height: 64px;
+  background: var(--gold); color: var(--black);
+  border: none; border-radius: 14px;
+  font-family: 'Bebas Neue', sans-serif; font-size: 26px; letter-spacing: 1.5px;
+  cursor: pointer; box-shadow: 0 6px 20px rgba(245,166,35,.3);
+  margin: 1rem 0 .5rem; transition: transform .1s, box-shadow .2s;
+}
+.v190-cta-start:active { transform: scale(0.98); box-shadow: 0 3px 10px rgba(245,166,35,.3); }
+.v190-cta-start-icon { margin-right: .4rem; font-size: 20px; vertical-align: -2px; }
 </style>
 </head>
 <body>
@@ -579,29 +726,74 @@ body.field-sidebar-open .sidebar .sidebar-close{display:flex;position:absolute;t
 
       <div class="content-area">
 
-        <!-- DASHBOARD -->
+        <!-- DASHBOARD (v1.9.0 redesign — dashboard-first UX) -->
         <div class="view active" id="view-dashboard">
-          <div class="view-title">Hey, <span id="dash-name" style="color:var(--gold)">Rep</span> 👋</div>
-          <div class="view-sub">Your performance today</div>
-          <!-- Session start section -->
-          <div id="session-start-section" style="padding:1rem">
-            <button onclick="showSessionStartModal()" id="start-session-btn" style="width:100%;padding:1rem;background:var(--gold);color:var(--black);border:none;border-radius:12px;font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:1px;cursor:pointer">Start Session</button>
+          <!-- Status bar: greeting + zip + on/off duty -->
+          <div class="v190-status-bar">
+            <div>
+              <span class="v190-status-greet">Hi <span id="dash-name">Rep</span></span>
+              <span class="v190-status-zip">· Fresno Zip <span id="dash-zip">—</span></span>
+            </div>
+            <span class="v190-status-pill" id="v190-status-pill">OFF DUTY</span>
           </div>
-          <!-- Last session + all-time stats -->
-          <div id="session-history-section" style="padding:0 1rem 1rem"></div>
-          <div class="rep-meta-row">
-            <div class="rep-meta-badge">📍 Zip: <span id="dash-zip">—</span></div>
-            <div class="rep-meta-badge">💰 Commission (est.): <span id="dash-comm">15%</span></div>
+
+          <!-- Today's Numbers (2x2) -->
+          <div class="v190-stats-2x2">
+            <div class="v190-stat-cell">
+              <div class="v190-stat-label">Doors</div>
+              <div class="v190-stat-value" id="stat-doors-today">0</div>
+            </div>
+            <div class="v190-stat-cell">
+              <div class="v190-stat-label">Leads</div>
+              <div class="v190-stat-value" id="stat-leads-today">0</div>
+            </div>
+            <div class="v190-stat-cell">
+              <div class="v190-stat-label">Quotes</div>
+              <div class="v190-stat-value" id="stat-quotes-today">0</div>
+            </div>
+            <div class="v190-stat-cell">
+              <div class="v190-stat-label">Earned (est.)</div>
+              <div class="v190-stat-value money" id="stat-comm-earned">$0</div>
+            </div>
           </div>
-          <div class="stats-grid">
-            <div class="stat-card"><div class="stat-val" id="stat-doors-today">0</div><div class="stat-label">Doors Today</div></div>
+
+          <!-- Daily Goal -->
+          <div class="v190-goal-card">
+            <div class="v190-goal-header">
+              <div class="v190-goal-title">Daily Goal</div>
+              <div class="v190-goal-count"><span id="v190-goal-current">0</span>/<span id="v190-goal-target">20</span> doors</div>
+            </div>
+            <div class="v190-goal-bar"><div class="v190-goal-fill" id="v190-goal-fill"></div></div>
+          </div>
+
+          <!-- Recent Jobs -->
+          <div class="v190-recent-card">
+            <div class="v190-recent-title">Recent Jobs</div>
+            <div id="v190-recent-jobs">
+              <div class="v190-recent-empty">No recent activity</div>
+            </div>
+            <button class="v190-recent-link" onclick="showView('followup')">View all →</button>
+          </div>
+
+          <!-- Big Start Session CTA -->
+          <button class="v190-cta-start" onclick="showSessionStartModal()" id="start-session-btn">
+            <span class="v190-cta-start-icon">▶</span>START SESSION
+          </button>
+
+          <!-- Legacy slot-in: session history + commission/all-time grid rendered below
+               the new UI so existing loaders still find their IDs. Hidden by default;
+               re-enabled if the legacy renderers populate them. -->
+          <div id="session-history-section" style="display:none;padding:0"></div>
+          <div class="stats-grid" style="display:none">
             <div class="stat-card"><div class="stat-val" id="stat-deals-today">0</div><div class="stat-label">Deals Today</div></div>
-            <div class="stat-card"><div class="stat-val" id="stat-comm-earned">$0</div><div class="stat-label">Commission (est.)</div></div>
             <div class="stat-card"><div class="stat-val" id="stat-doors-total">0</div><div class="stat-label">All-Time Doors</div></div>
           </div>
-          <div class="card">
+          <div class="card" style="display:none">
             <div class="card-title">Leaderboard — Today</div>
-            <div id="leaderboard"><div class="empty-state">No activity yet today. Start knocking!</div></div>
+            <div id="leaderboard"><div class="empty-state">No activity yet today.</div></div>
+          </div>
+          <div class="rep-meta-row" style="display:none">
+            <div class="rep-meta-badge">💰 Commission (est.): <span id="dash-comm">15%</span></div>
           </div>
         </div>
 
@@ -1018,7 +1210,7 @@ body.field-sidebar-open .sidebar .sidebar-close{display:flex;position:absolute;t
   </div>
 </div>
 
-<!-- Mobile Drawer -->
+<!-- Mobile Drawer (v1.9.0 — single source of nav truth; bottom nav + sidebar nav killed) -->
 <div class="mobile-drawer" id="mobile-drawer">
   <div class="drawer-header">
     <div>
@@ -1027,7 +1219,25 @@ body.field-sidebar-open .sidebar .sidebar-close{display:flex;position:absolute;t
     </div>
     <button class="drawer-close" onclick="closeDrawer()">✕</button>
   </div>
-  <div id="drawer-session-inactive">
+
+  <!-- Main navigation — replaces both the old .bottom-nav and .sidebar-nav.
+       Each button still calls the existing showView(); no tab logic changes. -->
+  <div class="v190-drawer-nav">
+    <div class="v190-drawer-label">Navigate</div>
+    <button class="v190-drawer-item active" data-view="dashboard" onclick="v190Nav('dashboard')"><span class="v190-drawer-icon">📊</span>Dashboard</button>
+    <button class="v190-drawer-item" data-view="map" onclick="v190Nav('map')"><span class="v190-drawer-icon">🗺️</span>Live Map</button>
+    <button class="v190-drawer-item" data-view="quote" onclick="v190Nav('quote')"><span class="v190-drawer-icon">💰</span>Quote Tool</button>
+    <button class="v190-drawer-item" data-view="followup" onclick="v190Nav('followup')"><span class="v190-drawer-icon">📞</span>Follow Ups<span class="v190-drawer-badge" id="v190-followup-badge">0</span></button>
+    <button class="v190-drawer-item" data-view="scripts" onclick="v190Nav('scripts')"><span class="v190-drawer-icon">📝</span>Scripts</button>
+    <button class="v190-drawer-item" data-view="stats" onclick="v190Nav('stats')"><span class="v190-drawer-icon">🏆</span>My Stats</button>
+  </div>
+
+  <div class="v190-drawer-nav" style="border-top:1px solid var(--border);margin-top:.25rem">
+    <div class="v190-drawer-label">Account</div>
+    <button class="v190-drawer-item" data-view="profile" onclick="v190Nav('profile')"><span class="v190-drawer-icon">👤</span>Profile &amp; Territory</button>
+  </div>
+
+  <div id="drawer-session-inactive" style="margin-top:auto">
     <button class="btn-start-session-side" onclick="showSessionStartModal()">🚀 Start Session</button>
   </div>
   <div id="drawer-session-active" style="display:none">
@@ -1045,7 +1255,7 @@ body.field-sidebar-open .sidebar .sidebar-close{display:flex;position:absolute;t
       <button class="btn-end-session" onclick="endSession()">End Session</button>
     </div>
   </div>
-  <button class="btn-signout" onclick="doSignOut()" style="margin-top:auto">Sign Out</button>
+  <button class="btn-signout" onclick="doSignOut()" style="margin-top:.5rem">Sign Out</button>
 </div>
 <div class="drawer-overlay" onclick="closeDrawer()"></div>
 
@@ -1632,6 +1842,10 @@ function showScreen(n) {
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('visible'));
   const el=document.getElementById('screen-'+n);
   if(el) el.classList.add('visible');
+  // v1.9.0 — toggle the dashboard-first UX only when the main app is visible.
+  // `.v190` class drives the bottom-nav and sidebar-nav hide rules.
+  if (n === 'app') document.body.classList.add('v190');
+  else document.body.classList.remove('v190');
 }
 
 // ── RECAPTCHA (pre-initialized on page load) ──
@@ -2104,6 +2318,169 @@ function renderDashboard({tDoors,tDeals,repStats}){
     </div>`).join(''):'<div class="empty-state">No activity today yet. Start knocking!</div>';
   if(lb)lb.innerHTML=html;
   if(homeLeaderboard)homeLeaderboard.innerHTML=html;
+
+  // v1.9.0 — populate the new dashboard widgets alongside the legacy renderers.
+  try { v190RenderDashboard({ tDoors, tDeals, repStats }); } catch (e) { console.warn('v190 dashboard render failed:', e); }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// v1.9.0 — Dashboard-first nav + widgets
+// ══════════════════════════════════════════════════════════════════════
+// Activates on auth success (body gets .v190 class, see onAuthStateChanged).
+// Drawer is the single nav source; bottom nav + sidebar nav hidden via CSS.
+
+window.v190Nav = function(view) {
+  // Close the drawer (mobile UX) then route via the existing showView().
+  // Desktop keeps drawer closed because .mobile-drawer is display:none on wide viewports.
+  try { closeDrawer(); } catch (_) {}
+  try { showView(view); } catch (e) { console.warn('v190Nav showView failed:', e); }
+  // Highlight the active drawer item
+  document.querySelectorAll('.v190-drawer-item').forEach(b => {
+    b.classList.toggle('active', b.dataset.view === view);
+  });
+};
+
+function v190UpdateStatusPill() {
+  const pill = document.getElementById('v190-status-pill');
+  if (!pill) return;
+  if (typeof activeSession !== 'undefined' && activeSession) {
+    pill.textContent = sessionPaused ? 'PAUSED' : 'ON DUTY';
+    pill.classList.add('active');
+  } else {
+    pill.textContent = 'OFF DUTY';
+    pill.classList.remove('active');
+  }
+}
+
+// v1.9.0 renderer — pulls from the same dashData the legacy renderDashboard
+// computed. Additionally fetches the rep's last 3 jobs for the Recent Jobs card.
+// Collections referenced:
+//   - doors (already queried by loadDashboard; we reuse its tDoors count)
+//   - jobs (new query here; filtered by repId, ordered by created_at desc, limit 3)
+// If these collections are empty or missing, widgets show "0" / "No recent activity".
+async function v190RenderDashboard({ tDoors = 0, tDeals = 0, repStats = {} } = {}) {
+  // Stat 1: Doors (same as legacy tDoors)
+  const elDoors = document.getElementById('stat-doors-today');
+  if (elDoors) elDoors.textContent = tDoors;
+
+  // Stat 2: Leads — count of TODAY's doors with a lead-like outcome.
+  // Loose definition until a dedicated `leads` collection exists:
+  //   pending_dispatch + quote_given + deal_closed + closed all count as leads.
+  //   (tDeals from legacy already approximates this.)
+  const elLeads = document.getElementById('stat-leads-today');
+  if (elLeads) elLeads.textContent = tDeals;
+
+  // Stat 3: Quotes — count of TODAY's doors with status 'quote_given'.
+  // Requires a re-read of today's doors (legacy renderDashboard only surfaced
+  // aggregate tDoors/tDeals). Done with a fresh query; swallow errors so a
+  // Firestore rule change can't break the dashboard.
+  let quotesToday = 0;
+  try {
+    if (currentUser && typeof todayTimestamp === 'function') {
+      const snap = await getDocs(query(
+        collection(db, 'doors'),
+        where('repId', '==', currentUser.uid),
+        where('timestamp', '>=', todayTimestamp()),
+        where('status', '==', 'quote_given')
+      ));
+      quotesToday = snap.size;
+    }
+  } catch (e) { /* ignore — leave as 0 */ }
+  const elQuotes = document.getElementById('stat-quotes-today');
+  if (elQuotes) elQuotes.textContent = quotesToday;
+
+  // Stat 4: Earned — same calc as legacy renderDashboard (tDeals * AVG_DEAL * commRate)
+  const commRate = (currentRep?.commission || 15) / 100;
+  const todayCommission = Math.round(tDeals * AVG_DEAL * commRate);
+  const elEarn = document.getElementById('stat-comm-earned');
+  if (elEarn) elEarn.textContent = '$' + todayCommission;
+
+  // Greeting + zip
+  const elName = document.getElementById('dash-name');
+  if (elName) elName.textContent = currentRep?.name || 'Rep';
+  const elZip = document.getElementById('dash-zip');
+  if (elZip) elZip.textContent = currentRep?.zipCode || '—';
+
+  // Daily goal (default target 20; could become a per-rep setting later)
+  const goalTarget = 20;
+  const goalCurrent = Math.min(tDoors, goalTarget);
+  const goalCurEl = document.getElementById('v190-goal-current');
+  const goalTgtEl = document.getElementById('v190-goal-target');
+  const goalFillEl = document.getElementById('v190-goal-fill');
+  if (goalCurEl) goalCurEl.textContent = goalCurrent;
+  if (goalTgtEl) goalTgtEl.textContent = goalTarget;
+  if (goalFillEl) goalFillEl.style.width = Math.min(100, Math.round((tDoors / goalTarget) * 100)) + '%';
+
+  // Recent Jobs — last 3 jobs for this rep. Collection: `jobs`.
+  const recentEl = document.getElementById('v190-recent-jobs');
+  if (recentEl && currentUser) {
+    try {
+      const jobsSnap = await getDocs(query(
+        collection(db, 'jobs'),
+        where('repId', '==', currentUser.uid),
+        orderBy('created_at', 'desc'),
+        limit(3)
+      ));
+      if (jobsSnap.empty) {
+        recentEl.innerHTML = '<div class="v190-recent-empty">No recent activity</div>';
+      } else {
+        const rows = [];
+        jobsSnap.forEach(d => {
+          const j = d.data();
+          const addr = (j.address || 'Job').split(',')[0];
+          const priceRange = j.aiQuote || j.priceRange || '';
+          const midpoint = (() => {
+            const m = String(priceRange).match(/\$?(\d+)[\s\-–]+\$?(\d+)/);
+            if (!m) return 0;
+            return Math.round((parseInt(m[1]) + parseInt(m[2])) / 2);
+          })();
+          const comm = midpoint ? Math.round(midpoint * commRate) : 0;
+          const priceLabel = midpoint
+            ? `$${midpoint} <span style="color:var(--gray);font-weight:500">· +$${comm}</span>`
+            : '<span class="pending">Pending</span>';
+          rows.push(`
+            <div class="v190-recent-row">
+              <div class="v190-recent-addr">${escapeHtml(addr)}</div>
+              <div class="v190-recent-price ${midpoint ? '' : 'pending'}">${priceLabel}</div>
+            </div>`);
+        });
+        recentEl.innerHTML = rows.join('');
+      }
+    } catch (e) {
+      console.warn('v190 recent jobs load failed:', e);
+      recentEl.innerHTML = '<div class="v190-recent-empty">No recent activity</div>';
+    }
+  }
+
+  // Sync the status pill with current session state.
+  v190UpdateStatusPill();
+
+  // Highlight the active drawer item to match the currently visible view.
+  const activeViewEl = document.querySelector('.view.active');
+  if (activeViewEl) {
+    const viewId = activeViewEl.id.replace(/^view-/, '');
+    document.querySelectorAll('.v190-drawer-item').forEach(b => {
+      b.classList.toggle('active', b.dataset.view === viewId);
+    });
+  }
+
+  // Mirror followup badge count into the drawer (the old .nav-badge was in
+  // the sidebar which is now hidden).
+  const oldBadge = document.getElementById('followup-badge');
+  const newBadge = document.getElementById('v190-followup-badge');
+  if (oldBadge && newBadge) {
+    const n = parseInt(oldBadge.textContent || '0', 10) || 0;
+    newBadge.textContent = n;
+    newBadge.classList.toggle('visible', n > 0);
+  }
+}
+
+// Tiny HTML-escape utility used by v190RenderDashboard (do not collide with
+// any existing escapeHtml in the file — defined here only if not already present).
+if (typeof window.escapeHtml !== 'function') {
+  window.escapeHtml = function(s) {
+    return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  };
 }
 
 // ── SESSION ──
@@ -2330,6 +2707,8 @@ function updateSessionStats() {
   if(activeSession&&currentUser){
     _sbSetDoc('sessions',currentUser.uid,{doorsKnocked:sessionDoors,dealsClosedCount:sessionDeals,lastUpdate:serverTimestamp()},{merge:true}).catch(()=>{});
   }
+  // v1.9.0 — keep the dashboard ON DUTY / OFF DUTY pill in sync
+  try { v190UpdateStatusPill(); } catch (_) {}
 }
 
 // ── GPS ──
